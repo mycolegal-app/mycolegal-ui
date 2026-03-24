@@ -1,0 +1,109 @@
+/* =========================================================================
+   MycoLegal Design System — Color Tokens
+   Inspired by jesusbenavides.es: warm corporate, trustworthy, premium
+   ========================================================================= */
+
+:root {
+  /* ------------------------------------------------------------------
+     Primary: Warm gold/bronze — legal gravitas, premium accent
+     ------------------------------------------------------------------ */
+  --mc-primary-50:  #faf8f5;
+  --mc-primary-100: #f3efe8;
+  --mc-primary-200: #e6ddd0;
+  --mc-primary-300: #d4c5ae;
+  --mc-primary-400: #c2b08e;
+  --mc-primary-500: #b09a6e;
+  --mc-primary-600: #97825e;
+  --mc-primary-700: #7d6b4e;
+  --mc-primary-800: #665742;
+  --mc-primary-900: #544838;
+
+  /* ------------------------------------------------------------------
+     Slate: Blue-gray — texts, buttons, navigation
+     ------------------------------------------------------------------ */
+  --mc-slate-50:  #f5f7fa;
+  --mc-slate-100: #e8ecf2;
+  --mc-slate-200: #d5dbe5;
+  --mc-slate-300: #b4bfcf;
+  --mc-slate-400: #8d9bb2;
+  --mc-slate-500: #6e7f99;
+  --mc-slate-600: #5b6777;
+  --mc-slate-700: #474f5c;
+  --mc-slate-800: #3c404b;
+  --mc-slate-900: #2f353e;
+  --mc-slate-950: #1a1f27;
+
+  /* ------------------------------------------------------------------
+     Neutral: Warm whites and grays — backgrounds, borders
+     ------------------------------------------------------------------ */
+  --mc-neutral-0:   #ffffff;
+  --mc-neutral-50:  #fafaf9;
+  --mc-neutral-100: #f5f5f3;
+  --mc-neutral-200: #eeece9;
+  --mc-neutral-300: #e0dedb;
+  --mc-neutral-400: #d0cdc8;
+  --mc-neutral-500: #b3b0ab;
+  --mc-neutral-600: #8a8680;
+  --mc-neutral-700: #6b6862;
+  --mc-neutral-800: #4a4843;
+  --mc-neutral-900: #2a2826;
+
+  /* ------------------------------------------------------------------
+     Semantic: status colors
+     ------------------------------------------------------------------ */
+  --mc-success-50:  #f0fdf4;
+  --mc-success-100: #dcfce7;
+  --mc-success-500: #22c55e;
+  --mc-success-600: #16a34a;
+  --mc-success-700: #15803d;
+
+  --mc-error-50:    #fef2f2;
+  --mc-error-100:   #fee2e2;
+  --mc-error-500:   #ef4444;
+  --mc-error-600:   #dc2626;
+  --mc-error-700:   #b91c1c;
+
+  --mc-warning-50:  #fffbeb;
+  --mc-warning-100: #fef3c7;
+  --mc-warning-500: #f59e0b;
+  --mc-warning-600: #d97706;
+  --mc-warning-700: #b45309;
+
+  --mc-info-50:     #eff6ff;
+  --mc-info-100:    #dbeafe;
+  --mc-info-500:    #3b82f6;
+  --mc-info-600:    #2563eb;
+  --mc-info-700:    #1d4ed8;
+
+  /* ------------------------------------------------------------------
+     App-specific brand colors
+     ------------------------------------------------------------------ */
+  --mc-app-legifirma:  #00d4aa;
+  --mc-app-notaria:    #3b82f6;
+  --mc-app-admin:      #0f1b2d;
+  --mc-app-landing:    #97825e;
+
+  /* ------------------------------------------------------------------
+     Semantic mapping (used by components)
+     ------------------------------------------------------------------ */
+  --mc-background:       var(--mc-neutral-0);
+  --mc-background-muted: var(--mc-neutral-50);
+  --mc-foreground:       var(--mc-slate-900);
+  --mc-foreground-muted: var(--mc-slate-500);
+  --mc-border:           var(--mc-neutral-300);
+  --mc-border-subtle:    var(--mc-neutral-200);
+  --mc-input-border:     var(--mc-slate-300);
+  --mc-ring:             var(--mc-primary-500);
+
+  --mc-card-bg:          var(--mc-neutral-0);
+  --mc-card-border:      var(--mc-neutral-200);
+
+  --mc-btn-primary-bg:   var(--mc-slate-700);
+  --mc-btn-primary-hover:var(--mc-slate-900);
+  --mc-btn-primary-text: var(--mc-neutral-0);
+
+  --mc-nav-bg:           var(--mc-neutral-0);
+  --mc-nav-border:       var(--mc-neutral-300);
+  --mc-nav-text:         var(--mc-slate-700);
+  --mc-nav-text-active:  var(--mc-slate-950);
+}

@@ -1,0 +1,35 @@
+/* =========================================================================
+   MycoLegal Design System — Spacing Tokens
+   ========================================================================= */
+
+:root {
+  /* Spacing scale */
+  --mc-space-0:   0;
+  --mc-space-1:   0.25rem;   /* 4px */
+  --mc-space-2:   0.5rem;    /* 8px */
+  --mc-space-3:   0.75rem;   /* 12px */
+  --mc-space-4:   1rem;      /* 16px */
+  --mc-space-5:   1.25rem;   /* 20px */
+  --mc-space-6:   1.5rem;    /* 24px */
+  --mc-space-8:   2rem;      /* 32px */
+  --mc-space-10:  2.5rem;    /* 40px */
+  --mc-space-12:  3rem;      /* 48px */
+  --mc-space-16:  4rem;      /* 64px */
+  --mc-space-20:  5rem;      /* 80px */
+  --mc-space-24:  6rem;      /* 96px */
+  --mc-space-32:  8rem;      /* 128px */
+
+  /* Layout max-widths */
+  --mc-max-w-sm:      640px;
+  --mc-max-w-md:      768px;
+  --mc-max-w-lg:      1024px;
+  --mc-max-w-xl:      1248px;
+  --mc-max-w-content: 1248px;
+
+  /* Border radius */
+  --mc-radius-sm:   4px;
+  --mc-radius-md:   6px;
+  --mc-radius-lg:   10px;
+  --mc-radius-xl:   16px;
+  --mc-radius-full: 9999px;
+}

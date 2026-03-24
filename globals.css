@@ -1,0 +1,103 @@
+/* =========================================================================
+   MycoLegal Design System — Global Base Styles
+   Import this in each app's globals.css AFTER @tailwind directives
+   ========================================================================= */
+
+/* Tokens */
+@import './tokens/colors.css';
+@import './tokens/typography.css';
+@import './tokens/spacing.css';
+@import './tokens/shadows.css';
+
+/* Base layer */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    border-color: var(--mc-border);
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    font-family: var(--mc-font-sans);
+    font-size: var(--mc-text-base);
+    line-height: var(--mc-leading-normal);
+    color: var(--mc-foreground);
+    background-color: var(--mc-background);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: var(--mc-font-bold);
+    line-height: var(--mc-leading-tight);
+    letter-spacing: var(--mc-tracking-tight);
+    color: var(--mc-slate-950);
+  }
+
+  h1 { font-size: var(--mc-text-4xl); }
+  h2 { font-size: var(--mc-text-3xl); }
+  h3 { font-size: var(--mc-text-2xl); }
+  h4 { font-size: var(--mc-text-xl); }
+
+  a {
+    color: var(--mc-primary-700);
+    text-decoration: none;
+    transition: color var(--mc-transition-fast);
+  }
+
+  a:hover {
+    color: var(--mc-primary-900);
+  }
+
+  ::selection {
+    background-color: var(--mc-primary-200);
+    color: var(--mc-primary-900);
+  }
+
+  /* Scrollbar — subtle, matches the warm neutral palette */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--mc-neutral-100);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--mc-neutral-400);
+    border-radius: var(--mc-radius-full);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--mc-neutral-500);
+  }
+}
+
+/* Utility layer */
+@layer utilities {
+  .mc-container {
+    width: 100%;
+    max-width: var(--mc-max-w-content);
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: var(--mc-space-6);
+    padding-right: var(--mc-space-6);
+  }
+
+  .mc-section {
+    padding-top: var(--mc-space-16);
+    padding-bottom: var(--mc-space-16);
+  }
+
+  @media (max-width: 768px) {
+    .mc-section {
+      padding-top: var(--mc-space-10);
+      padding-bottom: var(--mc-space-10);
+    }
+  }
+}
