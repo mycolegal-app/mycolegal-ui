@@ -3,14 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "exports": {
-    "./globals.css": "./globals.css",
-    "./tokens/*": "./tokens/*",
-    "./tailwind-preset": "./tailwind-preset.ts",
-    "./components/ui/*": "./components/ui/*.tsx",
-    "./components/shared/*": "./components/shared/*.tsx",
-    "./lib/*": "./lib/*.ts"
-  },
+  "main": "./index.ts",
   "peerDependencies": {
     "react": ">=18",
     "react-dom": ">=18",
@@ -32,5 +25,10 @@
     "lucide-react": "^0.468.0",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^6.0.2"
   }
 }
