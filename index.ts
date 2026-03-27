@@ -23,6 +23,8 @@ export { AlertBanner } from './components/shared/alert-banner';
 export { LoadingSpinner } from './components/shared/loading-spinner';
 export { EmptyState } from './components/shared/empty-state';
 export { KpiCard } from './components/shared/kpi-card';
+export { LoginForm } from './components/shared/login-form';
+export { AppCard } from './components/shared/app-card';
 
 // Utilities
 export { cn, formatCurrency, formatDate, formatDateTime } from './lib/utils';
