@@ -20,6 +20,10 @@ interface LoginFormProps {
   accentClass?: string;
   /** Subtitle shown below the app name */
   subtitle?: string;
+  /** Optional hero image URL shown on the left branding panel */
+  heroImageUrl?: string;
+  /** Optional bullet points shown on the left branding panel */
+  features?: string[];
   /** API endpoint to POST credentials to (defaults to /api/auth/login) */
   loginEndpoint?: string;
   /** URL to redirect to after successful login */
@@ -34,6 +38,8 @@ export function LoginForm({
   appLogoUrl,
   accentClass = "text-mc-primary-400",
   subtitle,
+  heroImageUrl,
+  features,
   loginEndpoint = "/api/auth/login",
   redirectTo = "/",
   onSuccess,
@@ -148,15 +154,54 @@ export function LoginForm({
   return (
     <div className="flex min-h-screen">
       {/* Left panel — branding */}
-      <div className="hidden lg:flex lg:w-2/5 flex-col justify-center bg-mc-slate-950 px-12 text-white">
-        <div className="flex items-center gap-4 mb-6">
-          {logoElement}
-          <h1 className="text-4xl font-bold">{appName}</h1>
-        </div>
-        {subtitle && (
-          <p className="text-lg text-mc-slate-400 max-w-sm">{subtitle}</p>
+      <div className="hidden lg:flex lg:w-2/5 flex-col justify-between bg-mc-slate-950 text-white relative overflow-hidden">
+        {/* Background photo */}
+        {heroImageUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={heroImageUrl}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 h-full w-full object-cover opacity-20 pointer-events-none select-none"
+          />
         )}
-        <div className={cn("mt-8 h-px w-24", accentClass.replace("text-", "bg-"))} />
+        {/* Gradient overlay to ensure text readability */}
+        <div className="absolute inset-0 bg-mc-slate-950/70 pointer-events-none" />
+
+        {/* Content */}
+        <div className="relative z-10 flex flex-1 flex-col justify-center px-12">
+          <div className="flex items-center gap-4 mb-6">
+            {logoElement}
+            <h1 className="text-4xl font-bold">{appName}</h1>
+          </div>
+          {subtitle && (
+            <p className="text-base text-mc-slate-300 max-w-sm leading-relaxed">{subtitle}</p>
+          )}
+          <div className={cn("mt-8 h-px w-24", accentClass.replace("text-", "bg-"))} />
+          {features && features.length > 0 && (
+            <ul className="mt-8 space-y-3">
+              {features.map((feat, i) => (
+                <li key={i} className="flex items-center gap-3 text-mc-slate-400 text-sm">
+                  <svg className={cn("h-5 w-5 shrink-0", accentClass)} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  {feat}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* Platform footer */}
+        <div className="relative z-10 px-12 py-6 border-t border-white/10">
+          <p className="text-xs text-mc-slate-500">
+            Una aplicación de la plataforma{" "}
+            <span className="text-mc-slate-400 font-medium">MycoLegal.app</span>
+          </p>
+          <p className="text-xs text-mc-slate-600 mt-1">
+            &copy; {new Date().getFullYear()} MycoLegalTech S.A.
+          </p>
+        </div>
       </div>
 
       {/* Right panel */}
