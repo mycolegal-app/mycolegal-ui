@@ -21,6 +21,7 @@ interface DataTableProps<TData, TValue> {
   data: TData[];
   searchKey?: string;
   searchPlaceholder?: string;
+  searchDataHelp?: string;
   pageSize?: number;
 }
 
@@ -29,6 +30,7 @@ export function DataTable<TData, TValue>({
   data,
   searchKey,
   searchPlaceholder = "Buscar...",
+  searchDataHelp,
   pageSize = 10,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -72,6 +74,7 @@ export function DataTable<TData, TValue>({
               table.getColumn(searchKey)?.setFilterValue(e.target.value)
             }
             className="max-w-sm"
+            {...(searchDataHelp ? { "data-help": searchDataHelp } : {})}
           />
         </div>
       )}
