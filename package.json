@@ -1,9 +1,25 @@
 {
   "name": "@mycolegal/ui",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "main": "./index.ts",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mycolegal-app/mycolegal-ui.git"
+  },
+  "files": [
+    "components",
+    "hooks",
+    "lib",
+    "tokens",
+    "globals.css",
+    "index.ts",
+    "tailwind-preset.ts",
+    "tsconfig.json"
+  ],
   "peerDependencies": {
     "react": ">=18",
     "react-dom": ">=18",
