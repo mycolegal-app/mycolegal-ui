@@ -6,9 +6,10 @@ import type { HelpAnnotation } from "./help-context";
 interface HelpTooltipProps {
   annotation: HelpAnnotation;
   onManualClick?: (path: string) => void;
+  moreInfoLabel?: string;
 }
 
-export function HelpTooltip({ annotation, onManualClick }: HelpTooltipProps) {
+export function HelpTooltip({ annotation, onManualClick, moreInfoLabel = "Más info →" }: HelpTooltipProps) {
   const [style, setStyle] = useState<CSSProperties>({ display: "none" });
   const [visible, setVisible] = useState(false);
   const position = annotation.position || "bottom";
@@ -59,7 +60,7 @@ export function HelpTooltip({ annotation, onManualClick }: HelpTooltipProps) {
           onClick={() => onManualClick(annotation.manualPath!)}
           className="mt-1 text-xs text-cyan-300 hover:text-cyan-100"
         >
-          Más info →
+          {moreInfoLabel}
         </button>
       )}
       {/* Arrow */}

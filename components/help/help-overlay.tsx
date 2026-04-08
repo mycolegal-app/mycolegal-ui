@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useHelp } from "./help-context";
+import { useI18n } from "../i18n/i18n-context";
 import { HelpTooltip } from "./help-tooltip";
 
 interface HelpOverlayProps {
@@ -15,6 +16,7 @@ interface HelpOverlayProps {
  */
 export function HelpOverlay({ onNavigateToManual }: HelpOverlayProps) {
   const { active, toggle, annotations } = useHelp();
+  const { t } = useI18n();
 
   // Close on Escape key
   useEffect(() => {
@@ -36,7 +38,7 @@ export function HelpOverlay({ onNavigateToManual }: HelpOverlayProps) {
       <div
         className="fixed inset-0 z-40 bg-black/30 cursor-pointer"
         onClick={toggle}
-        aria-label="Cerrar ayuda"
+        aria-label={t("common.close")}
       />
 
       {/* Tooltips */}
@@ -45,17 +47,18 @@ export function HelpOverlay({ onNavigateToManual }: HelpOverlayProps) {
           key={`${annotation.target}-${i}`}
           annotation={annotation}
           onManualClick={onNavigateToManual}
+          moreInfoLabel={t("help.moreInfo")}
         />
       ))}
 
       {/* Help mode indicator */}
       <div className="fixed bottom-6 right-6 z-[60] flex items-center gap-2 rounded-full bg-cyan-600 px-4 py-2 text-sm font-medium text-white shadow-lg">
-        <span>Modo ayuda activo</span>
+        <span>{t("help.modeActive")}</span>
         <button
           onClick={toggle}
           className="ml-1 rounded-full bg-white/20 px-2 py-0.5 text-xs hover:bg-white/30"
         >
-          ESC para cerrar
+          {t("help.escToClose")}
         </button>
       </div>
     </>

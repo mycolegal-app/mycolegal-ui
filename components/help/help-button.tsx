@@ -1,6 +1,7 @@
 "use client";
 
 import { useHelp } from "./help-context";
+import { useI18n } from "../i18n/i18n-context";
 import { HelpCircle } from "lucide-react";
 
 /**
@@ -8,6 +9,7 @@ import { HelpCircle } from "lucide-react";
  */
 export function HelpButton() {
   const { active, toggle } = useHelp();
+  const { t } = useI18n();
 
   return (
     <button
@@ -17,8 +19,8 @@ export function HelpButton() {
           ? "bg-cyan-500 text-white"
           : "text-white/60 hover:bg-white/10 hover:text-white"
       }`}
-      title={active ? "Desactivar ayuda" : "Activar ayuda"}
-      aria-label={active ? "Desactivar ayuda" : "Activar ayuda"}
+      title={active ? t("help.deactivate") : t("help.activate")}
+      aria-label={active ? t("help.deactivate") : t("help.activate")}
     >
       <HelpCircle className="h-5 w-5" />
     </button>
