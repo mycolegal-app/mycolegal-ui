@@ -20,12 +20,15 @@ if [ -z "${NPM_TOKEN:-}" ]; then
   exit 1
 fi
 
-echo "//npm.pkg.github.com/:_authToken=${NPM_TOKEN}" > .npmrc
+cat > .npmrc <<NPMRC
+@mycolegal-app:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=${NPM_TOKEN}
+NPMRC
 
 # Check if this version is already published
 PUBLISHED=$(npm view "${PKG_NAME}@${CURRENT_VERSION}" version 2>/dev/null || echo "")
 if [ "$PUBLISHED" = "$CURRENT_VERSION" ]; then
-  echo "   ✓ ${PKG_NAME}@${CURRENT_VERSION} already published"
+  echo "   ✓ ${PKG_NAME}@${CURRENT_VERSION} already published, skipping"
   rm -f .npmrc
   exit 0
 fi
