@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   BookOpen,
   ChevronRight,
@@ -25,6 +25,7 @@ interface ManualLayoutProps {
 
 export function ManualLayout({ sections, children, appName = "Manual de Usuario" }: ManualLayoutProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredSections = searchQuery
@@ -37,10 +38,25 @@ export function ManualLayout({ sections, children, appName = "Manual de Usuario"
       )
     : sections;
 
+  function handleChildClick(href: string) {
+    const [path, hash] = href.split("#");
+
+    if (hash && pathname === path) {
+      // Same page: just scroll to the anchor
+      const el = document.getElementById(hash);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    } else {
+      // Different page: navigate (Next.js handles the hash after navigation)
+      router.push(href);
+    }
+  }
+
   return (
     <div className="flex gap-0 min-h-[calc(100vh-3.5rem)]">
       {/* Manual sidebar */}
-      <aside className="w-64 shrink-0 border-r bg-gray-50 overflow-y-auto">
+      <aside data-manual-sidebar className="w-64 shrink-0 border-r bg-gray-50 overflow-y-auto">
         <div className="sticky top-0 bg-gray-50 p-4 border-b">
           <div className="flex items-center gap-2 mb-3">
             <BookOpen className="h-5 w-5 text-cyan-600" />
@@ -90,18 +106,14 @@ export function ManualLayout({ sections, children, appName = "Manual de Usuario"
                 {section.children && isActive && (
                   <div className="ml-6 mt-1 space-y-0.5">
                     {section.children.map((child) => (
-                      <Link
+                      <button
                         key={child.href}
-                        href={child.href}
-                        className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors ${
-                          pathname === child.href
-                            ? "text-cyan-700 font-medium"
-                            : "text-gray-500 hover:text-gray-700"
-                        }`}
+                        onClick={() => handleChildClick(child.href)}
+                        className="flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-xs text-left transition-colors cursor-pointer text-gray-500 hover:text-gray-700"
                       >
-                        <ChevronRight className="h-3 w-3" />
+                        <ChevronRight className="h-3 w-3 shrink-0" />
                         {child.title}
-                      </Link>
+                      </button>
                     ))}
                   </div>
                 )}
