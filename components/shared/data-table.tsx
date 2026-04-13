@@ -23,6 +23,8 @@ interface DataTableProps<TData, TValue> {
   searchPlaceholder?: string;
   searchDataHelp?: string;
   pageSize?: number;
+  pageSizeOptions?: number[];
+  rowClassName?: (row: TData) => string;
 }
 
 export function DataTable<TData, TValue>({
@@ -31,10 +33,13 @@ export function DataTable<TData, TValue>({
   searchKey,
   searchPlaceholder = "Buscar...",
   searchDataHelp,
-  pageSize = 10,
+  pageSize: initialPageSize = 10,
+  pageSizeOptions,
+  rowClassName,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [currentPageSize, setCurrentPageSize] = useState(initialPageSize);
 
   const table = useReactTable({
     data,
@@ -51,15 +56,22 @@ export function DataTable<TData, TValue>({
     },
     initialState: {
       pagination: {
-        pageSize,
+        pageSize: initialPageSize,
       },
     },
   });
 
+  function handlePageSizeChange(newSize: number) {
+    setCurrentPageSize(newSize);
+    table.setPageSize(newSize);
+  }
+
   const { pageIndex } = table.getState().pagination;
   const totalRows = table.getFilteredRowModel().rows.length;
-  const start = totalRows === 0 ? 0 : pageIndex * pageSize + 1;
-  const end = Math.min((pageIndex + 1) * pageSize, totalRows);
+  const activePSize = table.getState().pagination.pageSize;
+  const start = totalRows === 0 ? 0 : pageIndex * activePSize + 1;
+  const end = Math.min((pageIndex + 1) * activePSize, totalRows);
+  const sizeOptions = pageSizeOptions || [20, 50, 100];
 
   return (
     <div className="space-y-4">
@@ -119,7 +131,7 @@ export function DataTable<TData, TValue>({
               table.getRowModel().rows.map((row) => (
                 <tr
                   key={row.id}
-                  className="border-b transition-colors hover:bg-mc-neutral-50"
+                  className={`border-b transition-colors hover:bg-mc-neutral-50 ${rowClassName ? rowClassName(row.original) : ""}`}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <td key={cell.id} className="p-4 align-middle">
@@ -146,9 +158,23 @@ export function DataTable<TData, TValue>({
       </div>
 
       <div className="flex items-center justify-between px-2">
-        <p className="text-sm text-foreground-muted">
-          Mostrando {start}-{end} de {totalRows}
-        </p>
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-foreground-muted">
+            Mostrando {start}-{end} de {totalRows}
+          </p>
+          <select
+            value={activePSize}
+            onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+            className="rounded border px-2 py-1 text-xs text-foreground-muted"
+          >
+            {sizeOptions.map((size) => (
+              <option key={size} value={size}>
+                {size} / pág
+              </option>
+            ))}
+            <option value={totalRows}>Todos</option>
+          </select>
+        </div>
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
