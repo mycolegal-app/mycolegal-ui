@@ -35,7 +35,7 @@
     font-weight: var(--mc-font-bold);
     line-height: var(--mc-leading-tight);
     letter-spacing: var(--mc-tracking-tight);
-    color: var(--mc-slate-950);
+    color: inherit;
   }
 
   h1 { font-size: var(--mc-text-4xl); }

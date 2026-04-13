@@ -166,13 +166,13 @@ export function LoginForm({
           />
         )}
         {/* Gradient overlay to ensure text readability */}
-        <div className="absolute inset-0 bg-mc-slate-950/70 pointer-events-none" />
+        <div className="absolute inset-0 bg-mc-slate-950/80 pointer-events-none" />
 
         {/* Content */}
         <div className="relative z-10 flex flex-1 flex-col justify-center px-12">
           <div className="flex items-center gap-4 mb-6">
             {logoElement}
-            <h1 className="text-4xl font-bold">{appName}</h1>
+            <h1 className="text-4xl font-bold !text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">{appName}</h1>
           </div>
           {subtitle && (
             <p className="text-base text-mc-slate-300 max-w-sm leading-relaxed">{subtitle}</p>
