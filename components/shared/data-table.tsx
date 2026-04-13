@@ -5,6 +5,7 @@ import {
   type ColumnDef,
   type SortingState,
   type ColumnFiltersState,
+  type VisibilityState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
@@ -12,7 +13,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ArrowUpDown } from "lucide-react";
+import { ArrowUpDown, Columns3 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 
@@ -25,6 +26,7 @@ interface DataTableProps<TData, TValue> {
   pageSize?: number;
   pageSizeOptions?: number[];
   rowClassName?: (row: TData) => string;
+  enableColumnVisibility?: boolean;
 }
 
 export function DataTable<TData, TValue>({
@@ -36,10 +38,13 @@ export function DataTable<TData, TValue>({
   pageSize: initialPageSize = 10,
   pageSizeOptions,
   rowClassName,
+  enableColumnVisibility = false,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [currentPageSize, setCurrentPageSize] = useState(initialPageSize);
+  const [colMenuOpen, setColMenuOpen] = useState(false);
 
   const table = useReactTable({
     data,
@@ -50,9 +55,11 @@ export function DataTable<TData, TValue>({
     getFilteredRowModel: getFilteredRowModel(),
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
+    onColumnVisibilityChange: setColumnVisibility,
     state: {
       sorting,
       columnFilters,
+      columnVisibility,
     },
     initialState: {
       pagination: {
@@ -75,19 +82,57 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="space-y-4">
-      {searchKey && (
-        <div className="flex items-center">
-          <Input
-            placeholder={searchPlaceholder}
-            value={
-              (table.getColumn(searchKey)?.getFilterValue() as string) ?? ""
-            }
-            onChange={(e) =>
-              table.getColumn(searchKey)?.setFilterValue(e.target.value)
-            }
-            className="max-w-sm"
-            {...(searchDataHelp ? { "data-help": searchDataHelp } : {})}
-          />
+      {(searchKey || enableColumnVisibility) && (
+        <div className="flex items-center gap-2">
+          {searchKey && (
+            <Input
+              placeholder={searchPlaceholder}
+              value={
+                (table.getColumn(searchKey)?.getFilterValue() as string) ?? ""
+              }
+              onChange={(e) =>
+                table.getColumn(searchKey)?.setFilterValue(e.target.value)
+              }
+              className="max-w-sm"
+              {...(searchDataHelp ? { "data-help": searchDataHelp } : {})}
+            />
+          )}
+          {enableColumnVisibility && (
+            <div className="relative ml-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setColMenuOpen(!colMenuOpen)}
+                className="gap-1.5"
+              >
+                <Columns3 className="h-4 w-4" />
+                Columnas
+              </Button>
+              {colMenuOpen && (
+                <div className="absolute right-0 z-20 mt-1 min-w-[180px] rounded-md border bg-white p-2 shadow-lg">
+                  {table.getAllLeafColumns().map((column) => {
+                    if (column.id === "acciones") return null;
+                    return (
+                      <label
+                        key={column.id}
+                        className="flex items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-gray-50 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={column.getIsVisible()}
+                          onChange={column.getToggleVisibilityHandler()}
+                          className="rounded border-gray-300"
+                        />
+                        {typeof column.columnDef.header === "string"
+                          ? column.columnDef.header
+                          : column.id}
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
