@@ -25,6 +25,12 @@ export { EmptyState } from './components/shared/empty-state';
 export { KpiCard } from './components/shared/kpi-card';
 export { LoginForm } from './components/shared/login-form';
 export { AppCard } from './components/shared/app-card';
+export { Breadcrumbs } from './components/shared/breadcrumbs';
+export { CollapsibleSection } from './components/shared/collapsible-section';
+export { SidePanel } from './components/shared/side-panel';
+export { StatusBadge } from './components/shared/status-badge';
+export { CommandPalette } from './components/shared/command-palette';
+export type { CommandResultGroup, CommandResultItem, CommandQuickAction } from './components/shared/command-palette';
 
 // Utilities
 export { cn, formatCurrency, formatDate, formatDateTime } from './lib/utils';
@@ -32,3 +38,5 @@ export { cn, formatCurrency, formatDate, formatDateTime } from './lib/utils';
 // Hooks
 export { toast, useToast } from './hooks/use-toast';
 export type { ToastVariant, Toast as ToastType } from './hooks/use-toast';
+export { useKeyboardShortcuts } from './hooks/use-keyboard-shortcuts';
+export type { KeyboardShortcut } from './hooks/use-keyboard-shortcuts';
