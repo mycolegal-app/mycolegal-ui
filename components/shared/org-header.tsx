@@ -16,7 +16,7 @@ export function OrgHeader({ orgName, orgLogo, className = "" }: OrgHeaderProps) 
         <img
           src={orgLogo}
           alt={orgName}
-          className="h-8 w-8 shrink-0 rounded-md object-contain"
+          className="h-8 shrink-0 rounded-md object-contain"
         />
       ) : (
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-mc-primary-100 text-sm font-bold text-mc-primary-700">

@@ -58,17 +58,21 @@ export function CommandPalette({
   const [loading, setLoading] = useState(false);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Keyboard shortcut: Cmd+K / Ctrl+K
+  // Keyboard shortcuts: Cmd+K to toggle, Escape to close
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
         setOpen((prev) => !prev);
       }
+      if (e.key === "Escape" && open) {
+        e.preventDefault();
+        handleOpenChange(false);
+      }
     }
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [open]);
 
   const search = useCallback(
     async (q: string) => {
@@ -123,7 +127,7 @@ export function CommandPalette({
         className="flex items-center gap-2 rounded-md border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white/70 transition-colors hover:bg-white/15 hover:text-white"
       >
         <Search className="h-3.5 w-3.5" />
-        <span className="hidden sm:inline">Buscar...</span>
+        <span className="hidden sm:inline">Búsqueda general</span>
         <kbd className="ml-2 hidden rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-medium text-white/50 sm:inline">
           ⌘K
         </kbd>
