@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   type ColumnDef,
   type SortingState,
@@ -27,6 +27,7 @@ interface DataTableProps<TData, TValue> {
   pageSizeOptions?: number[];
   rowClassName?: (row: TData) => string;
   enableColumnVisibility?: boolean;
+  toolbar?: ReactNode;
 }
 
 export function DataTable<TData, TValue>({
@@ -39,6 +40,7 @@ export function DataTable<TData, TValue>({
   pageSizeOptions,
   rowClassName,
   enableColumnVisibility = false,
+  toolbar,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -82,8 +84,8 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="space-y-4">
-      {(searchKey || enableColumnVisibility) && (
-        <div className="flex items-center gap-2">
+      {(searchKey || enableColumnVisibility || toolbar) && (
+        <div className="flex flex-wrap items-center gap-2">
           {searchKey && (
             <Input
               placeholder={searchPlaceholder}
@@ -97,6 +99,7 @@ export function DataTable<TData, TValue>({
               {...(searchDataHelp ? { "data-help": searchDataHelp } : {})}
             />
           )}
+          {toolbar}
           {enableColumnVisibility && (
             <div className="relative ml-auto">
               <Button
@@ -137,7 +140,7 @@ export function DataTable<TData, TValue>({
       )}
 
       <div className="rounded-lg border">
-        <table className="w-full caption-bottom text-sm">
+        <table className="w-full caption-bottom text-xs">
           <thead className="[&_tr]:border-b">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr
@@ -147,7 +150,7 @@ export function DataTable<TData, TValue>({
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className="h-12 px-4 text-left align-middle font-medium text-foreground-muted"
+                    className="h-9 px-4 text-left align-middle font-medium text-foreground-muted"
                   >
                     {header.isPlaceholder ? null : header.column.getCanSort() ? (
                       <button
@@ -179,7 +182,7 @@ export function DataTable<TData, TValue>({
                   className={`border-b transition-colors hover:bg-mc-neutral-50 ${rowClassName ? rowClassName(row.original) : ""}`}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="p-4 align-middle">
+                    <td key={cell.id} className="px-4 py-1.5 align-middle">
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()

@@ -35,7 +35,9 @@ export function KpiCard({
         <div className="flex items-start justify-between">
           <div className="space-y-2">
             <p className="text-sm font-medium text-foreground-muted">{title}</p>
-            <p className="text-3xl font-bold tracking-tight">{value}</p>
+            <p className="text-3xl font-bold tracking-tight">
+              {typeof value === "number" ? value.toLocaleString("es-ES") : value}
+            </p>
             <p className="text-xs text-foreground-muted">{subtitle}</p>
             {trend && (
               <div
