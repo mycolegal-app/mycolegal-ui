@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { NavLink as Link } from "../shared/nav-link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   BookOpen,
