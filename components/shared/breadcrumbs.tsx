@@ -1,16 +1,13 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight, Home } from "lucide-react";
-import type { ComponentType, ComponentProps } from "react";
+import { NavLink } from "./nav-link";
 
 interface BreadcrumbsProps {
   routeLabels?: Record<string, string>;
   homeLabel?: string;
   homePath?: string;
-  /** Custom link component (defaults to Next.js Link) */
-  linkComponent?: ComponentType<ComponentProps<typeof Link>>;
 }
 
 const DEFAULT_LABELS: Record<string, string> = {
@@ -29,7 +26,6 @@ export function Breadcrumbs({
   routeLabels = {},
   homeLabel = "Inicio",
   homePath = "/",
-  linkComponent: LinkComponent = Link,
 }: BreadcrumbsProps) {
   const pathname = usePathname();
 
@@ -68,12 +64,12 @@ export function Breadcrumbs({
             {isLast ? (
               <span className="font-medium text-gray-700">{crumb.label}</span>
             ) : (
-              <LinkComponent
+              <NavLink
                 href={crumb.href}
                 className="hover:text-mc-primary-600 transition-colors"
               >
                 {crumb.label}
-              </LinkComponent>
+              </NavLink>
             )}
           </span>
         );
