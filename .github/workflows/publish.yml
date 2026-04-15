@@ -24,13 +24,21 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Publish package
+      - name: Check if version already published
+        id: check
         run: |
-          # Read current version from package.json
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          # Append git SHA to avoid version conflicts
-          NEW_VERSION="${CURRENT_VERSION}-${GITHUB_SHA::7}"
-          npm version "$NEW_VERSION" --no-git-tag-version
-          npm publish
+          echo "version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
+          if npm view "@mycolegal-app/ui@$CURRENT_VERSION" version 2>/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish package
+        if: steps.check.outputs.exists == 'false'
+        run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
