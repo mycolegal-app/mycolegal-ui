@@ -5,6 +5,13 @@
 
 ---
 
+## 1.4.0 — Muestra versiones desplegadas en la pantalla de login (2026-04-15)
+
+Type: **minor**
+
+
+
+
 ## 1.3.1 — Ajustes menores en los casos de test e2e (2026-04-15)
 
 Type: **revision**
