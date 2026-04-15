@@ -5,6 +5,13 @@
 
 ---
 
+## 1.4.1 — Bug fixes (borrado de organizaciones desde admin y otros errores menores) (2026-04-15)
+
+Type: **revision**
+
+
+
+
 ## 1.4.0 — Muestra versiones desplegadas en la pantalla de login (2026-04-15)
 
 Type: **minor**
