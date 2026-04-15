@@ -30,6 +30,8 @@ interface LoginFormProps {
   redirectTo?: string;
   /** Callback after successful login (alternative to redirectTo) */
   onSuccess?: (data: { token: string; user: Record<string, unknown> }) => void;
+  /** Version info shown discreetly in the bottom-left corner */
+  versionInfo?: { platform?: string; ui?: string };
 }
 
 export function LoginForm({
@@ -43,6 +45,7 @@ export function LoginForm({
   loginEndpoint = "/api/auth/login",
   redirectTo = "/",
   onSuccess,
+  versionInfo,
 }: LoginFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -201,11 +204,18 @@ export function LoginForm({
           <p className="text-xs text-mc-slate-600 mt-1">
             &copy; {new Date().getFullYear()} MycoLegalTech S.A.
           </p>
+          {versionInfo && (
+            <p className="text-[10px] text-mc-slate-700 mt-2 font-mono" data-testid="version-info" data-version-platform={versionInfo.platform} data-version-ui={versionInfo.ui}>
+              {versionInfo.platform && <>v{versionInfo.platform}</>}
+              {versionInfo.platform && versionInfo.ui && <> · </>}
+              {versionInfo.ui && <>ui {versionInfo.ui}</>}
+            </p>
+          )}
         </div>
       </div>
 
       {/* Right panel */}
-      <div className="flex flex-1 items-center justify-center px-6 bg-mc-neutral-50">
+      <div className="flex flex-1 flex-col items-center justify-center px-6 bg-mc-neutral-50 relative">
         <div className="w-full max-w-sm">
           {/* Mobile logo */}
           <div className="flex items-center gap-3 mb-8 lg:hidden">
@@ -306,6 +316,13 @@ export function LoginForm({
             </>
           )}
         </div>
+        {versionInfo && (
+          <p className="absolute bottom-3 left-6 text-[10px] text-mc-slate-400 font-mono lg:hidden" data-testid="version-info-mobile" data-version-platform={versionInfo.platform} data-version-ui={versionInfo.ui}>
+            {versionInfo.platform && <>v{versionInfo.platform}</>}
+            {versionInfo.platform && versionInfo.ui && <> · </>}
+            {versionInfo.ui && <>ui {versionInfo.ui}</>}
+          </p>
+        )}
       </div>
     </div>
   );
