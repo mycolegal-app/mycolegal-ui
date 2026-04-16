@@ -29,7 +29,6 @@ export function IdleTimeout({
 }: IdleTimeoutProps) {
   const [showModal, setShowModal] = useState(false);
   const [remaining, setRemaining] = useState(countdownSeconds);
-  const [continuing, setContinuing] = useState(false);
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countdownTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastActivity = useRef(Date.now());
@@ -107,18 +106,29 @@ export function IdleTimeout({
     };
   }, [showModal, onLogout]);
 
-  async function handleContinue() {
-    setContinuing(true);
-    try {
-      await onContinue();
-      setShowModal(false);
-      resetIdleTimer();
-    } catch {
-      // If refresh fails, logout
-      onLogout();
-    } finally {
-      setContinuing(false);
-    }
+  function handleContinue() {
+    // Close the modal + stop the countdown immediately so the user can keep
+    // working without waiting for the refresh round-trip. The refresh runs in
+    // the background; if it fails, the next authenticated request will 401
+    // and trigger the normal login redirect.
+    if (countdownTimer.current) clearInterval(countdownTimer.current);
+    setShowModal(false);
+    lastActivity.current = Date.now();
+    if (idleTimer.current) clearTimeout(idleTimer.current);
+    idleTimer.current = setTimeout(() => {
+      setShowModal(true);
+      setRemaining(countdownSeconds);
+    }, timeoutMs);
+    void onContinue().catch(() => {
+      // Silent — session will be invalidated on the next request if refresh truly failed.
+    });
+  }
+
+  function handleLogout() {
+    // Close the modal immediately for visual feedback; onLogout will redirect.
+    if (countdownTimer.current) clearInterval(countdownTimer.current);
+    setShowModal(false);
+    onLogout();
   }
 
   if (!showModal) return null;
@@ -164,17 +174,16 @@ export function IdleTimeout({
 
           <div className="mt-6 flex gap-3">
             <button
-              onClick={() => onLogout()}
+              onClick={handleLogout}
               className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               Cerrar sesión
             </button>
             <button
               onClick={handleContinue}
-              disabled={continuing}
-              className="flex-1 rounded-lg bg-cyan-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-cyan-700 disabled:opacity-50"
+              className="flex-1 rounded-lg bg-cyan-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-cyan-700"
             >
-              {continuing ? "Renovando..." : "Continuar"}
+              Continuar
             </button>
           </div>
         </div>
