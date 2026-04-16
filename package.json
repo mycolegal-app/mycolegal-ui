@@ -1,6 +1,6 @@
 {
   "name": "@mycolegal-app/ui",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "type": "module",
   "main": "./index.ts",
   "publishConfig": {
@@ -48,5 +48,5 @@
     "@types/react-dom": "^19.2.3",
     "typescript": "^6.0.2"
   },
-  "description": "Muestra versión en la pantalla compartida de login"
+  "description": "Añade estilos compartidos para botones en el Header de las apps"
 }

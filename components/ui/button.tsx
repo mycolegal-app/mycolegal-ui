@@ -18,6 +18,8 @@ const buttonVariants = cva(
           "bg-mc-neutral-100 text-mc-slate-900 hover:bg-mc-neutral-200",
         ghost:
           "hover:bg-mc-neutral-100 hover:text-mc-slate-900",
+        header:
+          "border border-white/30 text-white hover:bg-white/10",
         link:
           "text-mc-primary-700 underline-offset-4 hover:underline",
       },
