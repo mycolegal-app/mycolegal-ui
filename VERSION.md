@@ -5,6 +5,13 @@
 
 ---
 
+## 1.5.1 — Bug con el timeout de inactividad de sesión de usuario (2026-04-16)
+
+Type: **revision**
+
+
+
+
 ## 1.5.0 — Configuración de RESEND para servidor genérico de correo de la plataforma (2026-04-16)
 
 Type: **minor**
