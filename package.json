@@ -1,6 +1,6 @@
 {
   "name": "@mycolegal-app/ui",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "type": "module",
   "main": "./index.ts",
   "publishConfig": {
@@ -48,5 +48,5 @@
     "@types/react-dom": "^19.2.3",
     "typescript": "^6.0.2"
   },
-  "description": "Añade estilos compartidos para botones en el Header de las apps"
+  "description": "Nuevo aviso en el login cuando se conecta un usuario invitado sin activar"
 }

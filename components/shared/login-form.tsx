@@ -57,6 +57,9 @@ export function LoginForm({
   const [selectToken, setSelectToken] = useState<string | null>(null);
   const [userName, setUserName] = useState("");
 
+  // Pending-activation state (invited user logging in — we resend the activation email)
+  const [pendingActivation, setPendingActivation] = useState<{ email: string; message: string } | null>(null);
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
@@ -70,6 +73,15 @@ export function LoginForm({
       });
 
       const data = await res.json();
+
+      // Invited user — backend resent the activation email. Show the dedicated screen.
+      if (res.status === 202 || data.code === "account_pending_activation") {
+        setPendingActivation({
+          email,
+          message: data.message || "Tu cuenta está pendiente de activación. Te hemos reenviado el enlace a tu correo.",
+        });
+        return;
+      }
 
       if (!res.ok) {
         setError(data.error?.message || "Error de autenticación");
@@ -223,7 +235,26 @@ export function LoginForm({
             <span className="text-xl font-semibold text-mc-slate-900">{appName}</span>
           </div>
 
-          {orgs ? (
+          {pendingActivation ? (
+            /* ── Account pending activation ── */
+            <>
+              <h2 className="text-2xl font-bold text-mc-slate-900">Cuenta pendiente de activación</h2>
+              <div className="mt-4 rounded-lg bg-mc-primary-50 border border-mc-primary-500/30 px-4 py-3 text-sm text-mc-slate-700">
+                {pendingActivation.message}
+              </div>
+              <p className="mt-4 text-sm text-mc-slate-500">
+                Hemos enviado el enlace de activación a <strong>{pendingActivation.email}</strong>.
+                Revisa tu bandeja de entrada y la carpeta de spam. El enlace expira en 24 horas.
+              </p>
+              <button
+                type="button"
+                onClick={() => { setPendingActivation(null); setPassword(""); setError(""); }}
+                className="mt-6 text-sm text-mc-slate-500 hover:text-mc-slate-700 transition-colors"
+              >
+                ← Volver al login
+              </button>
+            </>
+          ) : orgs ? (
             /* ── Org selection step ── */
             <>
               <h2 className="text-2xl font-bold text-mc-slate-900">Selecciona organización</h2>
