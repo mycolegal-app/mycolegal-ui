@@ -5,6 +5,13 @@
 
 ---
 
+## 1.4.2 — Selector de aplicaciones en Header y cambios estéticos UI (2026-04-15)
+
+Type: **revision**
+
+
+
+
 ## 1.4.1 — Bug fixes (borrado de organizaciones desde admin y otros errores menores) (2026-04-15)
 
 Type: **revision**
