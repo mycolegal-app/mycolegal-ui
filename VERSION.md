@@ -5,6 +5,13 @@
 
 ---
 
+## 1.5.0 — Configuración de RESEND para servidor genérico de correo de la plataforma (2026-04-16)
+
+Type: **minor**
+
+
+
+
 ## 1.4.2 — Selector de aplicaciones en Header y cambios estéticos UI (2026-04-15)
 
 Type: **revision**
