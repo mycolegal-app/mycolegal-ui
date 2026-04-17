@@ -5,6 +5,13 @@
 
 ---
 
+## 1.7.0 — Version con audit de sesiones (2026-04-17)
+
+Type: **minor**
+
+
+
+
 ## 1.5.1 — Bug con el timeout de inactividad de sesión de usuario (2026-04-16)
 
 Type: **revision**
