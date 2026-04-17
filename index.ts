@@ -31,6 +31,8 @@ export { SidePanel } from './components/shared/side-panel';
 export { StatusBadge } from './components/shared/status-badge';
 export { CommandPalette } from './components/shared/command-palette';
 export type { CommandResultGroup, CommandResultItem, CommandQuickAction } from './components/shared/command-palette';
+export { AppInfoButton } from './components/shared/app-info-button';
+export { IncidentReporter } from './components/shared/incident-reporter';
 
 // Utilities
 export { cn, formatCurrency, formatDate, formatDateTime } from './lib/utils';
@@ -40,3 +42,5 @@ export { toast, useToast } from './hooks/use-toast';
 export type { ToastVariant, Toast as ToastType } from './hooks/use-toast';
 export { useKeyboardShortcuts } from './hooks/use-keyboard-shortcuts';
 export type { KeyboardShortcut } from './hooks/use-keyboard-shortcuts';
+export { useVersionInfo } from './hooks/use-version-info';
+export type { VersionInfo } from './hooks/use-version-info';

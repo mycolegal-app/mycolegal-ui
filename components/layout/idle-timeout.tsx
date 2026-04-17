@@ -9,8 +9,14 @@ interface IdleTimeoutProps {
   countdownSeconds?: number;
   /** Called when the user clicks "Continue" — should refresh the JWT */
   onContinue: () => Promise<void>;
-  /** Called when the countdown expires — should logout and redirect */
+  /** Called when the user explicitly clicks "Cerrar sesión" in the modal. */
   onLogout: () => void;
+  /**
+   * Called when the countdown elapses without user action. Distinct from
+   * onLogout so callers can emit a SESSION_TIMEOUT audit event instead of
+   * a regular LOGOUT. Falls back to onLogout when not provided.
+   */
+  onTimeout?: () => void;
 }
 
 const ACTIVITY_EVENTS: (keyof DocumentEventMap)[] = [
@@ -26,6 +32,7 @@ export function IdleTimeout({
   countdownSeconds = 60,
   onContinue,
   onLogout,
+  onTimeout,
 }: IdleTimeoutProps) {
   const [showModal, setShowModal] = useState(false);
   const [remaining, setRemaining] = useState(countdownSeconds);
@@ -94,7 +101,7 @@ export function IdleTimeout({
       setRemaining((prev) => {
         if (prev <= 1) {
           clearInterval(countdownTimer.current!);
-          onLogout();
+          (onTimeout ?? onLogout)();
           return 0;
         }
         return prev - 1;
@@ -104,7 +111,7 @@ export function IdleTimeout({
     return () => {
       if (countdownTimer.current) clearInterval(countdownTimer.current);
     };
-  }, [showModal, onLogout]);
+  }, [showModal, onLogout, onTimeout]);
 
   function handleContinue() {
     // Close the modal + stop the countdown immediately so the user can keep

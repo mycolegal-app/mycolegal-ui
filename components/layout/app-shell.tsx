@@ -5,6 +5,7 @@ import { Menu } from "lucide-react";
 import { PageHeaderProvider, usePageHeader } from "./page-header-context";
 import { AppSwitcher, type AppInfo } from "./app-switcher";
 import { IdleTimeout } from "./idle-timeout";
+import { AppInfoButton } from "../shared/app-info-button";
 
 interface UserInfo {
   displayName: string;
@@ -21,6 +22,10 @@ interface AppShellProps {
   children: ReactNode;
   /** App slug used to filter current app from the switcher */
   appSlug: string;
+  /** Display name used by the header info modal (e.g. "Notaría"). */
+  appName: string;
+  /** Optional logo shown in the info modal. */
+  appLogoUrl?: string;
   /** Sidebar component (app-specific nav) */
   sidebar: (props: { user: UserInfo; mobileOpen: boolean; onMobileClose: () => void }) => ReactNode;
   /** Optional slots for the header right section */
@@ -37,6 +42,8 @@ interface AppShellProps {
 function AppShellInner({
   children,
   appSlug,
+  appName,
+  appLogoUrl,
   org,
   apps,
   commandPalette,
@@ -46,6 +53,8 @@ function AppShellInner({
 }: {
   children: ReactNode;
   appSlug: string;
+  appName: string;
+  appLogoUrl?: string;
   org?: OrgInfo;
   apps: AppInfo[];
   commandPalette?: ReactNode;
@@ -82,6 +91,7 @@ function AppShellInner({
             )}
             {commandPalette}
             {helpButton}
+            <AppInfoButton appName={appName} appLogoUrl={appLogoUrl} />
             {/* App Switcher */}
             <AppSwitcher apps={apps} currentSlug={appSlug} />
             {/* Org info */}
@@ -110,6 +120,8 @@ function AppShellInner({
 export default function AppShell({
   children,
   appSlug,
+  appName,
+  appLogoUrl,
   sidebar,
   commandPalette,
   helpButton,
@@ -153,6 +165,8 @@ export default function AppShell({
         {sidebar({ user, mobileOpen, onMobileClose: () => setMobileOpen(false) })}
         <AppShellInner
           appSlug={appSlug}
+          appName={appName}
+          appLogoUrl={appLogoUrl}
           org={org}
           apps={apps}
           commandPalette={commandPalette}
@@ -170,9 +184,19 @@ export default function AppShell({
           await fetch("/api/auth/refresh", { method: "POST" });
         }}
         onLogout={() => {
-          fetch("/api/auth/logout", { method: "POST" }).finally(() => {
-            window.location.href = "/login";
-          });
+          // keepalive lets the POST finish even after navigation, so we can
+          // redirect immediately instead of waiting for the fetch to settle —
+          // otherwise a slow or hung logout call leaves the user sitting on
+          // the page after clicking "Cerrar sesión".
+          fetch("/api/auth/logout", { method: "POST", keepalive: true });
+          window.location.href = "/login";
+        }}
+        onTimeout={() => {
+          // Inactivity expiry — record SESSION_TIMEOUT in the audit trail
+          // instead of LOGOUT. Best-effort, fire-and-forget with keepalive so
+          // the request survives the immediate navigation below.
+          fetch("/api/auth/session/timeout", { method: "POST", keepalive: true });
+          window.location.href = "/login";
         }}
       />
     </PageHeaderProvider>
