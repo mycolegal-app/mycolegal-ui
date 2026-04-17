@@ -32,6 +32,8 @@ export { StatusBadge } from './components/shared/status-badge';
 export { CommandPalette } from './components/shared/command-palette';
 export type { CommandResultGroup, CommandResultItem, CommandQuickAction } from './components/shared/command-palette';
 export { AppInfoButton } from './components/shared/app-info-button';
+export { EmailConfigForm, deriveProvider } from './components/shared/email-config-form';
+export type { EmailConfigValues, EmailProvider, EmailConfigFormProps } from './components/shared/email-config-form';
 export { IncidentReporter } from './components/shared/incident-reporter';
 
 // Utilities

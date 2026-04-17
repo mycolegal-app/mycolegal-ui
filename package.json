@@ -1,6 +1,6 @@
 {
   "name": "@mycolegal-app/ui",
-  "version": "0.8.2",
+  "version": "0.8.3",
   "type": "module",
   "main": "./index.ts",
   "publishConfig": {
@@ -49,5 +49,5 @@
     "@types/react-dom": "^19.2.3",
     "typescript": "^6.0.2"
   },
-  "description": "Fix dialogo de versiones"
+  "description": "Form compartido de configuración de email"
 }
