@@ -5,6 +5,13 @@
 
 ---
 
+## 1.8.0 — Activación de RESEND para envío genérico de mails desde mail.mycolegal.app (2026-04-17)
+
+Type: **minor**
+
+
+
+
 ## 1.7.0 — Version con audit de sesiones (2026-04-17)
 
 Type: **minor**
