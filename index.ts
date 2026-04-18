@@ -24,6 +24,8 @@ export { LoadingSpinner } from './components/shared/loading-spinner';
 export { EmptyState } from './components/shared/empty-state';
 export { KpiCard } from './components/shared/kpi-card';
 export { LoginForm } from './components/shared/login-form';
+export { SetPasswordForm } from './components/shared/set-password-form';
+export { ForgotPasswordForm } from './components/shared/forgot-password-form';
 export { AppCard } from './components/shared/app-card';
 export { Breadcrumbs } from './components/shared/breadcrumbs';
 export { CollapsibleSection } from './components/shared/collapsible-section';
