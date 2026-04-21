@@ -18,14 +18,27 @@ interface IncidentReporterProps {
   appSlug: string;
   /** POST endpoint for the report. Defaults to the app's own proxy route. */
   submitUrl?: string;
-  /** Keyboard shortcut (defaults to Ctrl/Cmd+Shift+B). */
+  /**
+   * Keyboard shortcut that toggles the floating bug button's visibility
+   * (defaults to Ctrl/Cmd+Shift+B). The dialog is only opened by clicking
+   * the button itself — the shortcut is purely for show/hide.
+   */
   shortcut?: { key: string; shift?: boolean; alt?: boolean };
-  /** Hide the floating button but keep the keyboard shortcut. */
-  hideFloatingButton?: boolean;
 }
 
 const DEFAULT_SHORTCUT = { key: "B", shift: true };
 const MAX_CONSOLE_ERRORS = 5;
+const VISIBILITY_STORAGE_KEY = "mycolegal:incident-reporter:visible";
+
+function formatShortcut(s: { key: string; shift?: boolean; alt?: boolean }): string {
+  const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
+  const parts: string[] = [];
+  parts.push(isMac ? "⌘" : "Ctrl");
+  if (s.shift) parts.push(isMac ? "⇧" : "Shift");
+  if (s.alt) parts.push(isMac ? "⌥" : "Alt");
+  parts.push(s.key.toUpperCase());
+  return parts.join(isMac ? "" : "+");
+}
 
 interface CapturedError {
   message: string;
@@ -79,7 +92,6 @@ export function IncidentReporter({
   appSlug,
   submitUrl = "/api/incidents",
   shortcut = DEFAULT_SHORTCUT,
-  hideFloatingButton = false,
 }: IncidentReporterProps) {
   const [open, setOpen] = useState(false);
   const [capturing, setCapturing] = useState(false);
@@ -88,11 +100,16 @@ export function IncidentReporter({
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<null | "ok" | "error">(null);
   const [errorMessage, setErrorMessage] = useState<string>("");
+  const [captureError, setCaptureError] = useState<string | null>(null);
+  // The button is visible by default; the shortcut flips it, and the
+  // preference is persisted to localStorage so it survives reloads.
+  const [visible, setVisible] = useState(true);
 
   const consoleErrors = useConsoleErrorCapture();
 
   const captureScreenshot = useCallback(async () => {
     setCapturing(true);
+    setCaptureError(null);
     try {
       const mod = await import("html2canvas");
       const html2canvas = (mod.default || mod) as typeof import("html2canvas").default;
@@ -110,6 +127,11 @@ export function IncidentReporter({
     } catch (err) {
       console.error("Screenshot capture failed", err);
       setScreenshot(null);
+      // Preserve the failure reason so we can submit it as metadata. Without
+      // this, silent failures look identical to "user clicked cancel" and
+      // we have no way to diagnose why capture failed on a given page.
+      const msg = (err as Error)?.message || String(err);
+      setCaptureError(msg.slice(0, 500));
     } finally {
       setCapturing(false);
     }
@@ -126,6 +148,18 @@ export function IncidentReporter({
     setOpen(true);
   }, [captureScreenshot]);
 
+  // Hydrate the persisted visibility once on mount. We default to visible
+  // (so a fresh session still shows the bug) and only flip when a previous
+  // session explicitly stored "false".
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(VISIBILITY_STORAGE_KEY);
+      if (stored === "false") setVisible(false);
+    } catch {
+      // localStorage may be blocked (private mode); ignore — default stands.
+    }
+  }, []);
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const metaOrCtrl = e.metaKey || e.ctrlKey;
@@ -134,12 +168,16 @@ export function IncidentReporter({
       const matchesAlt = shortcut.alt ? e.altKey : true;
       if (metaOrCtrl && matchesShift && matchesAlt && matchesKey) {
         e.preventDefault();
-        if (!open) openReporter();
+        setVisible((v) => {
+          const next = !v;
+          try { window.localStorage.setItem(VISIBILITY_STORAGE_KEY, String(next)); } catch {}
+          return next;
+        });
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open, openReporter, shortcut]);
+  }, [shortcut]);
 
   const submit = useCallback(async () => {
     if (!description.trim()) return;
@@ -162,6 +200,7 @@ export function IncidentReporter({
             language: navigator.language,
             platform: (navigator as any).platform,
             consoleErrors,
+            screenshotCaptureError: captureError,
             capturedAt: new Date().toISOString(),
           },
         }),
@@ -179,17 +218,19 @@ export function IncidentReporter({
     } finally {
       setSubmitting(false);
     }
-  }, [appSlug, consoleErrors, description, screenshot, submitUrl]);
+  }, [appSlug, captureError, consoleErrors, description, screenshot, submitUrl]);
+
+  const shortcutLabel = formatShortcut(shortcut);
 
   return (
     <>
-      {!hideFloatingButton && (
+      {visible && (
         <button
           type="button"
           onClick={openReporter}
-          title="Reportar incidencia (Ctrl/Cmd + Shift + B)"
-          aria-label="Reportar incidencia"
-          className="fixed bottom-5 right-5 z-40 inline-flex h-11 w-11 items-center justify-center rounded-full bg-navy text-white shadow-lg transition-transform hover:scale-105 hover:bg-navy-800 focus:outline-none focus:ring-2 focus:ring-cyan"
+          title={`Reportar incidencia — ${shortcutLabel} para ocultar este botón`}
+          aria-label={`Reportar incidencia. Pulsa ${shortcutLabel} para ocultar este botón.`}
+          className="fixed bottom-6 right-6 z-40 inline-flex h-10 w-10 items-center justify-center rounded-full bg-navy text-white shadow-lg ring-1 ring-white/40 transition-transform hover:scale-105 hover:bg-navy-800 focus:outline-none focus:ring-2 focus:ring-cyan print:hidden"
         >
           <Bug className="h-5 w-5" />
         </button>
@@ -226,6 +267,11 @@ export function IncidentReporter({
                 <div className="flex h-40 flex-col items-center justify-center gap-2 text-sm text-gray-500">
                   <Camera className="h-5 w-5" />
                   <span>No se pudo capturar la pantalla — el reporte se enviará sin imagen.</span>
+                  {captureError && (
+                    <span className="max-w-xs truncate text-[11px] text-gray-400" title={captureError}>
+                      {captureError}
+                    </span>
+                  )}
                   <button
                     type="button"
                     onClick={captureScreenshot}

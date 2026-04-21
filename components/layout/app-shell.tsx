@@ -6,6 +6,7 @@ import { PageHeaderProvider, usePageHeader } from "./page-header-context";
 import { AppSwitcher, type AppInfo } from "./app-switcher";
 import { IdleTimeout } from "./idle-timeout";
 import { AppInfoButton } from "../shared/app-info-button";
+import { useAuthFetchGuard } from "../../hooks/use-auth-fetch-guard";
 
 interface UserInfo {
   displayName: string;
@@ -130,10 +131,11 @@ export default function AppShell({
   providers,
 }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [user, setUser] = useState<UserInfo>({ displayName: "...", email: "", role: "" });
+  const [user, setUser] = useState<UserInfo>({ displayName: "Cargando…", email: "", role: "" });
   const [org, setOrg] = useState<OrgInfo | undefined>(undefined);
   const [apps, setApps] = useState<AppInfo[]>([]);
   const [inactivityTimeout, setInactivityTimeout] = useState(15);
+  useAuthFetchGuard();
 
   useEffect(() => {
     fetch("/api/auth/me")

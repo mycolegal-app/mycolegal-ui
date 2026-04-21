@@ -96,8 +96,15 @@ export function LoginForm({
         return;
       }
 
+      // Admin-created-with-initial-password users must rotate before
+      // landing on the dashboard. The cookie is already set so /change-password
+      // is an authenticated page; server clears the flag on success.
+      const forcedChange = data?.data?.mustChangePassword === true || data?.mustChangePassword === true;
+
       if (onSuccess) {
         onSuccess(data);
+      } else if (forcedChange) {
+        window.location.href = "/change-password";
       } else {
         window.location.href = redirectTo;
       }
@@ -126,8 +133,12 @@ export function LoginForm({
         return;
       }
 
+      const forcedChange = data?.data?.mustChangePassword === true || data?.mustChangePassword === true;
+
       if (onSuccess) {
         onSuccess(data);
+      } else if (forcedChange) {
+        window.location.href = "/change-password";
       } else {
         window.location.href = redirectTo;
       }

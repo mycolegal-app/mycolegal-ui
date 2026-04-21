@@ -25,6 +25,7 @@ export { EmptyState } from './components/shared/empty-state';
 export { KpiCard } from './components/shared/kpi-card';
 export { LoginForm } from './components/shared/login-form';
 export { SetPasswordForm } from './components/shared/set-password-form';
+export { ChangePasswordForm } from './components/shared/change-password-form';
 export { ForgotPasswordForm } from './components/shared/forgot-password-form';
 export { AppCard } from './components/shared/app-card';
 export { Breadcrumbs } from './components/shared/breadcrumbs';
@@ -37,6 +38,18 @@ export { AppInfoButton } from './components/shared/app-info-button';
 export { EmailConfigForm, deriveProvider } from './components/shared/email-config-form';
 export type { EmailConfigValues, EmailProvider, EmailConfigFormProps } from './components/shared/email-config-form';
 export { IncidentReporter } from './components/shared/incident-reporter';
+export { SpainCCAAMap } from './components/shared/spain-ccaa-map';
+export type { SpainCCAAMapJurisdiccion, SpainCCAAMapProps } from './components/shared/spain-ccaa-map';
+export { NotificationsBell } from './components/shared/notifications-bell';
+export type { NotificationEntry } from './components/shared/notifications-bell';
+export { IncidentThread } from './components/shared/incident-thread';
+export type {
+  IncidentThreadIncident,
+  IncidentThreadMessage,
+} from './components/shared/incident-thread';
+export { SortableList } from './components/shared/sortable-list';
+export type { SortableListProps } from './components/shared/sortable-list';
+export { IdleTimeout } from './components/layout/idle-timeout';
 
 // Utilities
 export { cn, formatCurrency, formatDate, formatDateTime } from './lib/utils';
@@ -48,3 +61,4 @@ export { useKeyboardShortcuts } from './hooks/use-keyboard-shortcuts';
 export type { KeyboardShortcut } from './hooks/use-keyboard-shortcuts';
 export { useVersionInfo } from './hooks/use-version-info';
 export type { VersionInfo } from './hooks/use-version-info';
+export { useAuthFetchGuard } from './hooks/use-auth-fetch-guard';

@@ -36,6 +36,8 @@ export function IdleTimeout({
 }: IdleTimeoutProps) {
   const [showModal, setShowModal] = useState(false);
   const [remaining, setRemaining] = useState(countdownSeconds);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState(false);
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countdownTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastActivity = useRef(Date.now());
@@ -113,22 +115,28 @@ export function IdleTimeout({
     };
   }, [showModal, onLogout, onTimeout]);
 
-  function handleContinue() {
-    // Close the modal + stop the countdown immediately so the user can keep
-    // working without waiting for the refresh round-trip. The refresh runs in
-    // the background; if it fails, the next authenticated request will 401
-    // and trigger the normal login redirect.
+  async function handleContinue() {
+    // Pause the countdown while refreshing but keep the modal visible so the
+    // user gets clear feedback if the refresh fails (previous behavior closed
+    // the modal immediately and swallowed the error silently).
     if (countdownTimer.current) clearInterval(countdownTimer.current);
-    setShowModal(false);
-    lastActivity.current = Date.now();
-    if (idleTimer.current) clearTimeout(idleTimer.current);
-    idleTimer.current = setTimeout(() => {
-      setShowModal(true);
-      setRemaining(countdownSeconds);
-    }, timeoutMs);
-    void onContinue().catch(() => {
-      // Silent — session will be invalidated on the next request if refresh truly failed.
-    });
+    setRefreshing(true);
+    setRefreshError(false);
+    try {
+      await onContinue();
+      setShowModal(false);
+      setRefreshing(false);
+      lastActivity.current = Date.now();
+      if (idleTimer.current) clearTimeout(idleTimer.current);
+      idleTimer.current = setTimeout(() => {
+        setShowModal(true);
+        setRemaining(countdownSeconds);
+      }, timeoutMs);
+    } catch {
+      // Refresh failed — surface the error and force the user to log in again.
+      setRefreshing(false);
+      setRefreshError(true);
+    }
   }
 
   function handleLogout() {
@@ -172,26 +180,45 @@ export function IdleTimeout({
           </div>
 
           <h2 className="text-lg font-semibold text-gray-900">
-            Sesión a punto de expirar
+            {refreshError ? "No se pudo renovar la sesión" : "Sesión a punto de expirar"}
           </h2>
           <p className="mt-2 text-sm text-gray-500">
-            Por inactividad, tu sesión se cerrará automáticamente en{" "}
-            <strong>{remaining}</strong> segundos.
+            {refreshError ? (
+              <>Tu sesión ha caducado o no se pudo renovar. Vuelve a iniciar sesión.</>
+            ) : (
+              <>
+                Por inactividad, tu sesión se cerrará automáticamente en{" "}
+                <strong>{remaining}</strong> segundos.
+              </>
+            )}
           </p>
 
           <div className="mt-6 flex gap-3">
-            <button
-              onClick={handleLogout}
-              className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Cerrar sesión
-            </button>
-            <button
-              onClick={handleContinue}
-              className="flex-1 rounded-lg bg-cyan-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-cyan-700"
-            >
-              Continuar
-            </button>
+            {refreshError ? (
+              <button
+                onClick={handleLogout}
+                className="flex-1 rounded-lg bg-cyan-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-cyan-700"
+              >
+                Ir al login
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={handleLogout}
+                  disabled={refreshing}
+                  className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Cerrar sesión
+                </button>
+                <button
+                  onClick={handleContinue}
+                  disabled={refreshing}
+                  className="flex-1 rounded-lg bg-cyan-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-cyan-700 disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  {refreshing ? "Renovando..." : "Continuar"}
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
