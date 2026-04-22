@@ -1,6 +1,6 @@
 {
   "name": "@mycolegal-app/ui",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "type": "module",
   "main": "./index.ts",
   "publishConfig": {
@@ -52,5 +52,5 @@
     "@types/react-dom": "^19.2.3",
     "typescript": "^6.0.2"
   },
-  "description": "Mejoras del mapa CCAA"
+  "description": "Componentes compartidos para nueva app DocFilling"
 }
