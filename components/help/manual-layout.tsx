@@ -54,10 +54,18 @@ export function ManualLayout({ sections, children, appName = "Manual de Usuario"
   }
 
   return (
-    <div className="flex gap-0 min-h-[calc(100vh-3.5rem)]">
-      {/* Manual sidebar */}
-      <aside data-manual-sidebar className="w-64 shrink-0 border-r bg-gray-50 overflow-y-auto">
-        <div className="sticky top-0 bg-gray-50 p-4 border-b">
+    // Fixed-height shell so that only the content column scrolls. The aside
+    // (index) and the page chrome (topbar, breadcrumb) stay in place. The
+    // 8rem delta matches the other full-height pages in the app (topbar 3.5rem
+    // + breadcrumb row + main's p-6 vertical padding).
+    <div className="flex h-[calc(100vh-8rem)] min-h-0 gap-0">
+      {/* Manual sidebar — fixed column. Only its own content scrolls when the
+          index grows longer than the viewport. */}
+      <aside
+        data-manual-sidebar
+        className="w-64 shrink-0 border-r bg-gray-50 flex flex-col min-h-0"
+      >
+        <div className="bg-gray-50 p-4 border-b shrink-0">
           <div className="flex items-center gap-2 mb-3">
             <BookOpen className="h-5 w-5 text-cyan-600" />
             <h2 className="font-semibold text-gray-900">{appName}</h2>
@@ -83,7 +91,7 @@ export function ManualLayout({ sections, children, appName = "Manual de Usuario"
           </div>
         </div>
 
-        <nav className="p-3 space-y-1">
+        <nav className="flex-1 min-h-0 overflow-y-auto p-3 space-y-1">
           {filteredSections.map((section) => {
             const isActive = pathname === section.href || pathname.startsWith(section.href + "/");
             const Icon = section.icon;
@@ -123,9 +131,15 @@ export function ManualLayout({ sections, children, appName = "Manual de Usuario"
         </nav>
       </aside>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-3xl mx-auto px-8 py-6">
+      {/* Content — the only scroll area of the manual. The outer <main> stays
+          unscrolled because our shell height exactly matches main's content
+          box. Spacing overrides live here so every manual page reads with more
+          air between sections and subsections without touching each content
+          file per language. */}
+      <div className="flex-1 min-w-0 min-h-0 overflow-y-auto">
+        <div
+          className="manual-prose max-w-3xl mx-auto px-8 py-10 [&_section]:scroll-mt-6 [&_.space-y-8>*+*]:!mt-14 [&_h2]:!mt-2 [&_h2]:!mb-5 [&_h3]:!mt-1 [&_h3]:!mb-2.5 [&_section>*+*]:!mt-4"
+        >
           {children}
         </div>
       </div>
