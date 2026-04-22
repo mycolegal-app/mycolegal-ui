@@ -62,3 +62,7 @@ export type { KeyboardShortcut } from './hooks/use-keyboard-shortcuts';
 export { useVersionInfo } from './hooks/use-version-info';
 export type { VersionInfo } from './hooks/use-version-info';
 export { useAuthFetchGuard } from './hooks/use-auth-fetch-guard';
+
+// DocFilling integration
+export { DocFillingModal } from './components/docfilling/DocFillingModal';
+export type { DocFillingModalProps } from './components/docfilling/DocFillingModal';
