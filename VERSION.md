@@ -5,6 +5,13 @@
 
 ---
 
+## 2.0.0 — Versión con BD unificada entre apps e integración inicial con DocFilling (2026-04-23)
+
+Type: **major**
+
+
+
+
 ## 1.20.0 — Manual: aside del índice fijo y más aire entre secciones + consolida DocFillingModal (2026-04-22)
 
 Type: **minor**
