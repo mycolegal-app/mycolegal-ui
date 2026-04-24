@@ -37,6 +37,8 @@ export type { CommandResultGroup, CommandResultItem, CommandQuickAction } from '
 export { AppInfoButton } from './components/shared/app-info-button';
 export { EmailConfigForm, deriveProvider } from './components/shared/email-config-form';
 export type { EmailConfigValues, EmailProvider, EmailConfigFormProps } from './components/shared/email-config-form';
+export { EmailTemplatesManager } from './components/shared/email-templates-manager';
+export type { EmailTemplateEntry, EmailTemplatesManagerProps } from './components/shared/email-templates-manager';
 export { IncidentReporter } from './components/shared/incident-reporter';
 export { SpainCCAAMap } from './components/shared/spain-ccaa-map';
 export type { SpainCCAAMapJurisdiccion, SpainCCAAMapProps } from './components/shared/spain-ccaa-map';

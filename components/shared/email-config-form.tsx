@@ -16,11 +16,9 @@ export interface EmailConfigValues {
   smtpSecure: boolean;
   fromAddress: string;
   fromName: string;
-  inviteSubject: string;
-  inviteTemplate: string;
 }
 
-export type EmailProvider = "resend" | "smtp";
+export type EmailProvider = "platform" | "resend" | "smtp";
 
 const EMPTY: EmailConfigValues = {
   smtpHost: "",
@@ -30,8 +28,6 @@ const EMPTY: EmailConfigValues = {
   smtpSecure: true,
   fromAddress: "",
   fromName: "",
-  inviteSubject: "",
-  inviteTemplate: "",
 };
 
 const RESEND_HOST = "smtp.resend.com";
@@ -39,13 +35,25 @@ const RESEND_PORT = "465";
 const RESEND_USER = "resend";
 
 /**
- * Heuristic: a row is "Resend-shaped" iff it has Resend's host and the
- * canonical `resend` SMTP user. Anything else is treated as plain SMTP.
- * Option A in the proposal — no schema/provider column.
+ * Heuristic over a stored `org_email_configs` row:
+ *  - In org scope, an "empty" row (no SMTP host/user/pass and no from
+ *    address/name) means "delegate to the platform default" — the backend
+ *    already falls back to the system-org config in that case.
+ *  - A row pinned to Resend's host + canonical user is Resend.
+ *  - Anything else is plain SMTP.
+ * The platform scope never has "platform" as an option since it is the
+ * platform — so we only collapse to "platform" for org scope.
  */
-export function deriveProvider(cfg: Partial<EmailConfigValues> | null | undefined): EmailProvider {
-  if (!cfg) return "smtp";
-  if (cfg.smtpHost === RESEND_HOST && (cfg.smtpUser ?? "") === RESEND_USER) return "resend";
+export function deriveProvider(
+  cfg: Partial<EmailConfigValues> | null | undefined,
+  scope: "platform" | "org" = "org",
+): EmailProvider {
+  if (scope === "org") {
+    const noSmtp = !cfg?.smtpHost && !cfg?.smtpUser && !cfg?.smtpPass;
+    const noFrom = !cfg?.fromAddress && !cfg?.fromName;
+    if (!cfg || (noSmtp && noFrom)) return "platform";
+  }
+  if (cfg?.smtpHost === RESEND_HOST && (cfg?.smtpUser ?? "") === RESEND_USER) return "resend";
   return "smtp";
 }
 
@@ -54,14 +62,15 @@ export interface EmailConfigFormProps {
   scope: "platform" | "org";
   /** Initial config as returned by the API (nullable fields stringified). */
   initial?: Partial<EmailConfigValues> | null;
-  /** Default invite subject/template from the i18n layer (shown as placeholders). */
-  defaults?: { inviteSubject?: string; inviteTemplate?: string };
-  /** Macros listed above the template editor. */
-  macros?: string[];
   /** Labeled "Guardando…" while true. */
   saving?: boolean;
   /** Disable the whole form (loading state). */
   loading?: boolean;
+  /**
+   * Platform (system-org) sender shown in the "global provider" note when
+   * the org delegates to it. Ignored when scope === "platform".
+   */
+  platformSender?: { fromAddress: string | null; fromName: string | null };
   /**
    * Persist handler. Receives the values in Resend-or-SMTP shape ready for
    * the PUT payload — numeric port as string, empty strings for empty
@@ -77,16 +86,17 @@ export interface EmailConfigFormProps {
 export function EmailConfigForm({
   scope,
   initial,
-  defaults,
-  macros = [],
   saving = false,
   loading = false,
+  platformSender,
   onSave,
   testSlot,
   footerSlot,
 }: EmailConfigFormProps) {
   const [values, setValues] = useState<EmailConfigValues>(EMPTY);
-  const [provider, setProvider] = useState<EmailProvider>("smtp");
+  const [provider, setProvider] = useState<EmailProvider>(
+    scope === "org" ? "platform" : "smtp",
+  );
 
   // Sync state from props whenever `initial` changes identity.
   useEffect(() => {
@@ -98,22 +108,33 @@ export function EmailConfigForm({
       smtpSecure: initial?.smtpSecure ?? true,
       fromAddress: initial?.fromAddress ?? "",
       fromName: initial?.fromName ?? "",
-      inviteSubject: initial?.inviteSubject ?? "",
-      inviteTemplate: initial?.inviteTemplate ?? "",
     };
     setValues(next);
-    setProvider(deriveProvider(next));
-  }, [initial]);
+    setProvider(deriveProvider(next, scope));
+  }, [initial, scope]);
 
   /**
    * When the user flips providers, rewrite the SMTP-specific fields in
    * place so they don't see stale values from the other mode. The secret
    * (smtpPass) is kept — switching from Resend to SMTP should keep the key
-   * as the new password if the admin wants to reuse it.
+   * as the new password if the admin wants to reuse it. "platform" wipes
+   * the transport fields entirely so the row is stored empty and the
+   * backend falls back to the system-org config.
    */
   const switchProvider = useCallback((next: EmailProvider) => {
     setProvider(next);
-    if (next === "resend") {
+    if (next === "platform") {
+      setValues((v) => ({
+        ...v,
+        smtpHost: "",
+        smtpPort: "587",
+        smtpUser: "",
+        smtpPass: "",
+        smtpSecure: true,
+        fromAddress: "",
+        fromName: "",
+      }));
+    } else if (next === "resend") {
       setValues((v) => ({
         ...v,
         smtpHost: RESEND_HOST,
@@ -133,9 +154,12 @@ export function EmailConfigForm({
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    // Normalize Resend payload so the row persists with the exact shape the
-    // backend expects — admin might have changed nothing after switching
-    // provider; we still want the host/user/secure pinned.
+    // Normalize payload per provider:
+    //  - resend: pin host/port/user/secure so the row persists in the exact
+    //    shape the backend expects, even if the admin didn't touch anything.
+    //  - platform: wipe all transport + from fields so the backend falls back
+    //    to the system-org config. The invite subject/template are preserved
+    //    because the org may still want to personalize them.
     const payload: EmailConfigValues =
       provider === "resend"
         ? {
@@ -145,6 +169,17 @@ export function EmailConfigForm({
             smtpUser: RESEND_USER,
             smtpSecure: true,
           }
+        : provider === "platform"
+        ? {
+            ...values,
+            smtpHost: "",
+            smtpPort: "",
+            smtpUser: "",
+            smtpPass: "",
+            smtpSecure: true,
+            fromAddress: "",
+            fromName: "",
+          }
         : values;
     await onSave(payload);
   }
@@ -153,12 +188,27 @@ export function EmailConfigForm({
     return <p className="text-gray-500 text-sm py-8 text-center">Cargando...</p>;
   }
 
+  const platformFromAddress = platformSender?.fromAddress?.trim() || null;
+  const platformFromName = platformSender?.fromName?.trim() || null;
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Provider picker — always visible. */}
       <div className="border rounded-lg p-4 space-y-3">
         <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wider">Proveedor</h3>
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-4">
+          {scope === "org" && (
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="radio"
+                name="email-provider"
+                value="platform"
+                checked={provider === "platform"}
+                onChange={() => switchProvider("platform")}
+              />
+              Proveedor global MyCoLegal.app
+            </label>
+          )}
           <label className="flex items-center gap-2 text-sm">
             <input
               type="radio"
@@ -181,80 +231,44 @@ export function EmailConfigForm({
           </label>
         </div>
         <p className="text-xs text-gray-500">
-          {provider === "resend"
+          {provider === "platform"
+            ? "Los correos de esta organización se enviarán desde la cuenta genérica de la plataforma MyCoLegal.app."
+            : provider === "resend"
             ? "Envíos vía Resend. Sólo necesitas la API key y la dirección de remitente."
             : scope === "platform"
             ? "Servidor SMTP arbitrario. Si todos los campos quedan vacíos se usarán las variables de entorno del servicio."
-            : "Servidor SMTP propio de esta organización. Si queda vacío, se usa la configuración genérica de la plataforma."}
+            : "Servidor SMTP propio de esta organización."}
         </p>
       </div>
 
-      {/* Provider-specific fields */}
-      <div className="border rounded-lg p-4 space-y-4">
-        {provider === "resend" ? (
-          <ResendFields values={values} setValues={setValues} scope={scope} />
-        ) : (
-          <SmtpFields values={values} setValues={setValues} scope={scope} />
-        )}
-      </div>
-
-      {/* Invitation template — identical for both providers */}
-      <div className="border rounded-lg p-4 space-y-4">
-        <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wider">
-          Plantilla de invitación{scope === "platform" ? " por defecto" : ""}
-        </h3>
-
-        {macros.length > 0 && (
-          <div className="bg-gray-50 rounded-lg p-3">
-            <p className="text-xs font-medium text-gray-500 mb-2">Macros disponibles:</p>
-            <div className="flex flex-wrap gap-1.5">
-              {macros.map((m) => (
-                <code
-                  key={m}
-                  className="text-xs bg-white border border-gray-200 rounded px-1.5 py-0.5 text-gray-700 font-mono"
-                >{`{{${m}}}`}</code>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Asunto</label>
-          <input
-            type="text"
-            value={values.inviteSubject}
-            onChange={(e) => setValues((v) => ({ ...v, inviteSubject: e.target.value }))}
-            placeholder={defaults?.inviteSubject}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-          />
-          <p className="text-xs text-gray-400 mt-1">Vacío = plantilla por defecto del código (i18n)</p>
-        </div>
-
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Cuerpo (HTML)</label>
-          <textarea
-            value={values.inviteTemplate}
-            onChange={(e) => setValues((v) => ({ ...v, inviteTemplate: e.target.value }))}
-            placeholder={defaults?.inviteTemplate}
-            rows={12}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono"
-          />
-          <p className="text-xs text-gray-400 mt-1">
-            Vacío = plantilla por defecto del código (i18n). Usa las macros indicadas arriba.
+      {/* Provider-specific section */}
+      {provider === "platform" ? (
+        <div className="border rounded-lg p-4 bg-blue-50/40 text-sm text-gray-700 space-y-2">
+          <p>
+            Los correos se enviarán desde la cuenta genérica configurada en el servicio global de correo de la plataforma:
+          </p>
+          {platformFromAddress ? (
+            <p className="font-mono text-xs bg-white border border-gray-200 rounded px-2 py-1 inline-block">
+              {platformFromName ? `${platformFromName} <${platformFromAddress}>` : platformFromAddress}
+            </p>
+          ) : (
+            <p className="text-xs text-amber-700">
+              Aún no se ha definido un remitente global. Un superadmin debe configurarlo en «Correo plataforma».
+            </p>
+          )}
+          <p className="text-xs text-gray-500">
+            No hace falta parametrizar SMTP ni Resend para esta organización. Las plantillas de correo se gestionan en el apartado «Plantillas de correo» dentro de la administración de cada aplicación.
           </p>
         </div>
-
-        {defaults?.inviteTemplate && !values.inviteTemplate && (
-          <details className="text-sm">
-            <summary className="cursor-pointer text-gray-500 hover:text-gray-700">
-              Ver plantilla por defecto del código
-            </summary>
-            <pre className="mt-2 bg-gray-50 rounded-lg p-3 text-xs overflow-x-auto whitespace-pre-wrap font-mono text-gray-600">
-              {defaults.inviteTemplate}
-            </pre>
-          </details>
-        )}
-      </div>
+      ) : (
+        <div className="border rounded-lg p-4 space-y-4">
+          {provider === "resend" ? (
+            <ResendFields values={values} setValues={setValues} scope={scope} />
+          ) : (
+            <SmtpFields values={values} setValues={setValues} scope={scope} />
+          )}
+        </div>
+      )}
 
       {testSlot}
 
