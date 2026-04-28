@@ -5,6 +5,13 @@
 
 ---
 
+## 2.1.0 — Primer despliegue con Beta de Archivo y skeleton de apps nuevas (2026-04-27)
+
+Type: **minor**
+
+
+
+
 ## 2.0.0 — Versión con BD unificada entre apps e integración inicial con DocFilling (2026-04-23)
 
 Type: **major**
