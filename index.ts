@@ -49,6 +49,12 @@ export type {
   IncidentThreadIncident,
   IncidentThreadMessage,
 } from './components/shared/incident-thread';
+// Shared "my incidents" pages — every consumer app re-exports these as
+// the default export of their /incidencias and /incidencias/[number]
+// route segments. See server/incidents-routes.ts for the matching
+// API handler factory.
+export { MyIncidentsPage } from './components/shared/incidents-pages/my-incidents-page';
+export { IncidentDetailPage } from './components/shared/incidents-pages/incident-detail-page';
 export { SortableList } from './components/shared/sortable-list';
 export type { SortableListProps } from './components/shared/sortable-list';
 export { IdleTimeout } from './components/layout/idle-timeout';
