@@ -239,7 +239,7 @@ export function NotificationsBell({
         {unread > 0 && (
           <span
             aria-label={`${unread} sin leer`}
-            className="absolute -top-1 -right-1 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white"
+            className="absolute -top-1 -right-1 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white"
           >
             {unread > 99 ? "99+" : unread}
           </span>

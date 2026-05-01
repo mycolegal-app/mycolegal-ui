@@ -130,7 +130,7 @@ export function CommandPalette({
       >
         <Search className="h-3.5 w-3.5" />
         <span className="hidden sm:inline">Búsqueda general</span>
-        <kbd className="ml-2 hidden rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-medium text-white/50 sm:inline">
+        <kbd className="ml-2 hidden rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-medium text-white/80 sm:inline">
           ⌘K
         </kbd>
       </button>

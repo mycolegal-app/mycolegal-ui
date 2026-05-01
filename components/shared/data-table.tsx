@@ -302,6 +302,7 @@ export function DataTable<TData, TValue>({
           <select
             value={activePSize}
             onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+            aria-label="Filas por página"
             className="rounded border px-2 py-1 text-xs text-foreground-muted"
           >
             {sizeOptions.map((size) => (
