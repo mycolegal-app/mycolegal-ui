@@ -4,3 +4,5 @@ export { HelpButton } from "./help-button";
 export { HelpTooltip } from "./help-tooltip";
 export { usePageHelp } from "./use-page-help";
 export { ManualLayout, type ManualSection } from "./manual-layout";
+export { createManualResolver } from "./manual-resolver";
+export { makeManualSectionPage } from "./manual-section-page";

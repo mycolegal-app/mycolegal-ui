@@ -66,9 +66,13 @@ function AppShellInner({
   const { header } = usePageHeader();
 
   return (
-    <div className="lg:ml-[220px] flex flex-1 flex-col min-h-screen">
+    // h-screen (no min-h-screen) so the column has a bounded height. Together
+    // with the outer wrapper's overflow-hidden, this is what makes <main>'s
+    // own overflow-y-auto kick in instead of the body scrolling. Project rule:
+    // pages must never scroll vertically — the inner element owns the scroll.
+    <div className="lg:ml-[220px] flex flex-1 flex-col h-screen min-h-0">
       {header && (
-        <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between border-b border-navy-600/30 bg-navy-700 px-6">
+        <header className="flex h-14 shrink-0 items-center justify-between border-b border-navy-600/30 bg-navy-700 px-6">
           {/* Mobile hamburger */}
           <button
             onClick={onToggleMobile}
@@ -163,7 +167,10 @@ export default function AppShell({
 
   const content = (
     <PageHeaderProvider>
-      <div className="flex min-h-screen">
+      {/* h-screen + overflow-hidden cierra la altura del shell entero. Sin
+          esto, el scroll cae en <body> y la regla "página sin scroll, hijo
+          con scroll" deja de funcionar (ver UI-ASSESMENT.md §1.3). */}
+      <div className="flex h-screen overflow-hidden">
         {sidebar({ user, mobileOpen, onMobileClose: () => setMobileOpen(false) })}
         <AppShellInner
           appSlug={appSlug}
