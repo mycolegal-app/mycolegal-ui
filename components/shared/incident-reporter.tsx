@@ -179,6 +179,15 @@ export function IncidentReporter({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [shortcut]);
 
+  // Public imperative trigger: any component can do
+  // `window.dispatchEvent(new CustomEvent("mycolegal:open-incident-reporter"))`
+  // to open the modal (e.g. CTA en empty state de /incidencias).
+  useEffect(() => {
+    const handler = () => { void openReporter(); };
+    window.addEventListener("mycolegal:open-incident-reporter", handler);
+    return () => window.removeEventListener("mycolegal:open-incident-reporter", handler);
+  }, [openReporter]);
+
   const submit = useCallback(async () => {
     if (!description.trim()) return;
     setSubmitting(true);

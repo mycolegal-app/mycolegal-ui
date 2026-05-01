@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Loader2, Inbox } from "lucide-react";
+import { Loader2, Inbox, Plus } from "lucide-react";
 import { PageTitle } from "../../layout/page-title";
 
 interface IncidentListEntry {
@@ -38,8 +38,17 @@ function formatWhen(iso: string): string {
  * that lets the user find old ones without going through the bell.
  *
  * Shared across notaria/legifirma/archivo/… via `@mycolegal-app/ui`.
+ *
+ * `onReport` (opcional) habilita un CTA en el empty state. La app que la
+ * monta lo enchufa al disparador del bug-reporter floating (típicamente abre
+ * el modal global de incidencias). Si no se pasa, el empty state mantiene su
+ * mensaje minimal sin botón.
  */
-export function MyIncidentsPage() {
+interface MyIncidentsPageProps {
+  onReport?: () => void;
+}
+
+export function MyIncidentsPage({ onReport }: MyIncidentsPageProps = {}) {
   const [items, setItems] = useState<IncidentListEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -83,9 +92,19 @@ export function MyIncidentsPage() {
       )}
 
       {!loading && !error && items.length === 0 && (
-        <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 py-10 text-sm text-gray-500">
+        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-gray-300 bg-gray-50 py-10 text-sm text-gray-500">
           <Inbox className="h-6 w-6" />
-          Todavía no has abierto ninguna incidencia.
+          <p>Todavía no has abierto ninguna incidencia.</p>
+          {onReport && (
+            <button
+              type="button"
+              onClick={onReport}
+              className="inline-flex items-center gap-2 rounded-lg bg-mc-primary-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-mc-primary-700"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Reportar incidencia
+            </button>
+          )}
         </div>
       )}
 
