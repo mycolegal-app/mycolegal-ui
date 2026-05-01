@@ -123,8 +123,10 @@ export function CommandPalette({
     <>
       {/* Trigger button */}
       <button
+        type="button"
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 rounded-md border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white/70 transition-colors hover:bg-white/15 hover:text-white"
+        aria-label="Abrir búsqueda general (atajo ⌘K)"
+        className="flex items-center gap-2 rounded-md border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white/70 transition-colors hover:bg-white/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
       >
         <Search className="h-3.5 w-3.5" />
         <span className="hidden sm:inline">Búsqueda general</span>
@@ -153,8 +155,10 @@ export function CommandPalette({
                 />
                 {query && (
                   <button
+                    type="button"
                     onClick={() => { setQuery(""); setGroups([]); }}
-                    className="ml-2 text-gray-400 hover:text-gray-600"
+                    aria-label="Limpiar búsqueda"
+                    className="ml-2 text-gray-400 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 rounded"
                   >
                     <X className="h-4 w-4" />
                   </button>

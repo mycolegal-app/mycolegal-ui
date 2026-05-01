@@ -1,6 +1,6 @@
 {
   "name": "@mycolegal-app/ui",
-  "version": "1.28.0",
+  "version": "1.29.0",
   "type": "module",
   "main": "./index.ts",
   "publishConfig": {
@@ -59,5 +59,5 @@
     "@types/react-dom": "^19.2.3",
     "typescript": "^6.0.2"
   },
-  "description": "AppShell scroll architecture fix: h-screen + overflow-hidden so el scroll lo posee el hijo (<main> y, dentro de cada página, su contenido), nunca el body. Ver mycolegal-notaria/UI-ASSESMENT.md §1."
+  "description": "P2 a11y: aria-label en hamburger, búsqueda general y limpiar búsqueda; focus-visible rings consistentes."
 }

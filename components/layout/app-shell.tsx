@@ -75,8 +75,10 @@ function AppShellInner({
         <header className="flex h-14 shrink-0 items-center justify-between border-b border-navy-600/30 bg-navy-700 px-6">
           {/* Mobile hamburger */}
           <button
+            type="button"
             onClick={onToggleMobile}
-            className="mr-3 lg:hidden text-white/70 hover:text-white"
+            aria-label="Abrir menú lateral"
+            className="mr-3 lg:hidden text-white/70 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 rounded"
           >
             <Menu className="h-5 w-5" />
           </button>
