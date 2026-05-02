@@ -5,6 +5,32 @@
 
 ---
 
+## 1.31.0 — SpainCCAAMap inlina el SVG bundled (2026-05-01)
+
+Type: **minor**
+
+`SpainCCAAMap` ahora trae embebido el SVG realista de comunidades autónomas
+dentro del propio paquete, eliminando la dependencia de que cada app
+consumidora copie `spain-map.svg` en su `public/`.
+
+- Nueva variante por defecto `variant="realistic"` que usa el SVG inline
+  de `components/shared/spain-ccaa-map-svg.ts`.
+- `variant="schematic"` mantiene los paths esquemáticos previos para
+  consumidores que no quieran el peso adicional.
+- `svgSrc` queda como override opcional para apps que necesiten un SVG
+  personalizado (uso raro). Antes era el único modo de obtener el mapa
+  realista y exigía publicar el asset en `public/`.
+- Para regenerar el SVG inline tras editar el fichero fuente:
+  `node -e 'process.stdout.write("export const SPAIN_MAP_SVG = " +
+  JSON.stringify(require("fs").readFileSync(
+  "components/shared/spain-map.svg","utf8")) + ";\n")' >
+  components/shared/spain-ccaa-map-svg.ts`
+
+Breaking change menor: callers que pasaban `svgSrc="/spain-map.svg"` siguen
+funcionando, pero ya no es necesario y pueden eliminarlo. Llamadas sin
+`svgSrc` que antes renderizaban el esquemático ahora renderizan el realista
+por defecto; pasar `variant="schematic"` recupera el comportamiento previo.
+
 ## 1.25.0 — Auto-provision compartido de UserRole (2026-04-29)
 
 Type: **minor**

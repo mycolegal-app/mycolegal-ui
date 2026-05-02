@@ -9,6 +9,7 @@ import {
   CEUTA_POS,
   MELILLA_POS,
 } from "./spain-ccaa-paths";
+import { SPAIN_MAP_SVG } from "./spain-ccaa-map-svg";
 
 // Canonical slug derived from the official CCAA nombre. We normalise the
 // caller's jurisdicciones at runtime and match them against the SVG path
@@ -78,10 +79,16 @@ export interface SpainCCAAMapProps {
   className?: string;
   width?: number;
   /**
-   * When set, fetch a realistic-geometry SVG from this URL and render it in
-   * place of the built-in schematic polygons. The SVG must contain one
-   * <path id="ccaa-<slug>"> per CCAA (plus Ceuta/Melilla). Passing undefined
-   * falls back to the schematic renderer so existing callers don't change.
+   * Renderer choice:
+   * - "realistic" (default): inlined high-fidelity SVG bundled with the UI
+   *   package — no external asset needed.
+   * - "schematic": built-in schematic polygons (no fetch, smaller footprint).
+   */
+  variant?: "realistic" | "schematic";
+  /**
+   * Override the inlined SVG with a URL fetched at runtime. Rare — only useful
+   * if a consumer wants to ship a custom map. When unset, the bundled
+   * SPAIN_MAP_SVG markup is used directly.
    */
   svgSrc?: string;
 }
@@ -109,6 +116,7 @@ export function SpainCCAAMap({
   interactive = true,
   className,
   width = 480,
+  variant = "realistic",
   svgSrc,
 }: SpainCCAAMapProps) {
   const selSet = toSet(selectedCodigos);
@@ -129,10 +137,10 @@ export function SpainCCAAMap({
     return Math.max(0, ...Object.values(values));
   }, [values]);
 
-  // Branch after all hooks have run: if `svgSrc` is set AND the fetch hasn't
-  // yet failed, render the realistic SVG. Any fetch error flips us back to
-  // the schematic below.
-  if (svgSrc && !svgFallback) {
+  // Branch after all hooks have run. The realistic renderer uses the inlined
+  // bundled SVG markup unless the caller passed a custom svgSrc URL. On any
+  // fetch/parse failure we drop to the schematic renderer below.
+  if (variant === "realistic" && !svgFallback) {
     return (
       <RealisticCCAAMap
         svgSrc={svgSrc}
@@ -373,7 +381,8 @@ export function SpainCCAAMap({
 // CSS classes. The consumer API is identical to the schematic mode.
 
 interface RealisticProps {
-  svgSrc: string;
+  /** Optional override URL. When undefined, the bundled SPAIN_MAP_SVG is used. */
+  svgSrc?: string;
   jurisdicciones: SpainCCAAMapJurisdiccion[];
   values: Record<string, number>;
   selSet: Set<string>;
@@ -431,11 +440,16 @@ function RealisticCCAAMap({
     return nums.length ? Math.max(...nums) : 0;
   }, [values]);
 
-  // Fetch the SVG once per src. We dump the raw <svg> markup into the host
-  // div — after that, every style update is a direct DOM attribute tweak.
-  // On any failure (404, wrong content-type, network) we signal the parent
-  // so it can drop back to the schematic renderer.
+  // When no override URL is given, use the SVG markup bundled with the UI
+  // package — no network round-trip, no chance of a missing public/ asset.
+  // When `svgSrc` is set, fetch it and dump the raw <svg> markup into the host
+  // div. On any failure (404, wrong content-type, network) we signal the
+  // parent so it can drop back to the schematic renderer.
   React.useEffect(() => {
+    if (!svgSrc) {
+      setSvgMarkup(SPAIN_MAP_SVG);
+      return;
+    }
     let cancelled = false;
     fetch(svgSrc)
       .then((r) => {
