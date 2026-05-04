@@ -5,6 +5,19 @@
 
 ---
 
+## 1.34.1 — fix import extension en fixture compilado (2026-05-04)
+
+Type: **patch**
+
+`shared-lock-fixture.ts` importaba `./shared-lock` sin extensión; al
+compilarse a `.js` y servirse desde un paquete `type: module`, Node ESM
+(modo estricto) rechazaba el import con `ERR_MODULE_NOT_FOUND`. Cambio
+mínimo: el source ahora importa `./shared-lock.js` (TypeScript acepta
+esta sintaxis y el `.js` resuelve correctamente tanto antes como
+después de compilar).
+
+---
+
 ## 1.34.0 — e2e fixtures publicadas como JS compilado (2026-05-04)
 
 Type: **patch**

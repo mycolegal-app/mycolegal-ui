@@ -10,7 +10,7 @@
 
 import { test as baseTest } from '@playwright/test';
 import type { Reporter, TestCase, TestResult } from '@playwright/test/reporter';
-import { sharedTags, shouldSkip, recordPass } from './shared-lock';
+import { sharedTags, shouldSkip, recordPass } from './shared-lock.js';
 
 /**
  * Skips a test when any of its `@shared:*` tags has already been recorded
