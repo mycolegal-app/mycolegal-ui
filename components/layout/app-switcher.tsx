@@ -7,6 +7,7 @@ export interface AppInfo {
   slug: string;
   name: string;
   appUrl: string;
+  logoUrl?: string | null;
 }
 
 interface AppSwitcherProps {

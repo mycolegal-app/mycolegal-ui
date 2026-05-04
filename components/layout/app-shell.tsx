@@ -3,7 +3,7 @@
 import { useState, useEffect, type ReactNode } from "react";
 import { Menu } from "lucide-react";
 import { PageHeaderProvider, usePageHeader } from "./page-header-context";
-import { AppSwitcher, type AppInfo } from "./app-switcher";
+import { type AppInfo } from "./app-switcher";
 import { IdleTimeout } from "./idle-timeout";
 import { AppInfoButton } from "../shared/app-info-button";
 import { useAuthFetchGuard } from "../../hooks/use-auth-fetch-guard";
@@ -28,7 +28,13 @@ interface AppShellProps {
   /** Optional logo shown in the info modal. */
   appLogoUrl?: string;
   /** Sidebar component (app-specific nav) */
-  sidebar: (props: { user: UserInfo; mobileOpen: boolean; onMobileClose: () => void }) => ReactNode;
+  sidebar: (props: {
+    user: UserInfo;
+    apps: AppInfo[];
+    currentSlug: string;
+    mobileOpen: boolean;
+    onMobileClose: () => void;
+  }) => ReactNode;
   /** Optional slots for the header right section */
   commandPalette?: ReactNode;
   helpButton?: ReactNode;
@@ -42,22 +48,18 @@ interface AppShellProps {
 
 function AppShellInner({
   children,
-  appSlug,
   appName,
   appLogoUrl,
   org,
-  apps,
   commandPalette,
   helpButton,
   breadcrumbs,
   onToggleMobile,
 }: {
   children: ReactNode;
-  appSlug: string;
   appName: string;
   appLogoUrl?: string;
   org?: OrgInfo;
-  apps: AppInfo[];
   commandPalette?: ReactNode;
   helpButton?: ReactNode;
   breadcrumbs?: ReactNode;
@@ -99,27 +101,36 @@ function AppShellInner({
             {commandPalette}
             {helpButton}
             <AppInfoButton appName={appName} appLogoUrl={appLogoUrl} />
-            {/* App Switcher */}
-            <AppSwitcher apps={apps} currentSlug={appSlug} />
             {/* Org info */}
-            {org?.name && (
-              <div className="flex items-center gap-2 pl-3 border-l border-white/15">
-                {org.logo ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={org.logo} alt={org.name} className="h-6 shrink-0 rounded object-contain" />
-                ) : (
-                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-white/15 text-xs font-bold text-white">
-                    {org.name.charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <span className="text-sm font-medium text-navy-100 hidden xl:block">{org.name}</span>
-              </div>
-            )}
+            {org?.name && <OrgBadge org={org} />}
           </div>
         </header>
       )}
       {breadcrumbs}
       <main className="flex-1 overflow-y-auto overflow-x-hidden p-6">{children}</main>
+    </div>
+  );
+}
+
+function OrgBadge({ org }: { org: OrgInfo }) {
+  const [errored, setErrored] = useState(false);
+  const showImg = org.logo && !errored;
+  return (
+    <div className="flex items-center gap-2 pl-3 border-l border-white/15">
+      {showImg ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={org.logo as string}
+          alt={org.name}
+          className="h-6 shrink-0 rounded object-contain"
+          onError={() => setErrored(true)}
+        />
+      ) : (
+        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-white/15 text-xs font-bold text-white">
+          {org.name.charAt(0).toUpperCase()}
+        </div>
+      )}
+      <span className="text-sm font-medium text-navy-100 hidden xl:block">{org.name}</span>
     </div>
   );
 }
@@ -173,13 +184,17 @@ export default function AppShell({
           esto, el scroll cae en <body> y la regla "página sin scroll, hijo
           con scroll" deja de funcionar (ver UI-ASSESMENT.md §1.3). */}
       <div className="flex h-screen overflow-hidden">
-        {sidebar({ user, mobileOpen, onMobileClose: () => setMobileOpen(false) })}
+        {sidebar({
+          user,
+          apps,
+          currentSlug: appSlug,
+          mobileOpen,
+          onMobileClose: () => setMobileOpen(false),
+        })}
         <AppShellInner
-          appSlug={appSlug}
           appName={appName}
           appLogoUrl={appLogoUrl}
           org={org}
-          apps={apps}
           commandPalette={commandPalette}
           helpButton={helpButton}
           breadcrumbs={breadcrumbs}

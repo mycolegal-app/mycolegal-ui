@@ -4,4 +4,5 @@ export { PageHeaderProvider, usePageHeader } from "./page-header-context";
 export { PageTitle } from "./page-title";
 export { AppSwitcher } from "./app-switcher";
 export type { AppInfo } from "./app-switcher";
+export { MyAppsSection } from "./my-apps-section";
 export { IdleTimeout } from "./idle-timeout";
