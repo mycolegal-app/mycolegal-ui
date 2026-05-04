@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useHelp } from "./help-context";
 import { useI18n } from "../i18n/i18n-context";
-import { HelpTooltip } from "./help-tooltip";
+import { HelpTooltip, HELP_REPOSITION_EVENT } from "./help-tooltip";
 
 interface HelpOverlayProps {
   /** Called when user clicks "Más info →" on a tooltip */
@@ -29,6 +29,57 @@ export function HelpOverlay({ onNavigateToManual }: HelpOverlayProps) {
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [active, toggle]);
+
+  // Avoid overlapping tooltips by translating later siblings downward.
+  useEffect(() => {
+    if (!active) return;
+
+    let rafId = 0;
+    function schedule() {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(avoidOverlaps);
+    }
+
+    function avoidOverlaps() {
+      const tooltips = Array.from(
+        document.querySelectorAll<HTMLElement>('[data-help-tooltip="true"]'),
+      );
+      // Reset previous shifts so we always work from base positions.
+      tooltips.forEach((el) => {
+        el.style.translate = "";
+      });
+
+      const placed: DOMRect[] = [];
+      for (const el of tooltips) {
+        let rect = el.getBoundingClientRect();
+        let shift = 0;
+        let safety = 0;
+        while (safety++ < tooltips.length + 1) {
+          const collision = placed.find((p) => rectsOverlap(rect, p));
+          if (!collision) break;
+          const needed = collision.bottom - rect.top + 4;
+          shift += needed;
+          rect = new DOMRect(rect.x, rect.y + needed, rect.width, rect.height);
+        }
+        if (shift > 0) {
+          el.style.translate = `0 ${shift}px`;
+        }
+        placed.push(rect);
+      }
+    }
+
+    schedule();
+    window.addEventListener("scroll", schedule, true);
+    window.addEventListener("resize", schedule);
+    window.addEventListener(HELP_REPOSITION_EVENT, schedule);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener("scroll", schedule, true);
+      window.removeEventListener("resize", schedule);
+      window.removeEventListener(HELP_REPOSITION_EVENT, schedule);
+    };
+  }, [active, annotations]);
 
   if (!active) return null;
 
@@ -62,5 +113,14 @@ export function HelpOverlay({ onNavigateToManual }: HelpOverlayProps) {
         </button>
       </div>
     </>
+  );
+}
+
+function rectsOverlap(a: DOMRect, b: DOMRect): boolean {
+  return (
+    a.left < b.right &&
+    a.right > b.left &&
+    a.top < b.bottom &&
+    a.bottom > b.top
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { HelpAnnotation } from "./help-context";
 
 interface HelpTooltipProps {
@@ -9,9 +9,12 @@ interface HelpTooltipProps {
   moreInfoLabel?: string;
 }
 
+export const HELP_REPOSITION_EVENT = "mycolegal:help-repositioned";
+
 export function HelpTooltip({ annotation, onManualClick, moreInfoLabel = "Más info →" }: HelpTooltipProps) {
   const [style, setStyle] = useState<CSSProperties>({ display: "none" });
   const [visible, setVisible] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
   const position = annotation.position || "bottom";
 
   useEffect(() => {
@@ -23,9 +26,9 @@ export function HelpTooltip({ annotation, onManualClick, moreInfoLabel = "Más i
       const pos = computePosition(rect, position);
       setStyle(pos);
       setVisible(true);
+      window.dispatchEvent(new CustomEvent(HELP_REPOSITION_EVENT));
     }
 
-    // Highlight the target element
     (el as HTMLElement).style.outline = "2px solid #00d4aa";
     (el as HTMLElement).style.outlineOffset = "2px";
     (el as HTMLElement).style.position = "relative";
@@ -33,7 +36,6 @@ export function HelpTooltip({ annotation, onManualClick, moreInfoLabel = "Más i
 
     update();
 
-    // Recalculate on scroll/resize
     window.addEventListener("scroll", update, true);
     window.addEventListener("resize", update);
 
@@ -44,6 +46,7 @@ export function HelpTooltip({ annotation, onManualClick, moreInfoLabel = "Más i
       (el as HTMLElement).style.zIndex = "";
       window.removeEventListener("scroll", update, true);
       window.removeEventListener("resize", update);
+      window.dispatchEvent(new CustomEvent(HELP_REPOSITION_EVENT));
     };
   }, [annotation.target, position]);
 
@@ -51,21 +54,22 @@ export function HelpTooltip({ annotation, onManualClick, moreInfoLabel = "Más i
 
   return (
     <div
-      className="fixed z-[60] max-w-xs rounded-lg bg-gray-900 px-3 py-2 text-sm text-white shadow-xl"
+      ref={ref}
+      data-help-tooltip="true"
+      className="fixed z-[60] max-w-[200px] rounded-md bg-gray-900 px-2 py-1.5 text-[11px] leading-snug text-white shadow-lg"
       style={style}
     >
       <p>{annotation.text}</p>
       {annotation.manualPath && onManualClick && (
         <button
           onClick={() => onManualClick(annotation.manualPath!)}
-          className="mt-1 text-xs text-cyan-300 hover:text-cyan-100"
+          className="mt-1 text-[10px] text-cyan-300 hover:text-cyan-100"
         >
           {moreInfoLabel}
         </button>
       )}
-      {/* Arrow */}
       <div
-        className="absolute h-2 w-2 rotate-45 bg-gray-900"
+        className="absolute h-1.5 w-1.5 rotate-45 bg-gray-900"
         style={arrowStyle(position)}
       />
     </div>
@@ -76,7 +80,7 @@ function computePosition(
   rect: DOMRect,
   position: string,
 ): CSSProperties {
-  const gap = 10;
+  const gap = 8;
 
   switch (position) {
     case "top":
@@ -110,13 +114,13 @@ function computePosition(
 function arrowStyle(position: string): CSSProperties {
   switch (position) {
     case "top":
-      return { bottom: -4, left: "50%", transform: "translateX(-50%) rotate(45deg)" };
+      return { bottom: -3, left: "50%", transform: "translateX(-50%) rotate(45deg)" };
     case "left":
-      return { right: -4, top: "50%", transform: "translateY(-50%) rotate(45deg)" };
+      return { right: -3, top: "50%", transform: "translateY(-50%) rotate(45deg)" };
     case "right":
-      return { left: -4, top: "50%", transform: "translateY(-50%) rotate(45deg)" };
+      return { left: -3, top: "50%", transform: "translateY(-50%) rotate(45deg)" };
     case "bottom":
     default:
-      return { top: -4, left: "50%", transform: "translateX(-50%) rotate(45deg)" };
+      return { top: -3, left: "50%", transform: "translateX(-50%) rotate(45deg)" };
   }
 }

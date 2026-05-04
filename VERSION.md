@@ -5,6 +5,33 @@
 
 ---
 
+## 1.35.2 — Help tooltips: fuente reducida y anti-solapamiento (2026-05-04)
+
+Type: **patch**
+
+Las ayudas flotantes del modo ayuda (`HelpOverlay`) eran demasiado
+grandes (`text-sm`, `max-w-xs` = 320px) y se solapaban entre sí cuando
+varias caían cerca — visible en notaría con las 5 KPI cards y los
+charts cuyos tooltips se cruzaban.
+
+Cambios en `components/help/help-tooltip.tsx`:
+- `text-sm` → `text-[11px]`, `leading-snug`, padding más compacto
+- `max-w-xs` (320px) → `max-w-[200px]`
+- Flecha y "Más info" reducidos en proporción
+- Emite evento `mycolegal:help-repositioned` al posicionarse para que
+  el overlay re-evalúe colisiones
+
+Cambios en `components/help/help-overlay.tsx`:
+- Pase de evitación de solapamientos: tras cada
+  posicionamiento/scroll/resize, recorre los tooltips en orden DOM y
+  desplaza vertical (`translate: 0 Ypx`) los que colisionan con
+  hermanos previamente colocados. Idempotente (resetea translate y
+  recalcula).
+
+El cambio aplica a todas las apps que consumen `@mycolegal-app/ui`.
+
+---
+
 ## 1.35.1 — user-account-dialog soporta el shape `{error:string}` de Fastify (2026-05-04)
 
 Type: **patch**
