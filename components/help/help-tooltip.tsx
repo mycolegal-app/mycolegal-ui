@@ -56,6 +56,8 @@ export function HelpTooltip({ annotation, onManualClick, moreInfoLabel = "Más i
     <div
       ref={ref}
       data-help-tooltip="true"
+      data-help-anchor={annotation.target}
+      data-help-position={position}
       className="fixed z-[60] max-w-[200px] rounded-md bg-gray-900 px-2 py-1.5 text-[11px] leading-snug text-white shadow-lg"
       style={style}
     >

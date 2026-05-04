@@ -5,6 +5,25 @@
 
 ---
 
+## 1.35.3 — DataTable.paginatorExtras + help-overlay flip-to-top + anchor-aware (2026-05-04)
+
+Type: **patch**
+
+DataTable: nuevo prop `paginatorExtras` que renderiza un slot a la
+derecha del selector "registros por página" en el footer del paginador.
+Útil para checkboxes que no merecen una fila propia arriba de la tabla
+(ej. "Mostrar inactivos").
+
+HelpOverlay: el algoritmo anti-solapamiento ahora también considera los
+anchors `[data-help]` (cards/charts) como obstáculos, y cuando el shift
+acumulado superaría el umbral de 60px (el tooltip taparía contenido
+siguiente), flippea el tooltip arriba del anchor en lugar de empujarlo
+más abajo. Resuelve el caso del dashboard de notaria con 5 KPI cards
+seguidas de charts donde los tooltips bottom-placement caían sobre los
+gráficos.
+
+---
+
 ## 1.35.2 — Help tooltips: fuente reducida y anti-solapamiento (2026-05-04)
 
 Type: **patch**

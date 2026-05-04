@@ -55,6 +55,13 @@ interface DataTableProps<TData, TValue> {
   pageCount?: number;
   /** Called when the user changes page or page size. */
   onPaginationChange?: (pageIndex: number, pageSize: number) => void;
+  /**
+   * Slot que se renderiza en el footer del paginador, a la derecha del
+   * selector de "registros por página". Útil para filtros toggleables
+   * (ej. "Mostrar inactivos") que la página quiere mantener cerca del
+   * paginador en lugar de consumir una fila propia arriba de la tabla.
+   */
+  paginatorExtras?: ReactNode;
 }
 
 export function DataTable<TData, TValue>({
@@ -75,6 +82,7 @@ export function DataTable<TData, TValue>({
   totalRows: controlledTotalRows,
   pageCount: controlledPageCount,
   onPaginationChange,
+  paginatorExtras,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -312,6 +320,11 @@ export function DataTable<TData, TValue>({
             ))}
             <option value={totalRows}>Todos</option>
           </select>
+          {paginatorExtras && (
+            <div className="flex items-center gap-2 border-l border-gray-200 pl-3 text-sm text-foreground-muted">
+              {paginatorExtras}
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Button

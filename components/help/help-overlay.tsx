@@ -44,10 +44,22 @@ export function HelpOverlay({ onNavigateToManual }: HelpOverlayProps) {
       const tooltips = Array.from(
         document.querySelectorAll<HTMLElement>('[data-help-tooltip="true"]'),
       );
-      // Reset previous shifts so we always work from base positions.
+      // Reset previous shifts y top overrides para reposicionar desde cero.
       tooltips.forEach((el) => {
         el.style.translate = "";
+        el.style.top = el.dataset.helpBaseTop || el.style.top;
       });
+
+      // Obstáculos adicionales: los anchors `[data-help]` (cards/charts).
+      // Evitamos que un tooltip los tape, no solo a otros tooltips.
+      const anchorRects = Array.from(
+        document.querySelectorAll<HTMLElement>("[data-help]"),
+      ).map((el) => el.getBoundingClientRect());
+
+      // Umbral: si un tooltip tendría que desplazarse más que esto hacia
+      // abajo, flippeamos arriba del anchor en lugar de seguir empujando
+      // sobre charts/contenido siguiente.
+      const FLIP_THRESHOLD = 60;
 
       const placed: DOMRect[] = [];
       for (const el of tooltips) {
@@ -55,11 +67,33 @@ export function HelpOverlay({ onNavigateToManual }: HelpOverlayProps) {
         let shift = 0;
         let safety = 0;
         while (safety++ < tooltips.length + 1) {
-          const collision = placed.find((p) => rectsOverlap(rect, p));
+          const collision =
+            placed.find((p) => rectsOverlap(rect, p)) ||
+            anchorRects.find((a) => !rectsContains(a, rect) && rectsOverlap(rect, a));
           if (!collision) break;
           const needed = collision.bottom - rect.top + 4;
           shift += needed;
           rect = new DOMRect(rect.x, rect.y + needed, rect.width, rect.height);
+        }
+
+        // Si el shift acumulado tapa contenido siguiente, flippea arriba
+        // del anchor (siempre que haya espacio) y reintenta el cálculo.
+        if (shift > FLIP_THRESHOLD) {
+          const anchorSel = el.dataset.helpAnchor;
+          const anchor = anchorSel ? document.querySelector<HTMLElement>(anchorSel) : null;
+          const anchorRect = anchor?.getBoundingClientRect();
+          if (anchorRect && anchorRect.top - rect.height - 12 > 4) {
+            const baseTop = parseFloat(el.dataset.helpBaseTop || el.style.top) || 0;
+            const flippedTop = anchorRect.top - rect.height - 8;
+            el.dataset.helpBaseTop = el.dataset.helpBaseTop || el.style.top;
+            el.style.top = `${flippedTop}px`;
+            el.style.translate = "";
+            shift = 0;
+            const flippedRect = new DOMRect(rect.x, flippedTop, rect.width, rect.height);
+            placed.push(flippedRect);
+            void baseTop;
+            continue;
+          }
         }
         if (shift > 0) {
           el.style.translate = `0 ${shift}px`;
@@ -122,5 +156,16 @@ function rectsOverlap(a: DOMRect, b: DOMRect): boolean {
     a.right > b.left &&
     a.top < b.bottom &&
     a.bottom > b.top
+  );
+}
+
+// Devuelve true cuando `outer` contiene a `inner` (anchor con su propio
+// tooltip dentro: no es realmente colisión, es la flecha pegada al anchor).
+function rectsContains(outer: DOMRect, inner: DOMRect): boolean {
+  return (
+    inner.left >= outer.left - 1 &&
+    inner.right <= outer.right + 1 &&
+    inner.top >= outer.top - 1 &&
+    inner.bottom <= outer.bottom + 1
   );
 }
