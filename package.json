@@ -1,6 +1,6 @@
 {
   "name": "@mycolegal-app/ui",
-  "version": "1.32.0",
+  "version": "1.33.0",
   "type": "module",
   "main": "./index.ts",
   "publishConfig": {
@@ -12,6 +12,7 @@
   },
   "files": [
     "components",
+    "e2e",
     "hooks",
     "lib",
     "server",
@@ -25,10 +26,14 @@
     "react": ">=18",
     "react-dom": ">=18",
     "tailwindcss": ">=3",
-    "next": ">=14"
+    "next": ">=14",
+    "@playwright/test": ">=1.40"
   },
   "peerDependenciesMeta": {
     "next": {
+      "optional": true
+    },
+    "@playwright/test": {
       "optional": true
     }
   },

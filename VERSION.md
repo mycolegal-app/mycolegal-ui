@@ -5,6 +5,24 @@
 
 ---
 
+## 1.33.0 — Cross-app e2e shared-lock helpers (2026-05-04)
+
+Type: **minor**
+
+Nuevo subpath `@mycolegal-app/ui/e2e/shared-lock` y
+`@mycolegal-app/ui/e2e/shared-lock-fixture` para deduplicar tests e2e que
+prueban contratos compartidos (auth, incidencias, componentes shared)
+cuando la orquestación corre Playwright en varias apps en serie. Las apps
+añaden `SharedLockReporter` a su `playwright.config.ts` y los specs con
+tag `@shared:*` importan el `test` extendido (incluye un beforeEach que
+salta cuando el tag ya pasó en la misma run).
+
+Mecanismo: `mycolegal-platform/scripts/build-e2e-lock-env.mjs` calcula
+RUN_IDs por tag desde `shared-test-deps.json`. Sin `E2E_LOCK_PATH` (dev
+local de un solo app) los helpers son no-op. `@playwright/test` añadido
+como peer opcional para que solo lo necesiten las apps que usen los
+helpers e2e.
+
 ## 1.32.0 — UserAccountDialog ("Mi cuenta") + orgApp incidents route (2026-05-04)
 
 Type: **minor**

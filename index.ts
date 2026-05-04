@@ -74,4 +74,9 @@ export { useAuthFetchGuard } from './hooks/use-auth-fetch-guard';
 
 // DocFilling integration
 export { DocFillingModal } from './components/docfilling/DocFillingModal';
+
+// NOTE: e2e shared-lock helpers (./e2e/shared-lock and ./e2e/shared-lock-fixture)
+// are intentionally NOT re-exported here — they import `@playwright/test`,
+// which is not a runtime dep. Consumer apps import them directly via subpath:
+//   import { skipIfSharedAlreadyPassed } from '@mycolegal-app/ui/e2e/shared-lock-fixture';
 export type { DocFillingModalProps } from './components/docfilling/DocFillingModal';
