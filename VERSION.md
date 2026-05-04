@@ -5,6 +5,20 @@
 
 ---
 
+## 1.34.2 — shared-lock skip vía fixture auto, no `test.beforeEach` toplevel (2026-05-04)
+
+Type: **patch**
+
+`shared-lock-fixture.ts` también se carga desde `playwright.config.ts`
+como reporter (clase default). Llamar `test.beforeEach()` a top-level
+en ese módulo disparaba `"Playwright Test did not expect
+test.beforeEach() to be called here"` al arrancar Playwright. Cambio
+mínimo: el skip ahora se inyecta vía fixture auto (`_sharedLockGuard`)
+en lugar de `test.beforeEach`. La API pública (`import { test, expect }
+from '@mycolegal-app/ui/e2e/shared-lock-fixture'`) no cambia.
+
+---
+
 ## 1.34.1 — fix import extension en fixture compilado (2026-05-04)
 
 Type: **patch**

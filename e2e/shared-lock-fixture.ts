@@ -41,9 +41,22 @@ export async function skipIfSharedAlreadyPassed(testInfo: {
  */
 export * from '@playwright/test';
 // eslint-disable-next-line import/export
-export const test = baseTest.extend({});
-test.beforeEach(async ({}, testInfo) => {
-  await skipIfSharedAlreadyPassed(testInfo);
+//
+// El skip se aplica vía un fixture auto en lugar de `test.beforeEach()` a
+// top-level, porque este mismo módulo también se carga desde
+// `playwright.config.ts` como reporter (clase default). Llamar a
+// `test.beforeEach` durante la fase de carga de la config dispara
+// "Playwright Test did not expect test.beforeEach() to be called here";
+// los fixtures auto no tienen ese problema porque sólo se ejecutan al
+// arrancar cada test.
+export const test = baseTest.extend<{ _sharedLockGuard: void }>({
+  _sharedLockGuard: [
+    async ({}, use, testInfo) => {
+      await skipIfSharedAlreadyPassed(testInfo);
+      await use();
+    },
+    { auto: true },
+  ],
 });
 
 /**
