@@ -5,6 +5,31 @@
 
 ---
 
+## 1.36.0 — Gating cross-app: useOrgApps + AppGatedButton (2026-05-04)
+
+Type: **minor**
+
+Nueva infraestructura compartida para deshabilitar funcionalidad que
+depende de apps no contratadas por la org, mostrando un tooltip que
+explica al usuario por qué no está disponible (en vez de ocultar el
+botón sin más).
+
+- `hooks/use-org-apps.ts`: `useOrgApps()` y `useIsAppEnabled(slug)`.
+  Llaman a `/api/org/apps-habilitadas` en la app consumidora y cachean
+  module-level (evita re-fetch entre componentes en la misma sesión).
+- `components/shared/app-gated-button.tsx`: `<AppGatedButton appSlug=
+  ... disabledTooltip=... onClick=...>` envuelve un button HTML; si la
+  app no está habilitada, se renderiza disabled con `title=tooltip`.
+
+Las apps consumidoras necesitan exponer `GET /api/org/apps-habilitadas`
+que devuelva `{ data: { apps: string[] } }` (notaria ya lo tenía;
+otras apps deben replicar el patrón con `lib/org-apps.ts`).
+
+Caso de uso inicial: deshabilitar botones de "Generar documento" cuando
+la org no tiene la app `docfilling` contratada.
+
+---
+
 ## 1.35.3 — DataTable.paginatorExtras + help-overlay flip-to-top + anchor-aware (2026-05-04)
 
 Type: **patch**

@@ -58,6 +58,7 @@ export { MyIncidentsPage } from './components/shared/incidents-pages/my-incident
 export { IncidentDetailPage } from './components/shared/incidents-pages/incident-detail-page';
 export { SortableList } from './components/shared/sortable-list';
 export type { SortableListProps } from './components/shared/sortable-list';
+export { AppGatedButton } from './components/shared/app-gated-button';
 export { IdleTimeout } from './components/layout/idle-timeout';
 
 // Utilities
@@ -71,6 +72,7 @@ export type { KeyboardShortcut } from './hooks/use-keyboard-shortcuts';
 export { useVersionInfo } from './hooks/use-version-info';
 export type { VersionInfo } from './hooks/use-version-info';
 export { useAuthFetchGuard } from './hooks/use-auth-fetch-guard';
+export { useOrgApps, useIsAppEnabled, invalidateOrgApps } from './hooks/use-org-apps';
 
 // DocFilling integration
 export { DocFillingModal } from './components/docfilling/DocFillingModal';
