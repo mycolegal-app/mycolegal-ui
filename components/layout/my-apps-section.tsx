@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, LayoutGrid, Loader2 } from "lucide-react";
+import { ChevronRight, LayoutGrid, Loader2 } from "lucide-react";
 import type { AppInfo } from "./app-switcher";
+import { SidebarFlyout } from "./sidebar-flyout";
 
 interface MyAppsSectionProps {
   apps: AppInfo[];
@@ -13,12 +14,12 @@ interface MyAppsSectionProps {
 }
 
 /**
- * Collapsible "Mis aplicaciones" sidebar block. Default collapsed.
- * Selecting an app shows a full-screen overlay (spinner + click capture)
- * while the browser navigates to the target app.
+ * "Mis aplicaciones" sidebar block. Opens as a flyout panel to the right of
+ * the sidebar (no inline expansion), avoiding sidebar scroll. Selecting an app
+ * shows a full-screen overlay (spinner + click capture) while the browser
+ * navigates to the target app.
  */
 export function MyAppsSection({ apps, currentSlug, label = "Mis aplicaciones" }: MyAppsSectionProps) {
-  const [open, setOpen] = useState(false);
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
 
   const otherApps = apps.filter((a) => a.slug !== currentSlug);
@@ -32,58 +33,51 @@ export function MyAppsSection({ apps, currentSlug, label = "Mis aplicaciones" }:
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-400 transition-colors hover:bg-white/5 hover:text-white"
+      <SidebarFlyout
+        ariaLabel={label}
+        trigger={
+          <>
+            <LayoutGrid className="h-4 w-4 shrink-0" />
+            {label}
+            <ChevronRight className="ml-auto h-4 w-4" />
+          </>
+        }
       >
-        <LayoutGrid className="h-4 w-4 shrink-0" />
-        {label}
-        <ChevronDown
-          className={`ml-auto h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`}
-        />
-      </button>
-      {open && (
-        <div className="ml-4 space-y-0.5">
-          {otherApps.map((app) => {
-            const isNavigating = navigatingTo === app.slug;
-            return (
-              <button
-                key={app.slug}
-                type="button"
-                onClick={() => navigate(app)}
-                disabled={!!navigatingTo}
-                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-1.5 text-xs font-medium text-gray-500 transition-colors hover:bg-white/5 hover:text-gray-300 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <AppLogo app={app} />
-                <span className="truncate text-left">{app.name}</span>
-                {isNavigating && (
-                  <Loader2 className="ml-auto h-3.5 w-3.5 shrink-0 animate-spin text-cyan-400" />
-                )}
-              </button>
-            );
-          })}
-        </div>
-      )}
+        <p className="px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">
+          Mis aplicaciones
+        </p>
+        {otherApps.map((app) => {
+          const isNavigating = navigatingTo === app.slug;
+          return (
+            <button
+              key={app.slug}
+              type="button"
+              onClick={() => navigate(app)}
+              disabled={!!navigatingTo}
+              className="flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-sm text-white/80 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <AppLogo app={app} />
+              <span className="truncate text-left">{app.name}</span>
+              {isNavigating && (
+                <Loader2 className="ml-auto h-3.5 w-3.5 shrink-0 animate-spin text-cyan-400" />
+              )}
+            </button>
+          );
+        })}
+      </SidebarFlyout>
       {navigatingTo && <AppNavigatingOverlay />}
     </>
   );
 }
 
 function AppLogo({ app }: { app: AppInfo }) {
-  const [errored, setErrored] = useState(false);
   const initials = app.name.slice(0, 2).toUpperCase();
-  const showImg = app.logoUrl && !errored;
   return (
-    <div className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded bg-white/10 text-[10px] font-bold uppercase text-white/70">
-      {showImg ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={app.logoUrl as string}
-          alt=""
-          className="h-full w-full object-contain"
-          onError={() => setErrored(true)}
+    <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded bg-white/10 text-[10px] font-bold uppercase text-white/70">
+      {app.logoSvg ? (
+        <div
+          className="h-5 w-5 [&>svg]:h-full [&>svg]:w-full"
+          dangerouslySetInnerHTML={{ __html: app.logoSvg }}
         />
       ) : (
         initials

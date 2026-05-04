@@ -375,7 +375,13 @@ function PasswordTab({ endpoint }: { endpoint: string }) {
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body?.error?.message || body?.message || `HTTP ${res.status}`);
+        // Soporta tres shapes: `{error:{message}}` (apps consumer),
+        // `{message}` (legacy), `{error:"texto"}` (Fastify default — auth).
+        const msg = body?.error?.message
+          || body?.message
+          || (typeof body?.error === 'string' ? body.error : null)
+          || `HTTP ${res.status}`;
+        throw new Error(msg);
       }
       setCurrent("");
       setNext("");

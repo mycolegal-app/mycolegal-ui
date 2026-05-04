@@ -5,6 +5,18 @@
 
 ---
 
+## 1.35.1 — user-account-dialog soporta el shape `{error:string}` de Fastify (2026-05-04)
+
+Type: **patch**
+
+`UserAccountDialog` parseaba el cuerpo de error como `body.error.message`
+o `body.message`, pero auth (Fastify) devuelve `{ error: "La contraseña
+actual no es correcta", statusCode: 409 }` — `error` es string. El
+componente caía al fallback `HTTP 409` y el usuario nunca veía el
+mensaje real. Añadido un tercer caso al fallback chain.
+
+---
+
 ## 1.34.2 — shared-lock skip vía fixture auto, no `test.beforeEach` toplevel (2026-05-04)
 
 Type: **patch**

@@ -7,7 +7,8 @@ export interface AppInfo {
   slug: string;
   name: string;
   appUrl: string;
-  logoUrl?: string | null;
+  /** Raw SVG markup (not a URL). Rendered via dangerouslySetInnerHTML. */
+  logoSvg?: string | null;
 }
 
 interface AppSwitcherProps {
