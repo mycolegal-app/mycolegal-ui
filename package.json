@@ -1,10 +1,14 @@
 {
   "name": "@mycolegal-app/ui",
-  "version": "1.33.0",
+  "version": "1.34.0",
   "type": "module",
   "main": "./index.ts",
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
+  },
+  "scripts": {
+    "build:e2e": "tsc -p tsconfig.e2e.json",
+    "prepublishOnly": "npm run build:e2e"
   },
   "repository": {
     "type": "git",
@@ -20,14 +24,15 @@
     "globals.css",
     "index.ts",
     "tailwind-preset.ts",
-    "tsconfig.json"
+    "tsconfig.json",
+    "tsconfig.e2e.json"
   ],
   "peerDependencies": {
+    "@playwright/test": ">=1.40",
+    "next": ">=14",
     "react": ">=18",
     "react-dom": ">=18",
-    "tailwindcss": ">=3",
-    "next": ">=14",
-    "@playwright/test": ">=1.40"
+    "tailwindcss": ">=3"
   },
   "peerDependenciesMeta": {
     "next": {
@@ -60,9 +65,11 @@
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
+    "@types/node": "^22.19.17",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "typescript": "^6.0.2"
   },
-  "description": "WCAG AA: token --mc-slate-500 ajustado para pasar contraste (5.06:1); DataTable page-size select con aria-label; notification badge bg-red-500→red-600 + font-bold; command-palette ⌘K kbd text-white/50→/80."
+  "description": "e2e fixtures publicadas como JS compilado (Playwright no transforma .ts dentro de node_modules) — desbloquea imports de @mycolegal-app/ui/e2e/shared-lock-fixture desde specs."
 }

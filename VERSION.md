@@ -5,6 +5,26 @@
 
 ---
 
+## 1.34.0 — e2e fixtures publicadas como JS compilado (2026-05-04)
+
+Type: **patch**
+
+Playwright no transforma archivos `.ts` dentro de `node_modules` al
+descubrir specs, lo cual rompía cualquier app que importara
+`@mycolegal-app/ui/e2e/shared-lock-fixture` desde un spec
+(`SyntaxError: Unexpected token '{'` en notaria al usarlo en 5 specs).
+
+Cambios:
+- Nuevo `tsconfig.e2e.json` que compila `e2e/*.ts` → `e2e/*.js` + `.d.ts`.
+- `prepublishOnly` ejecuta `build:e2e` automáticamente al publicar.
+- DevDeps: `@playwright/test`, `@types/node` (necesarios para tsc).
+
+Las apps consumidoras siguen importando
+`@mycolegal-app/ui/e2e/shared-lock-fixture` sin cambio — el resolver
+escogerá el `.js` compilado en lugar del `.ts` crudo.
+
+---
+
 ## 1.33.0 — Cross-app e2e shared-lock helpers (2026-05-04)
 
 Type: **minor**
