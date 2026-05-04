@@ -40,6 +40,7 @@ export type { EmailConfigValues, EmailProvider, EmailConfigFormProps } from './c
 export { EmailTemplatesManager } from './components/shared/email-templates-manager';
 export type { EmailTemplateEntry, EmailTemplatesManagerProps } from './components/shared/email-templates-manager';
 export { IncidentReporter } from './components/shared/incident-reporter';
+export { UserAccountDialog } from './components/shared/user-account-dialog';
 export { SpainCCAAMap } from './components/shared/spain-ccaa-map';
 export type { SpainCCAAMapJurisdiccion, SpainCCAAMapProps } from './components/shared/spain-ccaa-map';
 export { NotificationsBell } from './components/shared/notifications-bell';

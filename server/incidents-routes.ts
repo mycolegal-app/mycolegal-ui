@@ -119,6 +119,21 @@ export function createIncidentsRoutes(config: AuthProxyConfig) {
       },
     },
 
+    /**
+     * GET /api/incidents/org-app — incidents from OTHER users in caller's
+     * org against a specific appSlug (used by the "Mi cuenta" modal). The
+     * caller passes ?appSlug=… and the route forwards verbatim.
+     */
+    orgApp: {
+      async GET(request: NextRequest) {
+        return proxyToAuth(
+          config,
+          request,
+          `/incidents/org-app${request.nextUrl.search}`,
+        );
+      },
+    },
+
     /** GET /api/incidents/mine/by-number/[number] — fetch incident by user-friendly number. */
     mineByNumber: {
       async GET(

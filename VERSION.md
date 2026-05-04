@@ -5,6 +5,23 @@
 
 ---
 
+## 1.32.0 — UserAccountDialog ("Mi cuenta") + orgApp incidents route (2026-05-04)
+
+Type: **minor**
+
+Nuevo componente `UserAccountDialog` para apps de usuario (notaria,
+legifirma): modal con tabs Mis datos / Contraseña / Incidencias, montado
+sobre el bloque user-info del sidebar. Permite editar `displayName`,
+`language`, `phoneNumber` y `nif`; cambiar contraseña con `currentPassword`
+obligatorio (excepto en flow `mustChangePassword`); y revisar incidencias
+abiertas por mí y por otros en la misma app.
+
+`server/incidents-routes.ts` añade el handler `orgApp` (proxy a
+`GET /incidents/org-app`) que las apps cablean en
+`/api/incidents/org-app`.
+
+Requiere `mycolegal-auth >= 2.3.0`.
+
 ## 1.31.0 — SpainCCAAMap inlina el SVG bundled (2026-05-01)
 
 Type: **minor**
