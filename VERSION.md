@@ -5,6 +5,18 @@
 
 ---
 
+## 1.37.1 — NotificationsBell: modal centrado en lugar de dropdown anclado (2026-05-04)
+
+Type: **patch**
+
+Click en la campana ya no abre un panel anclado al sidebar — abre
+directamente un modal centrado (lista de notificaciones). Click en una
+notificación marca como leída y la misma modal swappea a la vista de
+detalle (con flecha "← Volver" para regresar a la lista). Sin dropdown
+intermedio, sin botón "Ir al detalle", sin redirects fuera de la app.
+
+---
+
 ## 1.37.0 — SearchableSelect + ClientPicker compartidos (2026-05-04)
 
 Type: **minor**

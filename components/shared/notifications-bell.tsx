@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bell, Check, CheckCheck, Loader2, X } from "lucide-react";
+import { ArrowLeft, Bell, Check, CheckCheck, Loader2, X } from "lucide-react";
 import { cn } from "../../lib/utils";
 
 export interface NotificationEntry {
@@ -140,20 +140,17 @@ export function NotificationsBell({
   useEffect(() => {
     if (!open) return;
     fetchList();
+    // Esc cierra el modal completo (lista + detalle).
+    // El backdrop captura outside-click vía onClick del overlay,
+    // así que aquí ya no tocamos `mousedown` del documento.
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    const onDocClick = (e: MouseEvent) => {
-      const t = e.target as Node;
-      if (panelRef.current?.contains(t) || triggerRef.current?.contains(t)) return;
-      setOpen(false);
+      if (e.key === "Escape") {
+        setDetail(null);
+        setOpen(false);
+      }
     };
     document.addEventListener("keydown", onKey);
-    document.addEventListener("mousedown", onDocClick);
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.removeEventListener("mousedown", onDocClick);
-    };
+    return () => document.removeEventListener("keydown", onKey);
   }, [open, fetchList]);
 
   const markOneRead = useCallback(
@@ -203,13 +200,13 @@ export function NotificationsBell({
   const onEntryClick = useCallback(
     async (n: NotificationEntry) => {
       if (!n.readAt) {
-        // Optimistic: flip the row locally so the modal shows it as read
-        // immediately, then sync with the server. If the PATCH fails, the
-        // next poll will reconcile.
+        // Optimistic: flip the row locally so el modal muestra el item
+        // como leído inmediatamente; el PATCH al backend va en background.
         n = { ...n, readAt: new Date().toISOString() };
         void markOneRead(n.id);
       }
-      setOpen(false);
+      // El panel y el detalle viven en el mismo modal centrado; al
+      // seleccionar un item simplemente swappeamos a la vista de detalle.
       setDetail(n);
     },
     [markOneRead],
@@ -220,18 +217,24 @@ export function NotificationsBell({
       ? "text-gray-300 hover:text-white"
       : "text-gray-600 hover:text-gray-900";
 
-  const panelSide = align === "right" ? "right-0" : "left-0";
-  const panelVertical =
-    verticalAlign === "bottom" ? "bottom-full mb-2" : "top-full mt-2";
+  // Mantenemos `align` y `verticalAlign` en la API pública por compatibilidad,
+  // pero ya no se usan: la campana abre directamente un modal centrado.
+  void align;
+  void verticalAlign;
+
+  function closeAll() {
+    setOpen(false);
+    setDetail(null);
+  }
 
   return (
-    <div className="relative inline-block">
+    <>
       <button
         ref={triggerRef}
         type="button"
         aria-label="Notificaciones"
         title="Notificaciones"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => setOpen(true)}
         className={cn(
           "relative inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-cyan",
           iconColour,
@@ -251,139 +254,149 @@ export function NotificationsBell({
 
       {open && (
         <div
-          ref={panelRef}
           role="dialog"
+          aria-modal="true"
           aria-label="Notificaciones"
-          className={cn(
-            "absolute z-50 w-80 max-w-[90vw] rounded-lg border border-gray-200 bg-white shadow-xl",
-            panelSide,
-            panelVertical,
-          )}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeAll();
+          }}
         >
-          <div className="flex items-center justify-between border-b border-gray-100 px-3 py-2">
-            <span className="text-sm font-medium text-gray-900">Notificaciones</span>
-            <button
-              type="button"
-              onClick={markAllRead}
-              disabled={marking || unread === 0}
-              className="inline-flex items-center gap-1 text-xs text-cyan hover:underline disabled:opacity-50 disabled:no-underline"
-            >
-              {marking ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCheck className="h-3 w-3" />}
-              Marcar todas
-            </button>
-          </div>
+          <div
+            ref={panelRef}
+            className="flex max-h-[80vh] w-full max-w-lg flex-col overflow-hidden rounded-lg bg-white shadow-2xl"
+          >
+            {!detail ? (
+              <>
+                {/* Cabecera lista */}
+                <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-3">
+                  <span className="text-sm font-semibold text-gray-900">Notificaciones</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={markAllRead}
+                      disabled={marking || unread === 0}
+                      className="inline-flex items-center gap-1 text-xs text-cyan hover:underline disabled:opacity-50 disabled:no-underline"
+                    >
+                      {marking ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCheck className="h-3 w-3" />}
+                      Marcar todas
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Cerrar"
+                      onClick={closeAll}
+                      className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
 
-          <div className="max-h-96 overflow-y-auto">
-            {loading && items.length === 0 && (
-              <div className="flex items-center justify-center px-3 py-6 text-sm text-gray-500">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Cargando…
-              </div>
-            )}
-            {!loading && error && (
-              <div className="px-3 py-6 text-sm text-red-600">{error}</div>
-            )}
-            {!loading && !error && items.length === 0 && (
-              <div className="px-3 py-6 text-center text-sm text-gray-500">
-                No tienes notificaciones.
-              </div>
-            )}
-            {items.map((n) => {
-              const isRead = !!n.readAt;
-              return (
-                <button
-                  key={n.id}
-                  type="button"
-                  onClick={() => onEntryClick(n)}
-                  className={cn(
-                    "flex w-full items-start gap-2 border-b border-gray-50 px-3 py-2 text-left transition-colors last:border-b-0 hover:bg-gray-50",
-                    !isRead && "bg-cyan/5",
+                {/* Cuerpo lista */}
+                <div className="flex-1 overflow-y-auto">
+                  {loading && items.length === 0 && (
+                    <div className="flex items-center justify-center px-3 py-6 text-sm text-gray-500">
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Cargando…
+                    </div>
                   )}
-                >
-                  <span
-                    aria-hidden
-                    className={cn(
-                      "mt-1.5 h-2 w-2 shrink-0 rounded-full",
-                      isRead ? "bg-transparent" : "bg-cyan",
-                    )}
-                  />
+                  {!loading && error && (
+                    <div className="px-3 py-6 text-sm text-red-600">{error}</div>
+                  )}
+                  {!loading && !error && items.length === 0 && (
+                    <div className="px-3 py-10 text-center text-sm text-gray-500">
+                      No tienes notificaciones.
+                    </div>
+                  )}
+                  {items.map((n) => {
+                    const isRead = !!n.readAt;
+                    return (
+                      <button
+                        key={n.id}
+                        type="button"
+                        onClick={() => onEntryClick(n)}
+                        className={cn(
+                          "flex w-full items-start gap-2 border-b border-gray-50 px-4 py-2.5 text-left transition-colors last:border-b-0 hover:bg-gray-50",
+                          !isRead && "bg-cyan/5",
+                        )}
+                      >
+                        <span
+                          aria-hidden
+                          className={cn(
+                            "mt-1.5 h-2 w-2 shrink-0 rounded-full",
+                            isRead ? "bg-transparent" : "bg-cyan",
+                          )}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className={cn("text-sm text-gray-900", !isRead && "font-medium")}>
+                            {n.title}
+                          </p>
+                          {n.body && (
+                            <p className="mt-0.5 line-clamp-2 text-xs text-gray-500">{n.body}</p>
+                          )}
+                          <p className="mt-1 text-[11px] text-gray-400">
+                            {formatRelative(n.createdAt)}
+                            {n.appSlug !== currentAppSlug && (
+                              <>
+                                {" · "}
+                                <span className="uppercase tracking-wide">{n.appSlug}</span>
+                              </>
+                            )}
+                          </p>
+                        </div>
+                        {isRead && <Check className="mt-1 h-3 w-3 shrink-0 text-gray-300" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Cabecera detalle */}
+                <div className="flex items-start justify-between gap-3 border-b border-gray-100 px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={() => setDetail(null)}
+                    aria-label="Volver a la lista"
+                    className="mt-0.5 rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </button>
                   <div className="min-w-0 flex-1">
-                    <p className={cn("text-sm text-gray-900", !isRead && "font-medium")}>
-                      {n.title}
-                    </p>
-                    {n.body && (
-                      <p className="mt-0.5 line-clamp-2 text-xs text-gray-500">{n.body}</p>
-                    )}
-                    <p className="mt-1 text-[11px] text-gray-400">
-                      {formatRelative(n.createdAt)}
-                      {n.appSlug !== currentAppSlug && (
+                    <p className="text-sm font-semibold text-gray-900">{detail.title}</p>
+                    <p className="mt-0.5 text-[11px] text-gray-400">
+                      {formatRelative(detail.createdAt)}
+                      {detail.appSlug !== currentAppSlug && (
                         <>
                           {" · "}
-                          <span className="uppercase tracking-wide">{n.appSlug}</span>
+                          <span className="uppercase tracking-wide">{detail.appSlug}</span>
                         </>
                       )}
                     </p>
                   </div>
-                  {isRead && <Check className="mt-1 h-3 w-3 shrink-0 text-gray-300" />}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
+                  <button
+                    type="button"
+                    aria-label="Cerrar"
+                    onClick={closeAll}
+                    className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
 
-      {detail && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Detalle de la notificación"
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setDetail(null);
-          }}
-        >
-          <div className="w-full max-w-md rounded-lg bg-white shadow-2xl">
-            <div className="flex items-start justify-between gap-3 border-b border-gray-100 px-4 py-3">
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-900">{detail.title}</p>
-                <p className="mt-0.5 text-[11px] text-gray-400">
-                  {formatRelative(detail.createdAt)}
-                  {detail.appSlug !== currentAppSlug && (
-                    <>
-                      {" · "}
-                      <span className="uppercase tracking-wide">{detail.appSlug}</span>
-                    </>
+                {/* Cuerpo detalle */}
+                <div className="flex-1 overflow-y-auto px-4 py-3 text-sm text-gray-700">
+                  {detail.body ? (
+                    <p className="whitespace-pre-wrap">{detail.body}</p>
+                  ) : (
+                    <p className="text-gray-400">Sin descripción.</p>
                   )}
-                </p>
-              </div>
-              <button
-                type="button"
-                aria-label="Cerrar"
-                onClick={() => setDetail(null)}
-                className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="px-4 py-3 text-sm text-gray-700">
-              {detail.body ? (
-                <p className="whitespace-pre-wrap">{detail.body}</p>
-              ) : (
-                <p className="text-gray-400">Sin descripción.</p>
-              )}
-            </div>
-            <div className="flex items-center justify-end gap-2 border-t border-gray-100 px-4 py-3">
-              <button
-                type="button"
-                onClick={() => setDetail(null)}
-                className="rounded-md px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
-              >
-                Cerrar
-              </button>
-            </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
