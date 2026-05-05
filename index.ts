@@ -59,6 +59,10 @@ export { IncidentDetailPage } from './components/shared/incidents-pages/incident
 export { SortableList } from './components/shared/sortable-list';
 export type { SortableListProps } from './components/shared/sortable-list';
 export { AppGatedButton } from './components/shared/app-gated-button';
+export { SearchableSelect } from './components/shared/searchable-select';
+export type { SearchableOption } from './components/shared/searchable-select';
+export { ClientPicker } from './components/shared/client-picker';
+export type { ClientOption } from './components/shared/client-picker';
 export { IdleTimeout } from './components/layout/idle-timeout';
 
 // Utilities

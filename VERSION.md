@@ -5,6 +5,29 @@
 
 ---
 
+## 1.37.0 — SearchableSelect + ClientPicker compartidos (2026-05-04)
+
+Type: **minor**
+
+Dos componentes nuevos para captura de catálogos, antes duplicados o
+inconsistentes entre apps:
+
+- `SearchableSelect` — combobox client-side filtrable (acto jurídico,
+  jurisdicción, etc.). Autoselect por código exacto. Modo `clearAfterPick`
+  para usarse como picker de listas multi-select.
+- `ClientPicker` — autocomplete asíncrono de clientes con debounce y
+  shape canónico `{nombre, apellidos, razonSocial, nif, tipo}`. Prop
+  `apiBase` configurable (default `/api/catalogs/clientes`); apps con
+  endpoint distinto (archivo: `/api/clientes`) pasan override.
+
+Migración prevista: notaria/previos, notaria/expedientes/nuevo (ya en
+nuevo layout), notaria/previos/[id], legifirma/actuaciones/nueva,
+archivo/peticiones/nueva, consultor/jurisprudencia y
+consultor/consultor-documentos pasan a usar estos componentes en vez
+de copias locales o `<select>` planos.
+
+---
+
 ## 1.36.2 — NotificationsBell: fix marcar leídas + modal autocontenido (2026-05-04)
 
 Type: **patch**
