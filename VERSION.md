@@ -5,6 +5,29 @@
 
 ---
 
+## 1.36.2 — NotificationsBell: fix marcar leídas + modal autocontenido (2026-05-04)
+
+Type: **patch**
+
+Dos bugs:
+
+1. **"Marcar todas" y mark-one no funcionaban**: el frontend hacía
+   `fetch(..., { method: "POST"|"PATCH" })` sin body. El proxy de las
+   apps consumer fwd `Content-Type: application/json` y Fastify (auth)
+   rechazaba con 400 `"Body cannot be empty when content-type is set
+   to application/json"`. Fix: enviar `body: "{}"` con el header
+   explícito.
+
+2. **"Ir al detalle" llevaba al login de admin**: las notificaciones de
+   incidencias tienen `appSlug='admin'` para superadmins, y al navegar
+   se redirigía a `admin.mycolegal.local/...` que requiere sesión
+   admin separada. Fix: el modal del detalle es autocontenido — se
+   eliminó el botón "Ir al detalle"; el contenido completo del aviso
+   queda visible en el propio modal y la notificación se marca como
+   leída automáticamente al abrirse.
+
+---
+
 ## 1.36.1 — Componentes shared usan NavLink en vez de next/link (2026-05-04)
 
 Type: **patch**

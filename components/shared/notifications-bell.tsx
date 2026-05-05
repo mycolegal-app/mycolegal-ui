@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bell, Check, CheckCheck, ExternalLink, Loader2, X } from "lucide-react";
+import { Bell, Check, CheckCheck, Loader2, X } from "lucide-react";
 import { cn } from "../../lib/utils";
 
 export interface NotificationEntry {
@@ -159,7 +159,14 @@ export function NotificationsBell({
   const markOneRead = useCallback(
     async (id: string) => {
       try {
-        const res = await fetch(`${apiBase}/${id}/read`, { method: "PATCH", credentials: "include" });
+        // Body `{}` necesario: los proxies de las apps consumer fwd Content-Type
+        // application/json y Fastify (auth) rechaza body vacío con 400.
+        const res = await fetch(`${apiBase}/${id}/read`, {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: "{}",
+        });
         if (!res.ok) return;
         setItems((prev) =>
           prev.map((n) => (n.id === id ? { ...n, readAt: new Date().toISOString() } : n)),
@@ -175,7 +182,15 @@ export function NotificationsBell({
   const markAllRead = useCallback(async () => {
     setMarking(true);
     try {
-      const res = await fetch(`${apiBase}/read-all`, { method: "POST", credentials: "include" });
+      // Idéntico al PATCH individual: body `{}` para que el proxy + Fastify
+      // no rechacen el POST por "Body cannot be empty when content-type is
+      // application/json".
+      const res = await fetch(`${apiBase}/read-all`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
       if (!res.ok) return;
       const now = new Date().toISOString();
       setItems((prev) => prev.map((n) => ({ ...n, readAt: n.readAt ?? now })));
@@ -198,18 +213,6 @@ export function NotificationsBell({
       setDetail(n);
     },
     [markOneRead],
-  );
-
-  const goToDetailLink = useCallback(
-    (n: NotificationEntry) => {
-      setDetail(null);
-      if (n.appSlug === currentAppSlug && onNavigateInternal) {
-        onNavigateInternal(n.link);
-      } else if (typeof window !== "undefined") {
-        window.location.assign(n.absoluteLink);
-      }
-    },
-    [currentAppSlug, onNavigateInternal],
   );
 
   const iconColour =
@@ -376,14 +379,6 @@ export function NotificationsBell({
                 className="rounded-md px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
               >
                 Cerrar
-              </button>
-              <button
-                type="button"
-                onClick={() => goToDetailLink(detail)}
-                className="inline-flex items-center gap-1 rounded-md bg-navy px-3 py-1.5 text-sm text-white hover:bg-navy-800"
-              >
-                <ExternalLink className="h-3.5 w-3.5" />
-                Ir al detalle
               </button>
             </div>
           </div>
