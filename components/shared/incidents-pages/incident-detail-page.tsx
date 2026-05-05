@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import Link from "next/link";
+import { NavLink as Link } from "../nav-link";
 import { ChevronLeft, Loader2 } from "lucide-react";
 import { IncidentThread, type IncidentThreadIncident } from "../incident-thread";
 import { PageTitle } from "../../layout/page-title";

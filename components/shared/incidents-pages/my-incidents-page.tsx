@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
+import { NavLink as Link } from "../nav-link";
 import { Loader2, Inbox, Plus } from "lucide-react";
 import { PageTitle } from "../../layout/page-title";
 

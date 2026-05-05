@@ -5,6 +5,19 @@
 
 ---
 
+## 1.36.1 — Componentes shared usan NavLink en vez de next/link (2026-05-04)
+
+Type: **patch**
+
+`UserAccountDialog`, `MyIncidentsPage` e `IncidentDetailPage` importaban
+`next/link` directamente; cuando el componente se renderiza en una app
+consumer con `output: 'standalone'`, esa navegación cliente puede fallar
+silenciosamente (mismo bug que motivó la creación de NavLink). Migrados
+a `import { NavLink as Link } from "./nav-link"` para consistencia con
+el patrón canónico del ecosistema.
+
+---
+
 ## 1.36.0 — Gating cross-app: useOrgApps + AppGatedButton (2026-05-04)
 
 Type: **minor**
