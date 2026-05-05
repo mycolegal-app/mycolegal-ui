@@ -5,6 +5,21 @@
 
 ---
 
+## 1.37.2 — NotificationsBell: dropdown anclado + modal de detalle full-screen (2026-05-04)
+
+Type: **patch**
+
+Restablece el dropdown anclado al sidebar (lista de notificaciones) y
+deja el modal centrado a pantalla completa SOLO para la vista de
+detalle: click en una notificación de la lista cierra el dropdown y
+abre directamente el modal centrado con el detalle completo. Sin
+botón "Ir al detalle", sin redirects.
+
+(Reemplaza el comportamiento de 1.37.1, donde la lista misma se abría
+como modal centrado — pedido contradictorio del usuario.)
+
+---
+
 ## 1.37.1 — NotificationsBell: modal centrado en lugar de dropdown anclado (2026-05-04)
 
 Type: **patch**
