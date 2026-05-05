@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Bell, Check, CheckCheck, Loader2, X } from "lucide-react";
 import { cn } from "../../lib/utils";
 
@@ -333,60 +334,65 @@ export function NotificationsBell({
         </div>
       )}
 
-      {/* Modal centrado a pantalla completa con el detalle. Sin botón
-          "Ir al detalle": el modal ES el detalle. */}
-      {detail && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Detalle de la notificación"
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setDetail(null);
-          }}
-        >
-          <div className="flex max-h-[80vh] w-full max-w-lg flex-col overflow-hidden rounded-lg bg-white shadow-2xl">
-            <div className="flex items-start justify-between gap-3 border-b border-gray-100 px-4 py-3">
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-gray-900">{detail.title}</p>
-                <p className="mt-0.5 text-[11px] text-gray-400">
-                  {formatRelative(detail.createdAt)}
-                  {detail.appSlug !== currentAppSlug && (
-                    <>
-                      {" · "}
-                      <span className="uppercase tracking-wide">{detail.appSlug}</span>
-                    </>
-                  )}
-                </p>
+      {/* Modal centrado a pantalla completa: rendrizado vía portal a
+          `document.body` para evitar que un ancestro con `transform` o
+          `filter` (sidebar animado, etc.) cree un containing block que
+          rompa `position: fixed` y nos lo deje pegado al sidebar.
+          Detail-only — la lista sigue en el dropdown anclado de arriba. */}
+      {detail && typeof document !== "undefined" &&
+        createPortal(
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Detalle de la notificación"
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setDetail(null);
+            }}
+          >
+            <div className="flex max-h-[80vh] w-full max-w-lg flex-col overflow-hidden rounded-lg bg-white shadow-2xl">
+              <div className="flex items-start justify-between gap-3 border-b border-gray-100 px-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-gray-900">{detail.title}</p>
+                  <p className="mt-0.5 text-[11px] text-gray-400">
+                    {formatRelative(detail.createdAt)}
+                    {detail.appSlug !== currentAppSlug && (
+                      <>
+                        {" · "}
+                        <span className="uppercase tracking-wide">{detail.appSlug}</span>
+                      </>
+                    )}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  aria-label="Cerrar"
+                  onClick={() => setDetail(null)}
+                  className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
-              <button
-                type="button"
-                aria-label="Cerrar"
-                onClick={() => setDetail(null)}
-                className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              <div className="flex-1 overflow-y-auto px-4 py-3 text-sm text-gray-700">
+                {detail.body ? (
+                  <p className="whitespace-pre-wrap">{detail.body}</p>
+                ) : (
+                  <p className="text-gray-400">Sin descripción.</p>
+                )}
+              </div>
+              <div className="flex items-center justify-end gap-2 border-t border-gray-100 px-4 py-3">
+                <button
+                  type="button"
+                  onClick={() => setDetail(null)}
+                  className="rounded-md px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
+                >
+                  Cerrar
+                </button>
+              </div>
             </div>
-            <div className="flex-1 overflow-y-auto px-4 py-3 text-sm text-gray-700">
-              {detail.body ? (
-                <p className="whitespace-pre-wrap">{detail.body}</p>
-              ) : (
-                <p className="text-gray-400">Sin descripción.</p>
-              )}
-            </div>
-            <div className="flex items-center justify-end gap-2 border-t border-gray-100 px-4 py-3">
-              <button
-                type="button"
-                onClick={() => setDetail(null)}
-                className="rounded-md px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

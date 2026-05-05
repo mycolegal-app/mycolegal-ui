@@ -5,6 +5,18 @@
 
 ---
 
+## 1.37.3 — NotificationsBell: detail modal vía portal a body (2026-05-04)
+
+Type: **patch**
+
+El modal de detalle aparecía pequeño y pegado al sidebar (no centrado)
+en legifirma porque el sidebar/AppShell tiene un ancestro con
+`transform`/`filter` que crea un containing block y rompe
+`position: fixed`. Fix: rendrizar el modal vía `createPortal` a
+`document.body`, así `inset-0` referencia siempre al viewport.
+
+---
+
 ## 1.37.2 — NotificationsBell: dropdown anclado + modal de detalle full-screen (2026-05-04)
 
 Type: **patch**
