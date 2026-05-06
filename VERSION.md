@@ -5,6 +5,51 @@
 
 ---
 
+## 1.42.0 — HeaderActions: slot por portal en lugar de children del PageTitle (2026-05-06)
+
+Type: **minor**
+
+Refactor del patrón de "acciones en el top bar". Antes el consumer pasaba
+los widgets como `children` al `<PageTitle>`, que los almacenaba en
+`PageHeaderContext` vía `setHeader({ actions: children })` y el AppShell
+los re-renderizaba. El patrón tenía una race condition real (observada
+en e2e de peticiones / i18n-portal): cuando el consumer re-renderizaba
+y propagaba un nuevo `<JSX/>` a `setHeader`, el AppShell quedaba con
+`header.actions = null` y el slot no se pintaba.
+
+**Patrón nuevo**: `<HeaderActions>` portal'd via `createPortal` a un
+`<div ref={registerActionsSlot}/>` que el AppShell mounta dentro del
+header. Cero state para las actions, cero useEffect, cero loops; React
+maneja el árbol naturalmente.
+
+API pública:
+- `<HeaderActions>{children}</HeaderActions>` — nuevo, recomendado.
+- `<PageTitle title=... subtitle=... />` — children está **deprecated**
+  pero sigue funcionando por backward-compat (renderiza
+  `<HeaderActions>{children}</HeaderActions>` internamente, así los
+  consumers actuales no se rompen).
+- `usePageHeader()` ahora también expone `actionsSlot` y
+  `registerActionsSlot` para integraciones avanzadas. La forma `header.actions`
+  ya no existe.
+
+Migración recomendada para apps consumer:
+```tsx
+// Antes:
+<PageTitle title="Peticiones" subtitle="...">
+  <LangToggle />
+</PageTitle>
+
+// Después:
+<PageTitle title="Peticiones" subtitle="..." />
+<HeaderActions>
+  <LangToggle />
+</HeaderActions>
+```
+
+Sin cambios en `AppShell` para los consumers (la API pública del shell
+no cambia). Apps que pasan children al `PageTitle` siguen funcionando
+sin migrar.
+
 ## 1.41.0 — Helpers compartidos para resolución/persistencia de idioma (2026-05-05)
 
 Type: **minor**

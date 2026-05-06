@@ -65,7 +65,7 @@ function AppShellInner({
   breadcrumbs?: ReactNode;
   onToggleMobile: () => void;
 }) {
-  const { header } = usePageHeader();
+  const { header, registerActionsSlot } = usePageHeader();
 
   return (
     // h-screen (no min-h-screen) so the column has a bounded height. Together
@@ -93,11 +93,13 @@ function AppShellInner({
             )}
           </div>
           <div className="flex items-center gap-3 shrink-0 ml-4">
-            {header.actions && (
-              <div className="flex items-center gap-2 print:hidden">
-                {header.actions}
-              </div>
-            )}
+            {/* Slot where <HeaderActions> portals its children. `empty:hidden`
+                keeps the wrapper out of the flex when no consumer is mounted
+                — preserves the original "no extra gap" layout. */}
+            <div
+              ref={registerActionsSlot}
+              className="flex items-center gap-2 print:hidden empty:hidden"
+            />
             {commandPalette}
             {helpButton}
             <AppInfoButton appName={appName} appLogoUrl={appLogoUrl} />
