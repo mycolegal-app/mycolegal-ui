@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { NavLink as Link } from "./nav-link";
 import { Loader2, Save, KeyRound, User as UserIcon, Inbox, ExternalLink } from "lucide-react";
 import {
@@ -159,6 +160,7 @@ function ProfileTab({
   endpoint: string;
   onProfileUpdated?: (p: ProfileShape) => void;
 }) {
+  const router = useRouter();
   const [profile, setProfile] = useState<ProfileShape | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -220,16 +222,24 @@ function ProfileTab({
         }
         const body = await res.json();
         const updated: ProfileShape = body.data ?? body;
+        const languageChanged = updated.language !== profile?.language;
         setProfile((prev) => (prev ? { ...prev, ...updated } : updated));
         setSavedAt(Date.now());
         onProfileUpdated?.(updated);
+        // Si cambió el idioma, fuerza re-render del layout server-side: el
+        // PATCH habrá sembrado la cookie `mc_lang` (lo hace el proxy de la
+        // app consumer en su mismo dominio), pero los mensajes ya cargados
+        // siguen en el idioma anterior hasta que el árbol RSC se reevalúa.
+        if (languageChanged) {
+          router.refresh();
+        }
       } catch (err) {
         setError((err as Error).message || "No se pudo guardar.");
       } finally {
         setSaving(false);
       }
     },
-    [displayName, endpoint, language, nif, onProfileUpdated, phoneNumber],
+    [displayName, endpoint, language, nif, onProfileUpdated, phoneNumber, profile?.language, router],
   );
 
   if (loading) {

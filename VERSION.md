@@ -5,6 +5,27 @@
 
 ---
 
+## 1.40.0 — UserAccountDialog refresca al cambiar idioma (2026-05-05)
+
+Type: **minor**
+
+Cuando el usuario cambia su idioma de preferencia desde la pestaña
+"Mi cuenta" del modal y guarda, el dialog detecta el cambio y dispara
+`router.refresh()` para que el layout server-side vuelva a ejecutarse
+con el nuevo idioma. El cambio de los demás campos (nombre, NIF, etc.)
+no provoca refresh — sigue siendo update silencioso con toast.
+
+Esto requiere que la app consumer:
+
+1. Sirva un layout server component que lea el idioma desde una cookie
+   (p.ej. `mc_lang`) en cada render.
+2. Tenga un proxy `PATCH /api/auth/me/profile` que, cuando auth (privado)
+   confirme el cambio, siembre la cookie `mc_lang` en su propio dominio.
+
+Sin estas dos piezas el `router.refresh()` no tiene efecto visible — la
+UI seguirá mostrando los mensajes anteriores. Notaria es la primera app
+con el patrón completo cableado (mycolegal-notaria 2.10.5).
+
 ## 1.39.1 — Fix type-check ES2017 en release-notes.tsx (2026-05-05)
 
 Type: **revision**
