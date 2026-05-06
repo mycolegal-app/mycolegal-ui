@@ -32,6 +32,13 @@ interface LoginFormProps {
   onSuccess?: (data: { token: string; user: Record<string, unknown> }) => void;
   /** Version info shown discreetly in the bottom-left corner */
   versionInfo?: { platform?: string; ui?: string };
+  /**
+   * URL del enlace "¿Olvidaste tu contraseña?". Por defecto la ruta relativa
+   * `/forgot-password` (legacy, in-app). En la plataforma actual el flujo de
+   * recuperación vive en landing — pásale la URL absoluta del portal
+   * (`${PORTAL_URL}/forgot-password`) para que el enlace cruce de subdominio.
+   */
+  forgotPasswordUrl?: string;
 }
 
 export function LoginForm({
@@ -46,6 +53,7 @@ export function LoginForm({
   redirectTo = "/",
   onSuccess,
   versionInfo,
+  forgotPasswordUrl = "/forgot-password",
 }: LoginFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -338,7 +346,7 @@ export function LoginForm({
                       Contraseña
                     </label>
                     <a
-                      href="/forgot-password"
+                      href={forgotPasswordUrl}
                       className="text-xs text-mc-slate-500 hover:text-mc-slate-700 transition-colors"
                     >
                       ¿Olvidaste tu contraseña?

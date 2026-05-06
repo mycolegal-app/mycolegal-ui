@@ -5,6 +5,19 @@
 
 ---
 
+## 1.43.0 — LoginForm: prop `forgotPasswordUrl` para apuntar a landing (2026-05-06)
+
+Type: **minor**
+
+`LoginForm` añade el prop opcional `forgotPasswordUrl` (default `/forgot-password`).
+Permite que cada app pase la URL absoluta al portal de landing
+(`${PORTAL_URL}/forgot-password`) en lugar del fallback in-app. Las apps
+consumidoras pueden eliminar sus páginas `(auth)/forgot-password` y delegar el
+flujo a landing. Backwards-compatible — apps que no pasen el prop mantienen el
+comportamiento previo.
+
+---
+
 ## 1.42.0 — HeaderActions: slot por portal en lugar de children del PageTitle (2026-05-06)
 
 Type: **minor**
