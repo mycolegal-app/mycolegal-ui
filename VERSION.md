@@ -5,6 +5,33 @@
 
 ---
 
+## 1.41.0 — Helpers compartidos para resolución/persistencia de idioma (2026-05-05)
+
+Type: **minor**
+
+Nuevo módulo `@mycolegal-app/ui/server/language` que consolida la lógica
+de cookie + cascada JWT + factory de PATCH proxy que estaba copiada en
+las 10 apps consumer (notaria, legifirma, archivo, cancelaciones,
+consultor, docfilling, facturae, peticiones, tributos, actas).
+
+API pública:
+
+- Constantes: `LANG_COOKIE_NAME`, `LANG_COOKIE_MAX_AGE`, `VALID_LANGS`.
+- Tipos: `Language`, `LanguageCookieOpts`, `ProfileProxyConfig`.
+- Type guards: `isValidLanguage`, `pickLanguage`.
+- JWT: `languageFromJwt(token)` — decode sin verify.
+- Cookie ops: `setLanguageCookie(res, lang, opts)`,
+  `clearLanguageCookie(res, opts)`.
+- Layout: `await resolveDashboardLanguage({ jwtCookieName, fallback? })` —
+  cascade cookie → JWT → fallback.
+- Factory: `createProfileProxyHandlers({ authInternalUrl, jwtCookieName,
+  cookieOpts })` → `{ GET, PATCH }` para `/api/auth/me/profile`. PATCH
+  siembra `mc_lang` automáticamente cuando auth confirma cambio de idioma.
+
+Cada app consumer pasa de ~60 líneas duplicadas a ~5 llamadas a estos
+helpers. La adopción se hace app por app — el patrón viejo sigue
+funcionando hasta que cada repo migre.
+
 ## 1.40.0 — UserAccountDialog refresca al cambiar idioma (2026-05-05)
 
 Type: **minor**
