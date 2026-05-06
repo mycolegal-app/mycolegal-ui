@@ -93,9 +93,9 @@ function renderBlock(b: Block, i: number): ReactNode {
 }
 
 // Inline pass: **bold**, `code`. Order matters — code first so we don't
-// re-tokenize backticks inside a bold span. Both run via a single pass
-// using a regex with named groups.
-const INLINE_RE = /(?<code>`[^`\n]+`)|(?<bold>\*\*[^*\n]+\*\*)/g;
+// re-tokenize backticks inside a bold span. Group 1 = code, group 2 = bold.
+// Numbered groups (not named) so this stays valid under ES2017 targets.
+const INLINE_RE = /(`[^`\n]+`)|(\*\*[^*\n]+\*\*)/g;
 
 function renderInline(text: string): ReactNode {
   const out: ReactNode[] = [];
@@ -104,19 +104,19 @@ function renderInline(text: string): ReactNode {
   for (const m of text.matchAll(INLINE_RE)) {
     const start = m.index ?? 0;
     if (start > last) out.push(<Fragment key={key++}>{text.slice(last, start)}</Fragment>);
-    if (m.groups?.code) {
+    if (m[1]) {
       out.push(
         <code
           key={key++}
           className="rounded bg-gray-100 px-1 py-0.5 font-mono text-[0.85em] text-gray-800"
         >
-          {m.groups.code.slice(1, -1)}
+          {m[1].slice(1, -1)}
         </code>,
       );
-    } else if (m.groups?.bold) {
+    } else if (m[2]) {
       out.push(
         <strong key={key++} className="font-semibold text-gray-900">
-          {m.groups.bold.slice(2, -2)}
+          {m[2].slice(2, -2)}
         </strong>,
       );
     }
@@ -126,8 +126,9 @@ function renderInline(text: string): ReactNode {
   return out;
 }
 
-const HEADING_RE = /^##\s+(?<version>[\w.\-]+)\s*(?:[—-]\s*(?<title>.+?))?\s*(?:\((?<date>[^)]+)\))?\s*$/;
-const TYPE_RE = /^Type:\s*\*\*(?<value>[^*]+)\*\*\s*$/;
+// Group 1 = version, group 2 = title (optional), group 3 = date (optional).
+const HEADING_RE = /^##\s+([\w.\-]+)\s*(?:[—-]\s*(.+?))?\s*(?:\(([^)]+)\))?\s*$/;
+const TYPE_RE = /^Type:\s*\*\*([^*]+)\*\*\s*$/;
 
 function parse(md: string): Block[] {
   // Strip the file's intro (everything before the first `## ` heading).
@@ -187,9 +188,9 @@ function parse(md: string): Block[] {
       flushAll();
       blocks.push({
         kind: "heading",
-        version: h.groups!.version!,
-        title: (h.groups!.title ?? "").trim(),
-        date: (h.groups!.date ?? "").trim(),
+        version: h[1]!,
+        title: (h[2] ?? "").trim(),
+        date: (h[3] ?? "").trim(),
       });
       continue;
     }
@@ -197,7 +198,7 @@ function parse(md: string): Block[] {
     const t = TYPE_RE.exec(line.trim());
     if (t) {
       flushAll();
-      blocks.push({ kind: "type", value: t.groups!.value!.trim() });
+      blocks.push({ kind: "type", value: t[1]!.trim() });
       continue;
     }
 

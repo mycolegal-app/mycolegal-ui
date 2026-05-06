@@ -5,6 +5,22 @@
 
 ---
 
+## 1.39.1 — Fix type-check ES2017 en release-notes.tsx (2026-05-05)
+
+Type: **revision**
+
+Las regex internas de `ReleaseNotes` usaban named capture groups
+(`(?<code>…)`, `(?<bold>…)`, `(?<version>…)`, etc.), sintaxis que
+requiere target ES2018+. Las apps consumidoras (admin, facturae,
+notaria, …) tienen `target: ES2017` en su `tsconfig.json`, así que
+el type-check del Docker build fallaba con `Named capturing groups
+are only available when targeting 'ES2018' or later`.
+
+- `INLINE_RE`, `HEADING_RE` y `TYPE_RE` pasan a usar grupos numerados
+  (`m[1]`, `m[2]`, `m[3]`) — comportamiento idéntico, compatible con
+  ES2017.
+- Sin cambios de API ni de UX.
+
 ## 1.39.0 — AppInfoButton muestra notas de versión (2026-05-05)
 
 Type: **minor**
