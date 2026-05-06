@@ -5,6 +5,25 @@
 
 ---
 
+## 1.39.0 — AppInfoButton muestra notas de versión (2026-05-05)
+
+Type: **minor**
+
+El modal de "Acerca de" del header (componente `AppInfoButton`) ahora
+muestra un panel scrollable con las notas de versión bajo la tabla de
+versiones. La app consumidora debe exponer su `VERSION.md` vía
+`GET /api/version/notes` (devuelve `text/markdown` o 204 si no hay).
+
+- Nuevo hook `useReleaseNotes(enabled)` — fetch perezoso al abrir el
+  modal, con cache de módulo igual que `useVersionInfo`.
+- Nuevo componente interno `ReleaseNotes` con renderer markdown propio
+  (cero dependencias). Soporta headings de versión `## X.Y.Z — title
+  (date)`, badge de `Type`, listas, **bold**, `code`, párrafos y
+  bloques de diffstat (colapsados en `<pre>`).
+- Modal ensanchado a `max-w-2xl` con scroll interno (`max-h-[85vh]`).
+- Si la app no implementa `/api/version/notes` o devuelve 204, el panel
+  muestra un empty state silencioso — no rompe la UX.
+
 ## 1.37.3 — NotificationsBell: detail modal vía portal a body (2026-05-04)
 
 Type: **patch**

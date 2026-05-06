@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { Info, X } from "lucide-react";
 import { useVersionInfo } from "../../hooks/use-version-info";
+import { useReleaseNotes } from "../../hooks/use-release-notes";
+import { ReleaseNotes } from "./release-notes";
 
 interface AppInfoButtonProps {
   appName: string;
@@ -24,6 +26,7 @@ export function AppInfoButton({
 }: AppInfoButtonProps) {
   const [open, setOpen] = useState(false);
   const version = useVersionInfo();
+  const notes = useReleaseNotes(open);
 
   // Close on Escape and lock body scroll while the modal is visible —
   // the minimum ergonomics a user expects from a dialog.
@@ -65,8 +68,8 @@ export function AppInfoButton({
             if (e.target === e.currentTarget) setOpen(false);
           }}
         >
-          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-2xl">
-            <div className="flex items-start justify-between gap-3">
+          <div className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-xl bg-white shadow-2xl">
+            <div className="flex items-start justify-between gap-3 border-b border-gray-200 p-6 pb-4">
               <div className="flex items-center gap-3">
                 {appLogoUrl && (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -89,11 +92,17 @@ export function AppInfoButton({
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <dl className="mt-4 divide-y divide-gray-200 border-t border-gray-200">
-              <VersionRow label="Aplicación" value={version?.app} />
-              <VersionRow label="UI" value={version?.ui} />
-              <VersionRow label="Auth" value={version?.auth} />
-            </dl>
+            <div className="overflow-y-auto px-6 py-4">
+              <dl className="divide-y divide-gray-200 border-b border-gray-200 pb-2">
+                <VersionRow label="Aplicación" value={version?.app} />
+                <VersionRow label="UI" value={version?.ui} />
+                <VersionRow label="Auth" value={version?.auth} />
+              </dl>
+              <h3 className="mt-5 mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
+                Notas de la versión
+              </h3>
+              <NotesBody state={notes} />
+            </div>
           </div>
         </div>
       )}
@@ -108,4 +117,17 @@ function VersionRow({ label, value }: { label: string; value?: string }) {
       <dd className="font-mono text-gray-900">{value ?? "…"}</dd>
     </div>
   );
+}
+
+function NotesBody({ state }: { state: ReturnType<typeof useReleaseNotes> }) {
+  if (state.status === "loading") {
+    return <p className="text-sm text-gray-500">Cargando…</p>;
+  }
+  if (state.status === "empty") {
+    return <p className="text-sm text-gray-500">No hay notas de versión publicadas.</p>;
+  }
+  if (state.status === "error") {
+    return <p className="text-sm text-gray-500">No se han podido cargar las notas.</p>;
+  }
+  return <ReleaseNotes markdown={state.markdown} />;
 }

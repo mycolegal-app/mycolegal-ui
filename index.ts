@@ -75,6 +75,8 @@ export { useKeyboardShortcuts } from './hooks/use-keyboard-shortcuts';
 export type { KeyboardShortcut } from './hooks/use-keyboard-shortcuts';
 export { useVersionInfo } from './hooks/use-version-info';
 export type { VersionInfo } from './hooks/use-version-info';
+export { useReleaseNotes } from './hooks/use-release-notes';
+export type { ReleaseNotesState } from './hooks/use-release-notes';
 export { useAuthFetchGuard } from './hooks/use-auth-fetch-guard';
 export { useOrgApps, useIsAppEnabled, invalidateOrgApps } from './hooks/use-org-apps';
 export { useIsOrgAdmin } from './hooks/use-is-org-admin';
