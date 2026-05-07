@@ -18,6 +18,7 @@
     "components",
     "e2e",
     "hooks",
+    "i18n",
     "lib",
     "server",
     "tokens",

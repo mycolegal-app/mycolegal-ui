@@ -55,16 +55,23 @@ function interpolate(text: string, params?: Record<string, string | number>): st
 interface I18nProviderProps {
   language: Language;
   messages: TranslationMessages;
+  /**
+   * Optional fallback messages (e.g. shipped by the shared `mycolegal-ui` package).
+   * When a key is missing in `messages`, the provider tries `defaults` before returning
+   * the dev-mode warning fallback. App-level `messages` always win — apps can override
+   * any UI-package string by defining the same key.
+   */
+  defaults?: TranslationMessages;
   children: ReactNode;
 }
 
-export function I18nProvider({ language, messages, children }: I18nProviderProps) {
+export function I18nProvider({ language, messages, defaults, children }: I18nProviderProps) {
   // Normalize VAL to CAT (same translations)
   const effectiveLang = language === "VAL" ? "CAT" : language;
 
   const t = useCallback(
     (key: string, params?: Record<string, string | number>) => {
-      const value = resolveKey(messages, key);
+      const value = resolveKey(messages, key) ?? (defaults ? resolveKey(defaults, key) : undefined);
       if (value === undefined) {
         // Fallback: return the last segment of the key as readable text
         if (process.env.NODE_ENV === "development") {
@@ -74,7 +81,7 @@ export function I18nProvider({ language, messages, children }: I18nProviderProps
       }
       return interpolate(value, params);
     },
-    [messages, effectiveLang]
+    [messages, defaults, effectiveLang]
   );
 
   return (

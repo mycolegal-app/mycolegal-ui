@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { NavLink as Link } from "./nav-link";
 import { Loader2, Save, KeyRound, User as UserIcon, Inbox, ExternalLink } from "lucide-react";
+import { useI18n } from "../i18n/i18n-context";
 import {
   Dialog,
   DialogContent,
@@ -66,17 +67,24 @@ interface UserAccountDialogProps {
 }
 
 const LANGUAGE_OPTIONS = [
-  { value: "CAST", label: "Castellano" },
-  { value: "CAT", label: "Català" },
-  { value: "EU", label: "Euskara" },
-  { value: "GAL", label: "Galego" },
+  { value: "CAST", labelKey: "ui.userAccount.lang.cast" },
+  { value: "CAT", labelKey: "ui.userAccount.lang.cat" },
+  { value: "EU", labelKey: "ui.userAccount.lang.eus" },
+  { value: "GAL", labelKey: "ui.userAccount.lang.gal" },
 ];
 
-const STATUS_COPY: Record<string, { label: string; tone: string }> = {
-  open: { label: "Abierta", tone: "bg-amber-100 text-amber-800" },
-  awaiting_user: { label: "Esperando tu respuesta", tone: "bg-cyan-100 text-cyan-800" },
-  awaiting_admin: { label: "Esperando soporte", tone: "bg-cyan-100 text-cyan-800" },
-  closed: { label: "Cerrada", tone: "bg-gray-100 text-gray-700" },
+const STATUS_TONES: Record<string, string> = {
+  open: "bg-amber-100 text-amber-800",
+  awaiting_user: "bg-cyan-100 text-cyan-800",
+  awaiting_admin: "bg-cyan-100 text-cyan-800",
+  closed: "bg-gray-100 text-gray-700",
+};
+
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  open: "ui.userAccount.status.open",
+  awaiting_user: "ui.userAccount.status.awaitingUser",
+  awaiting_admin: "ui.userAccount.status.awaitingAdmin",
+  closed: "ui.userAccount.status.closed",
 };
 
 function formatWhen(iso: string | null | undefined): string {
@@ -97,6 +105,7 @@ export function UserAccountDialog({
   endpoints,
   onProfileUpdated,
 }: UserAccountDialogProps) {
+  const { t } = useI18n();
   const ep = {
     profile: endpoints?.profile ?? "/api/auth/me/profile",
     changePassword: endpoints?.changePassword ?? "/api/auth/change-password",
@@ -108,22 +117,22 @@ export function UserAccountDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Mi cuenta</DialogTitle>
+          <DialogTitle>{t("ui.userAccount.title")}</DialogTitle>
           <DialogDescription>
-            Gestiona tus datos, cambia tu contraseña y revisa las incidencias relacionadas con esta aplicación.
+            {t("ui.userAccount.description")}
           </DialogDescription>
         </DialogHeader>
 
         <Tabs defaultValue="profile" className="mt-2">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="profile">
-              <UserIcon className="mr-1.5 h-4 w-4" /> Mis datos
+              <UserIcon className="mr-1.5 h-4 w-4" /> {t("ui.userAccount.tabProfile")}
             </TabsTrigger>
             <TabsTrigger value="password">
-              <KeyRound className="mr-1.5 h-4 w-4" /> Contraseña
+              <KeyRound className="mr-1.5 h-4 w-4" /> {t("ui.userAccount.tabPassword")}
             </TabsTrigger>
             <TabsTrigger value="incidents">
-              <Inbox className="mr-1.5 h-4 w-4" /> Incidencias
+              <Inbox className="mr-1.5 h-4 w-4" /> {t("ui.userAccount.tabIncidents")}
             </TabsTrigger>
           </TabsList>
 
@@ -160,6 +169,7 @@ function ProfileTab({
   endpoint: string;
   onProfileUpdated?: (p: ProfileShape) => void;
 }) {
+  const { t } = useI18n();
   const router = useRouter();
   const [profile, setProfile] = useState<ProfileShape | null>(null);
   const [loading, setLoading] = useState(true);
@@ -189,7 +199,7 @@ function ProfileTab({
         setPhoneNumber(p.phoneNumber ?? "");
         setNif(p.nif ?? "");
       } catch (err) {
-        if (!cancelled) setError((err as Error).message || "No se pudo cargar el perfil.");
+        if (!cancelled) setError((err as Error).message || t("ui.userAccount.errLoadProfile"));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -197,7 +207,7 @@ function ProfileTab({
     return () => {
       cancelled = true;
     };
-  }, [endpoint]);
+  }, [endpoint, t]);
 
   const onSubmit = useCallback(
     async (e: FormEvent) => {
@@ -234,25 +244,25 @@ function ProfileTab({
           router.refresh();
         }
       } catch (err) {
-        setError((err as Error).message || "No se pudo guardar.");
+        setError((err as Error).message || t("ui.userAccount.errSave"));
       } finally {
         setSaving(false);
       }
     },
-    [displayName, endpoint, language, nif, onProfileUpdated, phoneNumber, profile?.language, router],
+    [displayName, endpoint, language, nif, onProfileUpdated, phoneNumber, profile?.language, router, t],
   );
 
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-sm text-gray-500">
-        <Loader2 className="h-4 w-4 animate-spin" /> Cargando perfil…
+        <Loader2 className="h-4 w-4 animate-spin" /> {t("ui.userAccount.loadingProfile")}
       </div>
     );
   }
   if (!profile) {
     return (
       <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-        {error || "No se pudo cargar el perfil."}
+        {error || t("ui.userAccount.errLoadProfile")}
       </div>
     );
   }
@@ -261,7 +271,7 @@ function ProfileTab({
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-          <Label htmlFor="ua-name">Nombre</Label>
+          <Label htmlFor="ua-name">{t("ui.userAccount.fieldName")}</Label>
           <Input
             id="ua-name"
             value={displayName}
@@ -271,7 +281,7 @@ function ProfileTab({
           />
         </div>
         <div>
-          <Label htmlFor="ua-lang">Idioma</Label>
+          <Label htmlFor="ua-lang">{t("ui.userAccount.fieldLanguage")}</Label>
           <Select value={language} onValueChange={setLanguage}>
             <SelectTrigger id="ua-lang">
               <SelectValue />
@@ -279,14 +289,14 @@ function ProfileTab({
             <SelectContent>
               {LANGUAGE_OPTIONS.map((o) => (
                 <SelectItem key={o.value} value={o.value}>
-                  {o.label}
+                  {t(o.labelKey)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div>
-          <Label htmlFor="ua-phone">Teléfono</Label>
+          <Label htmlFor="ua-phone">{t("ui.userAccount.fieldPhone")}</Label>
           <Input
             id="ua-phone"
             value={phoneNumber}
@@ -296,7 +306,7 @@ function ProfileTab({
           />
         </div>
         <div>
-          <Label htmlFor="ua-nif">NIF / NIE</Label>
+          <Label htmlFor="ua-nif">{t("ui.userAccount.fieldNif")}</Label>
           <Input
             id="ua-nif"
             value={nif}
@@ -309,19 +319,19 @@ function ProfileTab({
 
       <div className="rounded-md border border-gray-100 bg-gray-50 px-3 py-2 text-xs text-gray-600">
         <dl className="grid grid-cols-2 gap-x-4 gap-y-1">
-          <dt className="text-gray-500">Email</dt>
+          <dt className="text-gray-500">{t("ui.userAccount.fieldEmail")}</dt>
           <dd className="font-mono">{profile.email}</dd>
-          <dt className="text-gray-500">Rol</dt>
+          <dt className="text-gray-500">{t("ui.userAccount.fieldRole")}</dt>
           <dd>{profile.role}</dd>
           {profile.organization && (
             <>
-              <dt className="text-gray-500">Organización</dt>
+              <dt className="text-gray-500">{t("ui.userAccount.fieldOrganization")}</dt>
               <dd>{profile.organization.name}</dd>
             </>
           )}
-          <dt className="text-gray-500">Último acceso</dt>
+          <dt className="text-gray-500">{t("ui.userAccount.fieldLastLogin")}</dt>
           <dd>{formatWhen(profile.lastLogin)}</dd>
-          <dt className="text-gray-500">Contraseña cambiada</dt>
+          <dt className="text-gray-500">{t("ui.userAccount.fieldPasswordChanged")}</dt>
           <dd>{formatWhen(profile.passwordChangedAt)}</dd>
         </dl>
       </div>
@@ -331,16 +341,16 @@ function ProfileTab({
       )}
       {savedAt && !error && (
         <div className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
-          Datos guardados.
+          {t("ui.userAccount.savedOk")}
         </div>
       )}
 
       <div className="flex justify-end">
         <Button type="submit" disabled={saving || !displayName.trim()}>
           {saving ? (
-            <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" />Guardando…</>
+            <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" />{t("ui.userAccount.btnSaving")}</>
           ) : (
-            <><Save className="mr-1.5 h-4 w-4" />Guardar cambios</>
+            <><Save className="mr-1.5 h-4 w-4" />{t("ui.userAccount.btnSave")}</>
           )}
         </Button>
       </div>
@@ -351,6 +361,7 @@ function ProfileTab({
 // ────────────────────────────── Password tab ─────────────────────────────
 
 function PasswordTab({ endpoint }: { endpoint: string }) {
+  const { t } = useI18n();
   const MIN = 12;
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
@@ -364,15 +375,15 @@ function PasswordTab({ endpoint }: { endpoint: string }) {
     setError(null);
     setSavedAt(null);
     if (next.length < MIN) {
-      setError(`La nueva contraseña debe tener al menos ${MIN} caracteres.`);
+      setError(t("ui.userAccount.errMinChars", { min: String(MIN) }));
       return;
     }
     if (next !== confirm) {
-      setError("La nueva contraseña y la confirmación no coinciden.");
+      setError(t("ui.userAccount.errMismatch"));
       return;
     }
     if (!current) {
-      setError("Debes indicar tu contraseña actual.");
+      setError(t("ui.userAccount.errCurrentRequired"));
       return;
     }
     setSubmitting(true);
@@ -398,7 +409,7 @@ function PasswordTab({ endpoint }: { endpoint: string }) {
       setConfirm("");
       setSavedAt(Date.now());
     } catch (err) {
-      setError((err as Error).message || "No se pudo cambiar la contraseña.");
+      setError((err as Error).message || t("ui.userAccount.errChangePassword"));
     } finally {
       setSubmitting(false);
     }
@@ -407,7 +418,7 @@ function PasswordTab({ endpoint }: { endpoint: string }) {
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div>
-        <Label htmlFor="ua-current">Contraseña actual</Label>
+        <Label htmlFor="ua-current">{t("ui.userAccount.fieldCurrent")}</Label>
         <Input
           id="ua-current"
           type="password"
@@ -418,7 +429,7 @@ function PasswordTab({ endpoint }: { endpoint: string }) {
         />
       </div>
       <div>
-        <Label htmlFor="ua-new">Nueva contraseña</Label>
+        <Label htmlFor="ua-new">{t("ui.userAccount.fieldNew")}</Label>
         <Input
           id="ua-new"
           type="password"
@@ -428,10 +439,10 @@ function PasswordTab({ endpoint }: { endpoint: string }) {
           minLength={MIN}
           required
         />
-        <p className="mt-1 text-xs text-gray-500">Mínimo {MIN} caracteres.</p>
+        <p className="mt-1 text-xs text-gray-500">{t("ui.userAccount.minCharsHint", { min: String(MIN) })}</p>
       </div>
       <div>
-        <Label htmlFor="ua-confirm">Confirmar nueva contraseña</Label>
+        <Label htmlFor="ua-confirm">{t("ui.userAccount.fieldConfirm")}</Label>
         <Input
           id="ua-confirm"
           type="password"
@@ -447,16 +458,16 @@ function PasswordTab({ endpoint }: { endpoint: string }) {
       )}
       {savedAt && !error && (
         <div className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
-          Contraseña actualizada. Las demás sesiones se cerrarán al refrescar.
+          {t("ui.userAccount.passwordUpdated")}
         </div>
       )}
 
       <div className="flex justify-end">
         <Button type="submit" disabled={submitting}>
           {submitting ? (
-            <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" />Guardando…</>
+            <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" />{t("ui.userAccount.btnSaving")}</>
           ) : (
-            <><KeyRound className="mr-1.5 h-4 w-4" />Cambiar contraseña</>
+            <><KeyRound className="mr-1.5 h-4 w-4" />{t("ui.userAccount.btnChangePassword")}</>
           )}
         </Button>
       </div>
@@ -475,6 +486,7 @@ function IncidentsTab({
   myIncidentsEndpoint: string;
   orgAppIncidentsEndpoint: string;
 }) {
+  const { t } = useI18n();
   const [mine, setMine] = useState<IncidentEntry[] | null>(null);
   const [others, setOthers] = useState<IncidentEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -490,8 +502,8 @@ function IncidentsTab({
             credentials: "include",
           }),
         ]);
-        if (!r1.ok) throw new Error(`Mis incidencias: HTTP ${r1.status}`);
-        if (!r2.ok) throw new Error(`Otros: HTTP ${r2.status}`);
+        if (!r1.ok) throw new Error(t("ui.userAccount.errMyIncidents", { status: String(r1.status) }));
+        if (!r2.ok) throw new Error(t("ui.userAccount.errOtherIncidents", { status: String(r2.status) }));
         const b1 = await r1.json();
         const b2 = await r2.json();
         if (cancelled) return;
@@ -509,7 +521,7 @@ function IncidentsTab({
     return () => {
       cancelled = true;
     };
-  }, [appSlug, myIncidentsEndpoint, orgAppIncidentsEndpoint]);
+  }, [appSlug, myIncidentsEndpoint, orgAppIncidentsEndpoint, t]);
 
   return (
     <div className="space-y-5">
@@ -518,16 +530,16 @@ function IncidentsTab({
       )}
 
       <Section
-        title="Abiertas por mí en esta aplicación"
+        title={t("ui.userAccount.sectionMine")}
         items={mine}
-        emptyText="No has abierto incidencias en esta aplicación."
+        emptyText={t("ui.userAccount.emptyMine")}
         showReporter={false}
       />
 
       <Section
-        title="Abiertas por otros en esta aplicación"
+        title={t("ui.userAccount.sectionOthers")}
         items={others}
-        emptyText="No hay incidencias de otros usuarios en esta aplicación."
+        emptyText={t("ui.userAccount.emptyOthers")}
         showReporter
       />
 
@@ -536,7 +548,7 @@ function IncidentsTab({
           href="/incidencias"
           className="inline-flex items-center gap-1 text-sm text-mc-primary-600 hover:underline"
         >
-          Ver todas mis incidencias <ExternalLink className="h-3.5 w-3.5" />
+          {t("ui.userAccount.linkAllIncidents")} <ExternalLink className="h-3.5 w-3.5" />
         </Link>
       </div>
     </div>
@@ -554,12 +566,13 @@ function Section({
   emptyText: string;
   showReporter: boolean;
 }) {
+  const { t } = useI18n();
   return (
     <div>
       <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">{title}</h3>
       {items === null ? (
         <div className="flex items-center gap-2 text-sm text-gray-500">
-          <Loader2 className="h-4 w-4 animate-spin" /> Cargando…
+          <Loader2 className="h-4 w-4 animate-spin" /> {t("ui.userAccount.loadingShort")}
         </div>
       ) : items.length === 0 ? (
         <div className="rounded-md border border-dashed border-gray-200 bg-gray-50 px-3 py-4 text-center text-xs text-gray-500">
@@ -568,7 +581,9 @@ function Section({
       ) : (
         <ul className="divide-y divide-gray-100 overflow-hidden rounded-md border border-gray-100 bg-white">
           {items.map((i) => {
-            const status = STATUS_COPY[i.status] || { label: i.status, tone: "bg-gray-100 text-gray-700" };
+            const tone = STATUS_TONES[i.status] || "bg-gray-100 text-gray-700";
+            const labelKey = STATUS_LABEL_KEYS[i.status];
+            const statusLabel = labelKey ? t(labelKey) : i.status;
             const showLink = !showReporter; // only own incidents are clickable
             const number = (
               <span className="font-mono text-xs text-gray-500">#{i.number}</span>
@@ -588,8 +603,8 @@ function Section({
                       ) : (
                         number
                       )}
-                      <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-medium ${status.tone}`}>
-                        {status.label}
+                      <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-medium ${tone}`}>
+                        {statusLabel}
                       </span>
                       {showReporter && i.reporterDisplayName && (
                         <span className="text-xs text-gray-500">· {i.reporterDisplayName}</span>

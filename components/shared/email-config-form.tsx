@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, type FormEvent } from "react";
+import { useI18n } from "../i18n/i18n-context";
 
 /**
  * Raw email config payload as stored in `org_email_configs` and as returned
@@ -93,6 +94,7 @@ export function EmailConfigForm({
   testSlot,
   footerSlot,
 }: EmailConfigFormProps) {
+  const { t } = useI18n();
   const [values, setValues] = useState<EmailConfigValues>(EMPTY);
   const [provider, setProvider] = useState<EmailProvider>(
     scope === "org" ? "platform" : "smtp",
@@ -185,7 +187,7 @@ export function EmailConfigForm({
   }
 
   if (loading) {
-    return <p className="text-gray-500 text-sm py-8 text-center">Cargando...</p>;
+    return <p className="text-gray-500 text-sm py-8 text-center">{t("ui.emailConfig.loading")}</p>;
   }
 
   const platformFromAddress = platformSender?.fromAddress?.trim() || null;
@@ -195,7 +197,7 @@ export function EmailConfigForm({
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Provider picker — always visible. */}
       <div className="border rounded-lg p-4 space-y-3">
-        <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wider">Proveedor</h3>
+        <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wider">{t("ui.emailConfig.providerHeading")}</h3>
         <div className="flex flex-wrap gap-4">
           {scope === "org" && (
             <label className="flex items-center gap-2 text-sm">
@@ -206,7 +208,7 @@ export function EmailConfigForm({
                 checked={provider === "platform"}
                 onChange={() => switchProvider("platform")}
               />
-              Proveedor global MyCoLegal.app
+              {t("ui.emailConfig.providerPlatform")}
             </label>
           )}
           <label className="flex items-center gap-2 text-sm">
@@ -217,7 +219,7 @@ export function EmailConfigForm({
               checked={provider === "resend"}
               onChange={() => switchProvider("resend")}
             />
-            Resend
+            {t("ui.emailConfig.providerResend")}
           </label>
           <label className="flex items-center gap-2 text-sm">
             <input
@@ -227,17 +229,17 @@ export function EmailConfigForm({
               checked={provider === "smtp"}
               onChange={() => switchProvider("smtp")}
             />
-            SMTP
+            {t("ui.emailConfig.providerSmtp")}
           </label>
         </div>
         <p className="text-xs text-gray-500">
           {provider === "platform"
-            ? "Los correos de esta organización se enviarán desde la cuenta genérica de la plataforma MyCoLegal.app."
+            ? t("ui.emailConfig.descPlatform")
             : provider === "resend"
-            ? "Envíos vía Resend. Sólo necesitas la API key y la dirección de remitente."
+            ? t("ui.emailConfig.descResend")
             : scope === "platform"
-            ? "Servidor SMTP arbitrario. Si todos los campos quedan vacíos se usarán las variables de entorno del servicio."
-            : "Servidor SMTP propio de esta organización."}
+            ? t("ui.emailConfig.descSmtpPlatform")
+            : t("ui.emailConfig.descSmtpOrg")}
         </p>
       </div>
 
@@ -245,7 +247,7 @@ export function EmailConfigForm({
       {provider === "platform" ? (
         <div className="border rounded-lg p-4 bg-blue-50/40 text-sm text-gray-700 space-y-2">
           <p>
-            Los correos se enviarán desde la cuenta genérica configurada en el servicio global de correo de la plataforma:
+            {t("ui.emailConfig.platformIntro")}
           </p>
           {platformFromAddress ? (
             <p className="font-mono text-xs bg-white border border-gray-200 rounded px-2 py-1 inline-block">
@@ -253,11 +255,11 @@ export function EmailConfigForm({
             </p>
           ) : (
             <p className="text-xs text-amber-700">
-              Aún no se ha definido un remitente global. Un superadmin debe configurarlo en «Correo plataforma».
+              {t("ui.emailConfig.platformNoSender")}
             </p>
           )}
           <p className="text-xs text-gray-500">
-            No hace falta parametrizar SMTP ni Resend para esta organización. Las plantillas de correo se gestionan en el apartado «Plantillas de correo» dentro de la administración de cada aplicación.
+            {t("ui.emailConfig.platformFooter")}
           </p>
         </div>
       ) : (
@@ -279,10 +281,10 @@ export function EmailConfigForm({
           className="rounded-lg bg-cyan px-6 py-2 text-sm font-medium text-white hover:bg-cyan/90 disabled:opacity-50"
         >
           {saving
-            ? "Guardando..."
+            ? t("ui.emailConfig.saving")
             : scope === "platform"
-            ? "Guardar configuración por defecto"
-            : "Guardar configuración de email"}
+            ? t("ui.emailConfig.btnSavePlatform")
+            : t("ui.emailConfig.btnSaveOrg")}
         </button>
       </div>
 
@@ -300,14 +302,15 @@ function ResendFields({
   setValues: (u: (v: EmailConfigValues) => EmailConfigValues) => void;
   scope: "platform" | "org";
 }) {
+  const { t } = useI18n();
   return (
     <>
       <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wider">
-        Credenciales Resend
+        {t("ui.emailConfig.resendHeading")}
       </h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="sm:col-span-2">
-          <label className="block text-xs font-medium text-gray-600 mb-1">API Key</label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">{t("ui.emailConfig.apiKey")}</label>
           <input
             type="password"
             value={values.smtpPass}
@@ -317,12 +320,12 @@ function ResendFields({
             autoComplete="new-password"
           />
           <p className="text-xs text-gray-400 mt-1">
-            Se guarda como contraseña SMTP. Host/puerto/usuario se fijan automáticamente
+            {t("ui.emailConfig.apiKeyHint")}{" "}
             (<code className="text-[10px] bg-gray-100 rounded px-1">smtp.resend.com:465 / resend</code>).
           </p>
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Remitente (email)</label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">{t("ui.emailConfig.fromEmail")}</label>
           <input
             type="email"
             value={values.fromAddress}
@@ -332,7 +335,7 @@ function ResendFields({
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Nombre remitente</label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">{t("ui.emailConfig.fromName")}</label>
           <input
             type="text"
             value={values.fromName}
@@ -355,14 +358,15 @@ function SmtpFields({
   setValues: (u: (v: EmailConfigValues) => EmailConfigValues) => void;
   scope: "platform" | "org";
 }) {
+  const { t } = useI18n();
   return (
     <>
       <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wider">
-        Servidor SMTP{scope === "platform" ? " por defecto" : ""}
+        {scope === "platform" ? t("ui.emailConfig.smtpHeadingPlatform") : t("ui.emailConfig.smtpHeading")}
       </h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Host</label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">{t("ui.emailConfig.smtpHost")}</label>
           <input
             type="text"
             value={values.smtpHost}
@@ -372,7 +376,7 @@ function SmtpFields({
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Puerto</label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">{t("ui.emailConfig.smtpPort")}</label>
           <input
             type="text"
             value={values.smtpPort}
@@ -382,7 +386,7 @@ function SmtpFields({
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Usuario</label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">{t("ui.emailConfig.smtpUser")}</label>
           <input
             type="text"
             value={values.smtpUser}
@@ -391,7 +395,7 @@ function SmtpFields({
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Contraseña</label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">{t("ui.emailConfig.smtpPass")}</label>
           <input
             type="password"
             value={values.smtpPass}
@@ -403,7 +407,7 @@ function SmtpFields({
       </div>
       <div className="flex flex-wrap items-center gap-4">
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Remitente (email)</label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">{t("ui.emailConfig.fromEmail")}</label>
           <input
             type="email"
             value={values.fromAddress}
@@ -413,7 +417,7 @@ function SmtpFields({
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Nombre remitente</label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">{t("ui.emailConfig.fromName")}</label>
           <input
             type="text"
             value={values.fromName}
@@ -429,7 +433,7 @@ function SmtpFields({
             onChange={(e) => setValues((v) => ({ ...v, smtpSecure: e.target.checked }))}
             className="rounded border-gray-300"
           />
-          TLS/SSL
+          {t("ui.emailConfig.tls")}
         </label>
       </div>
     </>

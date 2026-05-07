@@ -81,6 +81,9 @@ export { useAuthFetchGuard } from './hooks/use-auth-fetch-guard';
 export { useOrgApps, useIsAppEnabled, invalidateOrgApps } from './hooks/use-org-apps';
 export { useIsOrgAdmin } from './hooks/use-is-org-admin';
 
+// i18n defaults (used by consumer apps' I18nProvider#defaults)
+export { uiMessages, getUiDefaults } from './i18n';
+
 // DocFilling integration
 export { DocFillingModal } from './components/docfilling/DocFillingModal';
 
