@@ -5,6 +5,18 @@
 
 ---
 
+## 1.44.1 — SetPasswordForm/ForgotPasswordForm: inputs self-contained (2026-05-07)
+
+Type: **patch**
+
+`SetPasswordForm` y `ForgotPasswordForm` añaden `bg-white text-mc-slate-900` en
+los `<input>`. Sin esto, los inputs heredaban `color: inherit` del `<body>` del
+host (e.g. el `body class="text-white"` de landing) y las contraseñas se tecleaban
+en blanco sobre fondo blanco — invisible. Cambio defensivo: el componente queda
+self-contained y deja de depender del color de texto del host.
+
+---
+
 ## 1.43.0 — LoginForm: prop `forgotPasswordUrl` para apuntar a landing (2026-05-06)
 
 Type: **minor**

@@ -251,7 +251,7 @@ export function SetPasswordForm({
                     minLength={minLength}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-mc-neutral-300 px-3 py-2 text-sm focus:border-mc-primary-500 focus:outline-none focus:ring-1 focus:ring-mc-primary-500"
+                    className="mt-1 block w-full rounded-lg border border-mc-neutral-300 bg-white px-3 py-2 text-sm text-mc-slate-900 focus:border-mc-primary-500 focus:outline-none focus:ring-1 focus:ring-mc-primary-500"
                   />
                   <p className="mt-1 text-xs text-mc-slate-500">
                     {t("ui.userAccount.minCharsHint", { min: String(minLength) })}
@@ -270,7 +270,7 @@ export function SetPasswordForm({
                     minLength={minLength}
                     value={confirm}
                     onChange={(e) => setConfirm(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-mc-neutral-300 px-3 py-2 text-sm focus:border-mc-primary-500 focus:outline-none focus:ring-1 focus:ring-mc-primary-500"
+                    className="mt-1 block w-full rounded-lg border border-mc-neutral-300 bg-white px-3 py-2 text-sm text-mc-slate-900 focus:border-mc-primary-500 focus:outline-none focus:ring-1 focus:ring-mc-primary-500"
                   />
                 </div>
 
