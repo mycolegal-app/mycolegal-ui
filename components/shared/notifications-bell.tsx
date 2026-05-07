@@ -360,7 +360,7 @@ export function NotificationsBell({
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-gray-900">{detail.title}</p>
                   <p className="mt-0.5 text-[11px] text-gray-400">
-                    {formatRelative(detail.createdAt)}
+                    {formatRelative(detail.createdAt, t)}
                     {detail.appSlug !== currentAppSlug && (
                       <>
                         {" · "}

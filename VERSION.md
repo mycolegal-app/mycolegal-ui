@@ -5,6 +5,17 @@
 
 ---
 
+## 1.44.3 — Fix type error en NotificationsBell tras refactor i18n (2026-05-07)
+
+Type: **patch**
+
+`notifications-bell.tsx:363` llamaba a `formatRelative(detail.createdAt)` con
+1 argumento; tras el refactor i18n (`44cc5a7`) la función pasó a requerir
+`(iso, t)`. La línea 325 sí se actualizó pero la 363 quedó descolgada,
+rompiendo el `tsc` de cualquier app consumidora. Bug latente en 1.44.0/1/2.
+
+---
+
 ## 1.44.1 — SetPasswordForm/ForgotPasswordForm: inputs self-contained (2026-05-07)
 
 Type: **patch**
