@@ -7,6 +7,7 @@ import { type AppInfo } from "./app-switcher";
 import { IdleTimeout } from "./idle-timeout";
 import { AppInfoButton } from "../shared/app-info-button";
 import { useAuthFetchGuard } from "../../hooks/use-auth-fetch-guard";
+import { useI18n } from "../i18n/i18n-context";
 
 interface UserInfo {
   displayName: string;
@@ -65,6 +66,7 @@ function AppShellInner({
   breadcrumbs?: ReactNode;
   onToggleMobile: () => void;
 }) {
+  const { t } = useI18n();
   const { header, registerActionsSlot } = usePageHeader();
 
   return (
@@ -79,7 +81,7 @@ function AppShellInner({
           <button
             type="button"
             onClick={onToggleMobile}
-            aria-label="Abrir menú lateral"
+            aria-label={t("ui.appShell.openMobileMenu")}
             className="mr-3 lg:hidden text-white/70 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 rounded"
           >
             <Menu className="h-5 w-5" />

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { cn } from "../../lib/utils";
+import { useI18n } from "../i18n/i18n-context";
 
 interface SetPasswordFormProps {
   /** App display name shown in the header (e.g. "Notaría"). */
@@ -59,6 +60,7 @@ export function SetPasswordForm({
   successTitle,
   versionInfo,
 }: SetPasswordFormProps) {
+  const { t } = useI18n();
   const [token, setToken] = useState<string | null>(tokenProp ?? null);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -73,8 +75,8 @@ export function SetPasswordForm({
     if (tokenProp) return;
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
-    const t = params.get("token");
-    if (t) setToken(t);
+    const tk = params.get("token");
+    if (tk) setToken(tk);
   }, [tokenProp]);
 
   async function handleSubmit(e: FormEvent) {
@@ -82,15 +84,15 @@ export function SetPasswordForm({
     setError("");
 
     if (!token) {
-      setError("Falta el token de activación. Abre el enlace del email otra vez.");
+      setError(t("ui.setPassword.errMissingToken"));
       return;
     }
     if (password.length < minLength) {
-      setError(`La contraseña debe tener al menos ${minLength} caracteres.`);
+      setError(t("ui.setPassword.errMinLength", { min: String(minLength) }));
       return;
     }
     if (password !== confirm) {
-      setError("Las contraseñas no coinciden.");
+      setError(t("ui.setPassword.errMismatch"));
       return;
     }
 
@@ -106,7 +108,7 @@ export function SetPasswordForm({
         const msg =
           (data as { error?: { message?: string }; message?: string })?.error?.message ??
           (data as { message?: string })?.message ??
-          "No se pudo establecer la contraseña. El enlace puede haber expirado.";
+          t("ui.setPassword.errSet");
         setError(msg);
         return;
       }
@@ -116,7 +118,7 @@ export function SetPasswordForm({
         window.location.href = redirectTo;
       }, 1500);
     } catch {
-      setError("Error de red. Vuelve a intentarlo.");
+      setError(t("ui.forgotPassword.errNetwork"));
     } finally {
       setLoading(false);
     }
@@ -180,7 +182,7 @@ export function SetPasswordForm({
 
         <div className="relative z-10 px-12 py-6 border-t border-white/10">
           <p className="text-xs text-mc-slate-500">
-            Una aplicación de la plataforma{" "}
+            {t("ui.login.platformPrefix")}{" "}
             <span className="text-mc-slate-400 font-medium">MycoLegal.app</span>
           </p>
           <p className="text-xs text-mc-slate-600 mt-1">
@@ -212,19 +214,19 @@ export function SetPasswordForm({
           {done ? (
             <>
               <h2 className="text-2xl font-bold text-mc-slate-900">
-                {successTitle ?? "Contraseña establecida"}
+                {successTitle ?? t("ui.setPassword.successTitle")}
               </h2>
               <p className="mt-3 text-sm text-mc-slate-500">
-                Te estamos llevando a la pantalla de acceso…
+                {t("ui.setPassword.redirecting")}
               </p>
             </>
           ) : (
             <>
               <h2 className="text-2xl font-bold text-mc-slate-900">
-                {formTitle ?? "Establece tu contraseña"}
+                {formTitle ?? t("ui.setPassword.title")}
               </h2>
               <p className="mt-2 text-sm text-mc-slate-500">
-                {formSubtitle ?? <>Elige una contraseña para tu cuenta en <strong>{appName}</strong>.</>}
+                {formSubtitle ?? <>{t("ui.setPassword.subtitleBefore")} <strong>{appName}</strong>{t("ui.setPassword.subtitleAfter")}</>}
               </p>
 
               {error && (
@@ -239,7 +241,7 @@ export function SetPasswordForm({
               <form onSubmit={handleSubmit} className="mt-6 space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-mc-slate-700" htmlFor="new-password">
-                    Nueva contraseña
+                    {t("ui.userAccount.fieldNew")}
                   </label>
                   <input
                     id="new-password"
@@ -252,13 +254,13 @@ export function SetPasswordForm({
                     className="mt-1 block w-full rounded-lg border border-mc-neutral-300 px-3 py-2 text-sm focus:border-mc-primary-500 focus:outline-none focus:ring-1 focus:ring-mc-primary-500"
                   />
                   <p className="mt-1 text-xs text-mc-slate-500">
-                    Mínimo {minLength} caracteres.
+                    {t("ui.userAccount.minCharsHint", { min: String(minLength) })}
                   </p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-mc-slate-700" htmlFor="confirm-password">
-                    Confirma la contraseña
+                    {t("ui.setPassword.fieldConfirm")}
                   </label>
                   <input
                     id="confirm-password"
@@ -277,7 +279,7 @@ export function SetPasswordForm({
                   disabled={loading || !token}
                   className="w-full rounded-lg bg-mc-primary-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-mc-primary-600 transition-colors disabled:opacity-50"
                 >
-                  {loading ? "Guardando…" : (submitLabel ?? "Establecer contraseña")}
+                  {loading ? t("ui.userAccount.btnSaving") : (submitLabel ?? t("ui.setPassword.btnSet"))}
                 </button>
               </form>
             </>

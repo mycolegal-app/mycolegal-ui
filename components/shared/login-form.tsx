@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { cn } from "../../lib/utils";
+import { useI18n } from "../i18n/i18n-context";
 
 interface Organization {
   id: string;
@@ -55,6 +56,7 @@ export function LoginForm({
   versionInfo,
   forgotPasswordUrl = "/forgot-password",
 }: LoginFormProps) {
+  const { t } = useI18n();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -86,13 +88,13 @@ export function LoginForm({
       if (res.status === 202 || data.code === "account_pending_activation") {
         setPendingActivation({
           email,
-          message: data.message || "Tu cuenta está pendiente de activación. Te hemos reenviado el enlace a tu correo.",
+          message: data.message || t("ui.login.pendingActivationDefault"),
         });
         return;
       }
 
       if (!res.ok) {
-        setError(data.error?.message || "Error de autenticación");
+        setError(data.error?.message || t("ui.login.errAuth"));
         return;
       }
 
@@ -117,7 +119,7 @@ export function LoginForm({
         window.location.href = redirectTo;
       }
     } catch {
-      setError("Error de conexión. Inténtalo de nuevo.");
+      setError(t("ui.login.errConnection"));
     } finally {
       setLoading(false);
     }
@@ -137,7 +139,7 @@ export function LoginForm({
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error?.message || "Error al seleccionar organización");
+        setError(data.error?.message || t("ui.login.errSelectOrg"));
         return;
       }
 
@@ -151,7 +153,7 @@ export function LoginForm({
         window.location.href = redirectTo;
       }
     } catch {
-      setError("Error de conexión. Inténtalo de nuevo.");
+      setError(t("ui.login.errConnection"));
     } finally {
       setLoading(false);
     }
@@ -229,7 +231,7 @@ export function LoginForm({
         {/* Platform footer */}
         <div className="relative z-10 px-12 py-6 border-t border-white/10">
           <p className="text-xs text-mc-slate-500">
-            Una aplicación de la plataforma{" "}
+            {t("ui.login.platformPrefix")}{" "}
             <span className="text-mc-slate-400 font-medium">MycoLegal.app</span>
           </p>
           <p className="text-xs text-mc-slate-600 mt-1">
@@ -257,28 +259,27 @@ export function LoginForm({
           {pendingActivation ? (
             /* ── Account pending activation ── */
             <>
-              <h2 className="text-2xl font-bold text-mc-slate-900">Cuenta pendiente de activación</h2>
+              <h2 className="text-2xl font-bold text-mc-slate-900">{t("ui.login.pendingTitle")}</h2>
               <div className="mt-4 rounded-lg bg-mc-primary-50 border border-mc-primary-500/30 px-4 py-3 text-sm text-mc-slate-700">
                 {pendingActivation.message}
               </div>
               <p className="mt-4 text-sm text-mc-slate-500">
-                Hemos enviado el enlace de activación a <strong>{pendingActivation.email}</strong>.
-                Revisa tu bandeja de entrada y la carpeta de spam. El enlace expira en 24 horas.
+                {t("ui.login.pendingHintBefore")} <strong>{pendingActivation.email}</strong>{t("ui.login.pendingHintAfter")}
               </p>
               <button
                 type="button"
                 onClick={() => { setPendingActivation(null); setPassword(""); setError(""); }}
                 className="mt-6 text-sm text-mc-slate-500 hover:text-mc-slate-700 transition-colors"
               >
-                ← Volver al login
+                {t("ui.login.backToLogin")}
               </button>
             </>
           ) : orgs ? (
             /* ── Org selection step ── */
             <>
-              <h2 className="text-2xl font-bold text-mc-slate-900">Selecciona organización</h2>
+              <h2 className="text-2xl font-bold text-mc-slate-900">{t("ui.login.selectOrgTitle")}</h2>
               <p className="mt-2 text-sm text-mc-slate-500">
-                Hola {userName}, elige con qué organización deseas trabajar
+                {t("ui.login.selectOrgIntro", { name: userName })}
               </p>
 
               {error && (
@@ -307,15 +308,15 @@ export function LoginForm({
                 onClick={handleBackToLogin}
                 className="mt-4 text-sm text-mc-slate-500 hover:text-mc-slate-700 transition-colors"
               >
-                ← Volver al login
+                {t("ui.login.backToLogin")}
               </button>
             </>
           ) : (
             /* ── Login form step ── */
             <>
-              <h2 className="text-2xl font-bold text-mc-slate-900">Iniciar sesión</h2>
+              <h2 className="text-2xl font-bold text-mc-slate-900">{t("ui.login.title")}</h2>
               <p className="mt-2 text-sm text-mc-slate-500">
-                Introduce tus credenciales para acceder
+                {t("ui.login.subtitle")}
               </p>
 
               <form onSubmit={handleSubmit} className="mt-8 space-y-5">
@@ -327,7 +328,7 @@ export function LoginForm({
 
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-mc-slate-700">
-                    Correo electrónico
+                    {t("ui.login.email")}
                   </label>
                   <input
                     id="email"
@@ -343,13 +344,13 @@ export function LoginForm({
                 <div>
                   <div className="flex items-center justify-between">
                     <label htmlFor="password" className="block text-sm font-medium text-mc-slate-700">
-                      Contraseña
+                      {t("ui.login.password")}
                     </label>
                     <a
                       href={forgotPasswordUrl}
                       className="text-xs text-mc-slate-500 hover:text-mc-slate-700 transition-colors"
                     >
-                      ¿Olvidaste tu contraseña?
+                      {t("ui.login.forgotPassword")}
                     </a>
                   </div>
                   <input
@@ -368,7 +369,7 @@ export function LoginForm({
                   disabled={loading}
                   className="w-full rounded-lg bg-mc-slate-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-mc-slate-900 focus:outline-none focus:ring-2 focus:ring-mc-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  {loading ? "Accediendo..." : "Entrar"}
+                  {loading ? t("ui.login.loggingIn") : t("ui.login.btnLogin")}
                 </button>
               </form>
             </>

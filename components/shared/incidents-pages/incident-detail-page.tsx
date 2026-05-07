@@ -6,6 +6,7 @@ import { NavLink as Link } from "../nav-link";
 import { ChevronLeft, Loader2 } from "lucide-react";
 import { IncidentThread, type IncidentThreadIncident } from "../incident-thread";
 import { PageTitle } from "../../layout/page-title";
+import { useI18n } from "../../i18n/i18n-context";
 
 /**
  * User-facing detail view for an incident the logged-in user reported.
@@ -14,6 +15,7 @@ import { PageTitle } from "../../layout/page-title";
  * Shared across notaria/legifirma/archivo/… via `@mycolegal-app/ui`.
  */
 export function IncidentDetailPage() {
+  const { t } = useI18n();
   const params = useParams<{ number: string }>();
   const numberParam = params?.number;
 
@@ -29,17 +31,17 @@ export function IncidentDetailPage() {
         credentials: "include",
       });
       if (!res.ok) {
-        if (res.status === 404) throw new Error("No encontramos esta incidencia.");
+        if (res.status === 404) throw new Error(t("ui.incidentDetail.errNotFound"));
         throw new Error(`HTTP ${res.status}`);
       }
       const body = await res.json();
       setIncident(body.data);
     } catch (err) {
-      setError((err as Error).message || "No se pudo cargar la incidencia.");
+      setError((err as Error).message || t("ui.incidentDetail.errLoad"));
     } finally {
       setLoading(false);
     }
-  }, [numberParam]);
+  }, [numberParam, t]);
 
   useEffect(() => {
     fetchIncident();
@@ -48,21 +50,21 @@ export function IncidentDetailPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <PageTitle
-        title={incident ? `Incidencia #${incident.number}` : "Incidencia"}
-        subtitle="Detalle de la incidencia"
+        title={incident ? t("ui.incidentDetail.titleWithNumber", { num: String(incident.number) }) : t("ui.incidentDetail.title")}
+        subtitle={t("ui.incidentDetail.subtitle")}
       />
       <Link
         href="/incidencias"
         className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800"
       >
         <ChevronLeft className="h-4 w-4" />
-        Volver
+        {t("ui.incidentDetail.back")}
       </Link>
 
       {loading && (
         <div className="flex items-center gap-2 text-sm text-gray-500">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Cargando incidencia…
+          {t("ui.incidentDetail.loadingIncident")}
         </div>
       )}
 

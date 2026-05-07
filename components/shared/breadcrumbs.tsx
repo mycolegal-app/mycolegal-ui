@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { ChevronRight, Home } from "lucide-react";
 import { NavLink } from "./nav-link";
+import { useI18n } from "../i18n/i18n-context";
 
 interface BreadcrumbsProps {
   routeLabels?: Record<string, string>;
@@ -32,12 +33,12 @@ export function setBreadcrumbLabel(segment: string, label: string): void {
   );
 }
 
-const DEFAULT_LABELS: Record<string, string> = {
-  nuevo: "Nuevo",
-  nueva: "Nueva",
-  admin: "Administración",
-  manual: "Manual",
-  faq: "FAQ",
+const DEFAULT_LABEL_KEYS: Record<string, string> = {
+  nuevo: "ui.breadcrumbs.nuevo",
+  nueva: "ui.breadcrumbs.nueva",
+  admin: "ui.breadcrumbs.admin",
+  manual: "ui.breadcrumbs.manual",
+  faq: "ui.breadcrumbs.faq",
 };
 
 function isId(segment: string): boolean {
@@ -46,9 +47,11 @@ function isId(segment: string): boolean {
 
 export function Breadcrumbs({
   routeLabels = {},
-  homeLabel = "Inicio",
+  homeLabel,
   homePath = "/",
 }: BreadcrumbsProps) {
+  const { t } = useI18n();
+  const resolvedHomeLabel = homeLabel ?? t("ui.breadcrumbs.home");
   const pathname = usePathname();
   const [dynamicLabels, setDynamicLabels] = useState<Record<string, string>>({});
 
@@ -75,10 +78,15 @@ export function Breadcrumbs({
   const segments = pathname.split("/").filter(Boolean);
   if (segments.length === 0) return null;
 
-  const labels = { ...DEFAULT_LABELS, ...routeLabels };
+  // Resolve default labels from i18n keys (override-friendly via routeLabels prop).
+  const defaultLabels: Record<string, string> = {};
+  for (const [seg, key] of Object.entries(DEFAULT_LABEL_KEYS)) {
+    defaultLabels[seg] = t(key);
+  }
+  const labels = { ...defaultLabels, ...routeLabels };
 
   const crumbs: { label: string; href: string }[] = [
-    { label: homeLabel, href: homePath },
+    { label: resolvedHomeLabel, href: homePath },
   ];
 
   let currentPath = "";
@@ -95,7 +103,7 @@ export function Breadcrumbs({
 
   return (
     <nav
-      aria-label="Breadcrumb"
+      aria-label={t("ui.breadcrumbs.aria")}
       className="flex items-center gap-1.5 px-6 py-2 text-xs text-gray-500 bg-gray-50/80 border-b"
     >
       {crumbs.map((crumb, idx) => {

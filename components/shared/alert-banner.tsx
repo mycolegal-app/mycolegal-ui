@@ -2,6 +2,7 @@
 
 import { AlertTriangle, XCircle, Info, CheckCircle, X } from "lucide-react";
 import { cn } from "../../lib/utils";
+import { useI18n } from "../i18n/i18n-context";
 
 interface AlertBannerProps {
   type: "warning" | "error" | "info" | "success";
@@ -37,6 +38,7 @@ const config = {
 };
 
 export function AlertBanner({ type, message, onDismiss }: AlertBannerProps) {
+  const { t } = useI18n();
   const { icon: Icon, bg, text, iconColor } = config[type];
 
   return (
@@ -56,7 +58,7 @@ export function AlertBanner({ type, message, onDismiss }: AlertBannerProps) {
             "flex-shrink-0 rounded-sm p-1 transition-opacity hover:opacity-70",
             text
           )}
-          aria-label="Cerrar"
+          aria-label={t("ui.docfilling.close")}
         >
           <X className="h-4 w-4" />
         </button>

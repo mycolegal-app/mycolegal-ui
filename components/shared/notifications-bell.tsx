@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Bell, Check, CheckCheck, Loader2, X } from "lucide-react";
 import { cn } from "../../lib/utils";
+import { useI18n } from "../i18n/i18n-context";
 
 export interface NotificationEntry {
   id: string;
@@ -52,16 +53,19 @@ interface NotificationsBellProps {
 
 const DEFAULT_POLL = 30_000;
 
-function formatRelative(iso: string): string {
+function formatRelative(
+  iso: string,
+  t: (key: string, params?: Record<string, string | number>) => string,
+): string {
   const then = new Date(iso).getTime();
   const diffSec = Math.max(0, Math.round((Date.now() - then) / 1000));
-  if (diffSec < 60) return "hace unos segundos";
+  if (diffSec < 60) return t("ui.notifications.relSeconds");
   const min = Math.floor(diffSec / 60);
-  if (min < 60) return `hace ${min} min`;
+  if (min < 60) return t("ui.notifications.relMinutes", { min });
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `hace ${hr} h`;
+  if (hr < 24) return t("ui.notifications.relHours", { hr });
   const d = Math.floor(hr / 24);
-  if (d < 7) return `hace ${d} d`;
+  if (d < 7) return t("ui.notifications.relDays", { d });
   return new Date(iso).toLocaleDateString();
 }
 
@@ -84,6 +88,7 @@ export function NotificationsBell({
   verticalAlign = "top",
   variant = "dark",
 }: NotificationsBellProps) {
+  const { t } = useI18n();
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<NotificationEntry[]>([]);
@@ -131,11 +136,11 @@ export function NotificationsBell({
       setItems(body.data);
       setUnread(body.unread);
     } catch (err) {
-      setError((err as Error).message || "No se pudieron cargar las notificaciones");
+      setError((err as Error).message || t("ui.notifications.errLoad"));
     } finally {
       setLoading(false);
     }
-  }, [apiBase]);
+  }, [apiBase, t]);
 
   // Fetch on open; close on outside click + Escape.
   useEffect(() => {
@@ -145,8 +150,8 @@ export function NotificationsBell({
       if (e.key === "Escape") setOpen(false);
     };
     const onDocClick = (e: MouseEvent) => {
-      const t = e.target as Node;
-      if (panelRef.current?.contains(t) || triggerRef.current?.contains(t)) return;
+      const target = e.target as Node;
+      if (panelRef.current?.contains(target) || triggerRef.current?.contains(target)) return;
       setOpen(false);
     };
     document.addEventListener("keydown", onKey);
@@ -230,8 +235,8 @@ export function NotificationsBell({
       <button
         ref={triggerRef}
         type="button"
-        aria-label="Notificaciones"
-        title="Notificaciones"
+        aria-label={t("ui.notifications.title")}
+        title={t("ui.notifications.title")}
         onClick={() => setOpen((o) => !o)}
         className={cn(
           "relative inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-cyan",
@@ -242,7 +247,7 @@ export function NotificationsBell({
         <Bell className="h-4 w-4" />
         {unread > 0 && (
           <span
-            aria-label={`${unread} sin leer`}
+            aria-label={t("ui.notifications.unreadAria", { count: String(unread) })}
             className="absolute -top-1 -right-1 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white"
           >
             {unread > 99 ? "99+" : unread}
@@ -255,7 +260,7 @@ export function NotificationsBell({
         <div
           ref={panelRef}
           role="dialog"
-          aria-label="Notificaciones"
+          aria-label={t("ui.notifications.title")}
           className={cn(
             "absolute z-50 w-80 max-w-[90vw] rounded-lg border border-gray-200 bg-white shadow-xl",
             panelSide,
@@ -263,7 +268,7 @@ export function NotificationsBell({
           )}
         >
           <div className="flex items-center justify-between border-b border-gray-100 px-3 py-2">
-            <span className="text-sm font-medium text-gray-900">Notificaciones</span>
+            <span className="text-sm font-medium text-gray-900">{t("ui.notifications.title")}</span>
             <button
               type="button"
               onClick={markAllRead}
@@ -271,7 +276,7 @@ export function NotificationsBell({
               className="inline-flex items-center gap-1 text-xs text-cyan hover:underline disabled:opacity-50 disabled:no-underline"
             >
               {marking ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCheck className="h-3 w-3" />}
-              Marcar todas
+              {t("ui.notifications.markAll")}
             </button>
           </div>
 
@@ -279,7 +284,7 @@ export function NotificationsBell({
             {loading && items.length === 0 && (
               <div className="flex items-center justify-center px-3 py-6 text-sm text-gray-500">
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Cargando…
+                {t("ui.docfilling.loading")}
               </div>
             )}
             {!loading && error && (
@@ -287,7 +292,7 @@ export function NotificationsBell({
             )}
             {!loading && !error && items.length === 0 && (
               <div className="px-3 py-6 text-center text-sm text-gray-500">
-                No tienes notificaciones.
+                {t("ui.notifications.empty")}
               </div>
             )}
             {items.map((n) => {
@@ -317,7 +322,7 @@ export function NotificationsBell({
                       <p className="mt-0.5 line-clamp-2 text-xs text-gray-500">{n.body}</p>
                     )}
                     <p className="mt-1 text-[11px] text-gray-400">
-                      {formatRelative(n.createdAt)}
+                      {formatRelative(n.createdAt, t)}
                       {n.appSlug !== currentAppSlug && (
                         <>
                           {" · "}
@@ -344,7 +349,7 @@ export function NotificationsBell({
           <div
             role="dialog"
             aria-modal="true"
-            aria-label="Detalle de la notificación"
+            aria-label={t("ui.notifications.detailAria")}
             className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
             onClick={(e) => {
               if (e.target === e.currentTarget) setDetail(null);
@@ -366,7 +371,7 @@ export function NotificationsBell({
                 </div>
                 <button
                   type="button"
-                  aria-label="Cerrar"
+                  aria-label={t("ui.docfilling.close")}
                   onClick={() => setDetail(null)}
                   className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
                 >
@@ -377,7 +382,7 @@ export function NotificationsBell({
                 {detail.body ? (
                   <p className="whitespace-pre-wrap">{detail.body}</p>
                 ) : (
-                  <p className="text-gray-400">Sin descripción.</p>
+                  <p className="text-gray-400">{t("ui.notifications.noDescription")}</p>
                 )}
               </div>
               <div className="flex items-center justify-end gap-2 border-t border-gray-100 px-4 py-3">
@@ -386,7 +391,7 @@ export function NotificationsBell({
                   onClick={() => setDetail(null)}
                   className="rounded-md px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
                 >
-                  Cerrar
+                  {t("ui.docfilling.close")}
                 </button>
               </div>
             </div>

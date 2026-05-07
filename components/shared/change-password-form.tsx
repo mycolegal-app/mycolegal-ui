@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { useI18n } from "../i18n/i18n-context";
 
 interface ChangePasswordFormProps {
   /** API endpoint that proxies to /auth/change-password. */
@@ -24,6 +25,7 @@ export function ChangePasswordForm({
   redirectTo = "/",
   minLength = 12,
 }: ChangePasswordFormProps) {
+  const { t } = useI18n();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
@@ -34,11 +36,11 @@ export function ChangePasswordForm({
     setError("");
 
     if (password.length < minLength) {
-      setError(`La contraseña debe tener al menos ${minLength} caracteres.`);
+      setError(t("ui.setPassword.errMinLength", { min: String(minLength) }));
       return;
     }
     if (password !== confirm) {
-      setError("Las contraseñas no coinciden.");
+      setError(t("ui.setPassword.errMismatch"));
       return;
     }
 
@@ -52,12 +54,12 @@ export function ChangePasswordForm({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data?.error?.message || data?.error || "No se pudo cambiar la contraseña.");
+        setError(data?.error?.message || data?.error || t("ui.userAccount.errChangePassword"));
         return;
       }
       window.location.href = redirectTo;
     } catch {
-      setError("Error de conexión. Inténtalo de nuevo.");
+      setError(t("ui.login.errConnection"));
     } finally {
       setLoading(false);
     }
@@ -66,17 +68,16 @@ export function ChangePasswordForm({
   return (
     <div className="mx-auto max-w-md space-y-4 p-6">
       <div>
-        <h1 className="text-xl font-semibold text-gray-900">Cambia tu contraseña</h1>
+        <h1 className="text-xl font-semibold text-gray-900">{t("ui.changePassword.title")}</h1>
         <p className="mt-1 text-sm text-gray-600">
-          Tu administrador te ha creado la cuenta con una contraseña inicial. Debes
-          elegir una nueva antes de continuar.
+          {t("ui.changePassword.subtitle")}
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-3">
         <div>
           <label htmlFor="new-password" className="mb-1 block text-sm text-gray-700">
-            Nueva contraseña
+            {t("ui.userAccount.fieldNew")}
           </label>
           <input
             id="new-password"
@@ -91,7 +92,7 @@ export function ChangePasswordForm({
         </div>
         <div>
           <label htmlFor="new-password-confirm" className="mb-1 block text-sm text-gray-700">
-            Repítela
+            {t("ui.changePassword.repeat")}
           </label>
           <input
             id="new-password-confirm"
@@ -112,7 +113,7 @@ export function ChangePasswordForm({
           disabled={loading || !password || !confirm}
           className="w-full rounded-md bg-cyan px-4 py-2 text-sm font-medium text-white hover:bg-cyan/90 disabled:opacity-50"
         >
-          {loading ? "Guardando…" : "Guardar contraseña"}
+          {loading ? t("ui.userAccount.btnSaving") : t("ui.changePassword.btnSave")}
         </button>
       </form>
     </div>

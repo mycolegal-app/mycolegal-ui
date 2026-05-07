@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useI18n } from "../i18n/i18n-context";
 
 interface IdleTimeoutProps {
   /** Inactivity timeout in minutes before showing the warning modal */
@@ -34,6 +35,7 @@ export function IdleTimeout({
   onLogout,
   onTimeout,
 }: IdleTimeoutProps) {
+  const { t } = useI18n();
   const [showModal, setShowModal] = useState(false);
   const [remaining, setRemaining] = useState(countdownSeconds);
   const [refreshing, setRefreshing] = useState(false);
@@ -180,15 +182,15 @@ export function IdleTimeout({
           </div>
 
           <h2 className="text-lg font-semibold text-gray-900">
-            {refreshError ? "No se pudo renovar la sesión" : "Sesión a punto de expirar"}
+            {refreshError ? t("ui.idleTimeout.errTitle") : t("ui.idleTimeout.title")}
           </h2>
           <p className="mt-2 text-sm text-gray-500">
             {refreshError ? (
-              <>Tu sesión ha caducado o no se pudo renovar. Vuelve a iniciar sesión.</>
+              <>{t("ui.idleTimeout.errBody")}</>
             ) : (
               <>
-                Por inactividad, tu sesión se cerrará automáticamente en{" "}
-                <strong>{remaining}</strong> segundos.
+                {t("ui.idleTimeout.bodyBefore")}{" "}
+                <strong>{remaining}</strong> {t("ui.idleTimeout.bodyAfter")}
               </>
             )}
           </p>
@@ -199,7 +201,7 @@ export function IdleTimeout({
                 onClick={handleLogout}
                 className="flex-1 rounded-lg bg-cyan-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-cyan-700"
               >
-                Ir al login
+                {t("ui.idleTimeout.btnGoLogin")}
               </button>
             ) : (
               <>
@@ -208,14 +210,14 @@ export function IdleTimeout({
                   disabled={refreshing}
                   className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Cerrar sesión
+                  {t("ui.idleTimeout.btnLogout")}
                 </button>
                 <button
                   onClick={handleContinue}
                   disabled={refreshing}
                   className="flex-1 rounded-lg bg-cyan-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-cyan-700 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  {refreshing ? "Renovando..." : "Continuar"}
+                  {refreshing ? t("ui.idleTimeout.refreshing") : t("ui.idleTimeout.btnContinue")}
                 </button>
               </>
             )}

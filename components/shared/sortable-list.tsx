@@ -20,6 +20,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Lock } from "lucide-react";
 import { cn } from "../../lib/utils";
+import { useI18n } from "../i18n/i18n-context";
 
 export interface SortableListProps<TItem> {
   items: TItem[];
@@ -111,6 +112,7 @@ interface SortableRowProps {
 }
 
 function SortableRow({ id, isLocked, render }: SortableRowProps) {
+  const { t } = useI18n();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
     disabled: isLocked,
@@ -126,7 +128,7 @@ function SortableRow({ id, isLocked, render }: SortableRowProps) {
     <span
       aria-hidden
       className="inline-flex h-6 w-6 items-center justify-center text-gray-300"
-      title="Elemento bloqueado"
+      title={t("ui.sortableList.lockedTitle")}
     >
       <Lock className="h-3.5 w-3.5" />
     </span>
@@ -135,7 +137,7 @@ function SortableRow({ id, isLocked, render }: SortableRowProps) {
       type="button"
       {...attributes}
       {...listeners}
-      aria-label="Reordenar — Espacio para coger, flechas para mover"
+      aria-label={t("ui.sortableList.reorderAria")}
       className="inline-flex h-6 w-6 cursor-grab items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-cyan active:cursor-grabbing"
     >
       <GripVertical className="h-4 w-4" />

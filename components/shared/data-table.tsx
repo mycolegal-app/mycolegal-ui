@@ -16,6 +16,7 @@ import {
 import { ArrowUpDown, Columns3 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+import { useI18n } from "../i18n/i18n-context";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -68,7 +69,7 @@ export function DataTable<TData, TValue>({
   columns,
   data,
   searchKey,
-  searchPlaceholder = "Buscar...",
+  searchPlaceholder,
   searchDataHelp,
   pageSize: initialPageSize = 10,
   pageSizeOptions,
@@ -84,6 +85,8 @@ export function DataTable<TData, TValue>({
   onPaginationChange,
   paginatorExtras,
 }: DataTableProps<TData, TValue>) {
+  const { t } = useI18n();
+  const resolvedSearchPlaceholder = searchPlaceholder ?? t("ui.dataTable.searchPlaceholder");
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -177,7 +180,7 @@ export function DataTable<TData, TValue>({
         <div className="flex flex-wrap items-center gap-2">
           {searchKey && (
             <Input
-              placeholder={searchPlaceholder}
+              placeholder={resolvedSearchPlaceholder}
               value={
                 (table.getColumn(searchKey)?.getFilterValue() as string) ?? ""
               }
@@ -305,20 +308,20 @@ export function DataTable<TData, TValue>({
       <div className="flex items-center justify-between px-2">
         <div className="flex items-center gap-3">
           <p className="text-sm text-foreground-muted">
-            Mostrando {start}-{end} de {totalRows}
+            {t("ui.dataTable.showing", { start: String(start), end: String(end), total: String(totalRows) })}
           </p>
           <select
             value={activePSize}
             onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-            aria-label="Filas por página"
+            aria-label={t("ui.dataTable.rowsPerPage")}
             className="rounded border px-2 py-1 text-xs text-foreground-muted"
           >
             {sizeOptions.map((size) => (
               <option key={size} value={size}>
-                {size} / pág
+                {t("ui.dataTable.perPage", { size: String(size) })}
               </option>
             ))}
-            <option value={totalRows}>Todos</option>
+            <option value={totalRows}>{t("ui.dataTable.all")}</option>
           </select>
           {paginatorExtras && (
             <div className="flex items-center gap-2 border-l border-gray-200 pl-3 text-sm text-foreground-muted">

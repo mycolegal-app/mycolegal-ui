@@ -6,6 +6,7 @@ import { Check, ChevronRight, Download, FileText, Loader2, X } from "lucide-reac
 import { cn } from "../../lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Button } from "../ui/button";
+import { useI18n } from "../i18n/i18n-context";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -95,14 +96,14 @@ const MAX_POLLS = 60;
 // Step indicator
 // ---------------------------------------------------------------------------
 
-const PHASE_LABELS: Array<{ phase: Phase; label: string }> = [
-  { phase: "select", label: "Plantilla" },
-  { phase: "fields", label: "Campos" },
-  { phase: "sourceDocuments", label: "Documentos" },
-  { phase: "preActions", label: "Pre" },
-  { phase: "generating", label: "Generando" },
-  { phase: "result", label: "Resultado" },
-  { phase: "postActions", label: "Post" },
+const PHASE_LABELS: Array<{ phase: Phase; labelKey: string }> = [
+  { phase: "select", labelKey: "ui.docfilling.phaseTemplate" },
+  { phase: "fields", labelKey: "ui.docfilling.phaseFields" },
+  { phase: "sourceDocuments", labelKey: "ui.docfilling.phaseDocuments" },
+  { phase: "preActions", labelKey: "ui.docfilling.phasePre" },
+  { phase: "generating", labelKey: "ui.docfilling.phaseGenerating" },
+  { phase: "result", labelKey: "ui.docfilling.phaseResult" },
+  { phase: "postActions", labelKey: "ui.docfilling.phasePost" },
 ];
 
 function StepDot({ active, done, label }: { active: boolean; done: boolean; label: string }) {
@@ -138,6 +139,7 @@ function PhaseSelect({
   loading: boolean;
   onSelect: (binding: Binding) => void;
 }) {
+  const { t } = useI18n();
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -149,14 +151,14 @@ function PhaseSelect({
   if (bindings.length === 0) {
     return (
       <div className="rounded-lg bg-yellow-50 p-4 text-sm text-yellow-700">
-        No hay plantillas configuradas para este contexto. Configura bindings en mycolegal-docfilling.
+        {t("ui.docfilling.noTemplates")}
       </div>
     );
   }
 
   return (
     <div className="space-y-2">
-      <p className="text-sm text-gray-500 mb-4">Selecciona la plantilla para generar el documento:</p>
+      <p className="text-sm text-gray-500 mb-4">{t("ui.docfilling.selectIntro")}</p>
       {bindings.map((b) => (
         <button
           key={b.id}
@@ -167,7 +169,7 @@ function PhaseSelect({
             <FileText className="h-5 w-5 text-gray-400 group-hover:text-blue-500" />
             <div>
               <p className="text-sm font-medium text-gray-900">
-                {b.template?.name ?? `Plantilla #${b.template_id}`}
+                {b.template?.name ?? t("ui.docfilling.templateFallback", { id: String(b.template_id) })}
               </p>
               {b.template?.description && (
                 <p className="text-xs text-gray-500 mt-0.5">{b.template.description}</p>
@@ -202,13 +204,14 @@ function PhaseFields({
   nextLabel: string;
   generating: boolean;
 }) {
+  const { t } = useI18n();
   const mapping = binding.field_mapping;
   const allKeys = Object.keys(mapping);
 
   if (allKeys.length === 0) {
     return (
       <div className="space-y-4">
-        <p className="text-sm text-gray-500">Esta plantilla no requiere campos adicionales.</p>
+        <p className="text-sm text-gray-500">{t("ui.docfilling.noFields")}</p>
         <Button onClick={onNext} disabled={generating} className="w-full">
           {generating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           {nextLabel}
@@ -219,7 +222,7 @@ function PhaseFields({
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-gray-500">Revisa y completa los campos:</p>
+      <p className="text-sm text-gray-500">{t("ui.docfilling.fieldsIntro")}</p>
       <div className="space-y-3">
         {allKeys.map((dfField) => {
           const sourceKey = mapping[dfField];
@@ -233,7 +236,7 @@ function PhaseFields({
                 <span>{dfField}</span>
                 {isPrefilled && (
                   <span className="inline-flex items-center gap-0.5 text-green-600 text-xs">
-                    <Check className="h-3 w-3" /> Auto
+                    <Check className="h-3 w-3" /> {t("ui.docfilling.auto")}
                   </span>
                 )}
               </label>
@@ -248,7 +251,7 @@ function PhaseFields({
                     ? "border-green-200 bg-green-50 text-green-800"
                     : "border-gray-200 bg-white focus:border-blue-400 focus:outline-none",
                 )}
-                placeholder={isPrefilled ? "" : `Valor para ${dfField}`}
+                placeholder={isPrefilled ? "" : t("ui.docfilling.valuePlaceholder", { field: dfField })}
               />
               {sourceKey && (
                 <p className="text-xs text-gray-400 mt-0.5 font-mono">{sourceKey}</p>
@@ -282,12 +285,13 @@ function PhaseSourceDocuments({
   onNext: () => void;
   onSkip: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-sm font-medium text-gray-900">Documentos fuente</p>
+        <p className="text-sm font-medium text-gray-900">{t("ui.docfilling.sourceTitle")}</p>
         <p className="text-xs text-gray-500 mt-1">
-          Selecciona los documentos que DocFilling usará para extraer datos.
+          {t("ui.docfilling.sourceIntro")}
         </p>
       </div>
       <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
@@ -314,10 +318,12 @@ function PhaseSourceDocuments({
       </div>
       <div className="flex gap-2">
         <Button onClick={onNext} disabled={selected.size === 0} className="flex-1">
-          Continuar ({selected.size} seleccionado{selected.size !== 1 ? "s" : ""})
+          {selected.size === 1
+            ? t("ui.docfilling.continueWithOne", { count: String(selected.size) })
+            : t("ui.docfilling.continueWithMany", { count: String(selected.size) })}
         </Button>
         <Button variant="outline" onClick={onSkip}>
-          Saltar
+          {t("ui.docfilling.skip")}
         </Button>
       </div>
     </div>
@@ -349,18 +355,19 @@ function PhaseActions({
   onDownload?: () => void;
   downloadUrl?: string;
 }) {
+  const { t } = useI18n();
   const isPre = phase === "pre";
 
   return (
     <div className="space-y-4">
       <div>
         <p className="text-sm font-medium text-gray-900">
-          {isPre ? "Acciones previas a la generación" : "Acciones posteriores"}
+          {isPre ? t("ui.docfilling.preTitle") : t("ui.docfilling.postTitle")}
         </p>
         <p className="text-xs text-gray-500 mt-1">
           {isPre
-            ? "Marca las siguientes acciones como completadas para poder generar el documento."
-            : "Recuerda realizar estas acciones tras descargar el documento."}
+            ? t("ui.docfilling.preIntro")
+            : t("ui.docfilling.postIntro")}
         </p>
       </div>
       <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
@@ -395,7 +402,7 @@ function PhaseActions({
             className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             <Download className="h-4 w-4" />
-            Descargar
+            {t("ui.docfilling.download")}
           </a>
         )}
         <Button onClick={onConfirm} disabled={confirmDisabled} className="flex-1">
@@ -403,7 +410,7 @@ function PhaseActions({
         </Button>
         {!isPre && onDownload && (
           <Button variant="outline" onClick={onDownload}>
-            Cerrar
+            {t("ui.docfilling.close")}
           </Button>
         )}
       </div>
@@ -416,18 +423,19 @@ function PhaseActions({
 // ---------------------------------------------------------------------------
 
 function PhaseGenerating({ status }: { status: TaskStatus }) {
-  const messages: Record<string, string> = {
-    pending: "En cola…",
-    processing: "Procesando con IA…",
+  const { t } = useI18n();
+  const messageKeys: Record<string, string> = {
+    pending: "ui.docfilling.statusPending",
+    processing: "ui.docfilling.statusProcessing",
   };
 
   return (
     <div className="flex flex-col items-center gap-4 py-8">
       <Loader2 className="h-10 w-10 animate-spin text-blue-500" />
       <p className="text-sm font-medium text-gray-700">
-        {messages[status] ?? "Generando documento…"}
+        {messageKeys[status] ? t(messageKeys[status]) : t("ui.docfilling.statusGenerating")}
       </p>
-      <p className="text-xs text-gray-400">Esto puede tardar unos segundos. No cierres la ventana.</p>
+      <p className="text-xs text-gray-400">{t("ui.docfilling.statusHint")}</p>
     </div>
   );
 }
@@ -451,6 +459,7 @@ function PhaseResult({
   onAccept: () => void;
   regenerating: boolean;
 }) {
+  const { t } = useI18n();
   const [fieldValues, setFieldValues] = useState<Record<string, string>>(() =>
     Object.fromEntries(incompleteFields.map((f) => [f, ""])),
   );
@@ -463,8 +472,8 @@ function PhaseResult({
         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-100">
           <Check className="h-7 w-7 text-green-600" />
         </div>
-        <p className="text-base font-medium text-gray-900">Documento generado</p>
-        <p className="text-xs text-gray-400">Tarea #{taskId}</p>
+        <p className="text-base font-medium text-gray-900">{t("ui.docfilling.docGenerated")}</p>
+        <p className="text-xs text-gray-400">{t("ui.docfilling.taskNumber", { id: String(taskId) })}</p>
         <div className="flex gap-3">
           {documentUrl && (
             <a
@@ -474,11 +483,11 @@ function PhaseResult({
               className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
             >
               <Download className="h-4 w-4" />
-              Descargar
+              {t("ui.docfilling.download")}
             </a>
           )}
           <Button variant="outline" onClick={onAccept}>
-            {documentUrl ? "Continuar" : "Cerrar"}
+            {documentUrl ? t("ui.docfilling.continue") : t("ui.docfilling.close")}
           </Button>
         </div>
       </div>
@@ -488,8 +497,9 @@ function PhaseResult({
   return (
     <div className="space-y-4">
       <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-700">
-        {incompleteFields.length} campo{incompleteFields.length !== 1 ? "s" : ""} quedaron incompletos.
-        Puedes completarlos y regenerar, o descargar el documento tal cual.
+        {incompleteFields.length === 1
+          ? t("ui.docfilling.incompleteOne", { count: String(incompleteFields.length) })
+          : t("ui.docfilling.incompleteMany", { count: String(incompleteFields.length) })}
       </div>
       <div className="space-y-3 max-h-48 overflow-y-auto pr-1">
         {incompleteFields.map((field) => (
@@ -500,7 +510,7 @@ function PhaseResult({
               value={fieldValues[field] ?? ""}
               onChange={(e) => setFieldValues((prev) => ({ ...prev, [field]: e.target.value }))}
               className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
-              placeholder={`Valor para ${field}`}
+              placeholder={t("ui.docfilling.valuePlaceholder", { field })}
             />
           </div>
         ))}
@@ -514,7 +524,7 @@ function PhaseResult({
             className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             <Download className="h-4 w-4" />
-            Descargar tal cual
+            {t("ui.docfilling.downloadAsIs")}
           </a>
         )}
         <Button
@@ -523,7 +533,7 @@ function PhaseResult({
           className="flex-1"
         >
           {regenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-          Completar y regenerar
+          {t("ui.docfilling.completeAndRegenerate")}
         </Button>
       </div>
     </div>
@@ -550,6 +560,7 @@ export function DocFillingModal({
   onDocumentGenerated,
   onActionsCompleted,
 }: DocFillingModalProps) {
+  const { t } = useI18n();
   const [phase, setPhase] = useState<Phase>(templateId ? "fields" : "select");
   const [bindings, setBindings] = useState<Binding[]>([]);
   const [loadingBindings, setLoadingBindings] = useState(false);
@@ -602,7 +613,7 @@ export function DocFillingModal({
     fetch(`${serviceUrl}/api/inter/bindings?${qs}`, { headers })
       .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
       .then((d) => setBindings(d.data ?? []))
-      .catch(() => setError("No se pudieron cargar las plantillas"))
+      .catch(() => setError(t("ui.docfilling.errLoadTemplates")))
       .finally(() => setLoadingBindings(false));
   }, [open, phase, serviceUrl, appSlug, entityType, triggerState]);
 
@@ -629,7 +640,7 @@ export function DocFillingModal({
   const pollStatus = useCallback(
     async (id: number) => {
       if (pollCount.current >= MAX_POLLS) {
-        setError("El documento tardó demasiado en generarse.");
+        setError(t("ui.docfilling.errTimeout"));
         setPhase("result");
         return;
       }
@@ -649,7 +660,7 @@ export function DocFillingModal({
           onDocumentGenerated?.({ taskId: id, fileName: `task-${id}.docx` });
           setPhase("result");
         } else if (data.status === "failed") {
-          setError("La generación del documento falló.");
+          setError(t("ui.docfilling.errFailed"));
           setPhase("result");
         } else {
           pollTimer.current = setTimeout(() => pollStatus(id), POLL_INTERVAL);
@@ -759,7 +770,7 @@ export function DocFillingModal({
     try {
       await doGenerate(completedFields);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error al regenerar");
+      setError(e instanceof Error ? e.message : t("ui.docfilling.errRegenerate"));
       setRegenerating(false);
     }
   }
@@ -799,17 +810,17 @@ export function DocFillingModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-blue-500" />
-            Generar documento
+            {t("ui.docfilling.modalTitle")}
           </DialogTitle>
         </DialogHeader>
 
         {/* Step indicator */}
         {visiblePhases.length > 1 && (
           <div className="flex items-center justify-center gap-2 py-2 flex-wrap">
-            {visiblePhases.map(({ phase: p, label }, i) => (
+            {visiblePhases.map(({ phase: p, labelKey }, i) => (
               <React.Fragment key={p}>
                 <StepDot
-                  label={label}
+                  label={t(labelKey)}
                   active={phase === p}
                   done={currentPhaseIdx > i}
                 />
@@ -847,7 +858,7 @@ export function DocFillingModal({
               editableFields={editableFields}
               onFieldChange={(k, v) => setEditableFields((prev) => ({ ...prev, [k]: v }))}
               onNext={handleAfterFields}
-              nextLabel={preActionsLoading ? "Cargando…" : "Siguiente"}
+              nextLabel={preActionsLoading ? t("ui.docfilling.loading") : t("ui.docfilling.next")}
               generating={preActionsLoading}
             />
           )}
@@ -881,7 +892,7 @@ export function DocFillingModal({
                 })
               }
               onConfirm={handlePreActionsConfirm}
-              confirmLabel="Generar documento"
+              confirmLabel={t("ui.docfilling.modalTitle")}
               confirmDisabled={preActionsChecked.size < humanActions.pre.length}
             />
           )}
@@ -912,7 +923,7 @@ export function DocFillingModal({
                 })
               }
               onConfirm={handlePostActionsDone}
-              confirmLabel="Cerrar"
+              confirmLabel={t("ui.docfilling.close")}
               confirmDisabled={false}
               downloadUrl={documentUrl}
             />

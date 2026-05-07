@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef, type ReactNode } from "react";
 import { Command } from "cmdk";
 import { Search, X } from "lucide-react";
+import { useI18n } from "../i18n/i18n-context";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -46,12 +47,14 @@ interface CommandPaletteProps {
 
 export function CommandPalette({
   searchEndpoint,
-  placeholder = "Buscar...",
+  placeholder,
   mapResults,
   quickActions,
   minQueryLength = 2,
   debounceMs = 250,
 }: CommandPaletteProps) {
+  const { t } = useI18n();
+  const resolvedPlaceholder = placeholder ?? t("ui.commandPalette.placeholder");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [groups, setGroups] = useState<CommandResultGroup[]>([]);
@@ -125,8 +128,8 @@ export function CommandPalette({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label="Abrir búsqueda general (atajo ⌘K)"
-        title="Buscar (⌘K)"
+        aria-label={t("ui.commandPalette.btnAria")}
+        title={t("ui.commandPalette.btnTitle")}
         className="flex h-8 w-8 items-center justify-center rounded-md text-white/70 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
       >
         <Search className="h-4 w-4" />
@@ -146,7 +149,7 @@ export function CommandPalette({
                 <Command.Input
                   value={query}
                   onValueChange={handleQueryChange}
-                  placeholder={placeholder}
+                  placeholder={resolvedPlaceholder}
                   className="flex h-12 w-full bg-transparent text-sm outline-none placeholder:text-gray-400"
                   autoFocus
                 />
@@ -154,7 +157,7 @@ export function CommandPalette({
                   <button
                     type="button"
                     onClick={() => { setQuery(""); setGroups([]); }}
-                    aria-label="Limpiar búsqueda"
+                    aria-label={t("ui.commandPalette.clearAria")}
                     className="ml-2 text-gray-400 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 rounded"
                   >
                     <X className="h-4 w-4" />
@@ -166,14 +169,14 @@ export function CommandPalette({
                 {loading && (
                   <Command.Loading>
                     <div className="px-4 py-6 text-center text-sm text-gray-500">
-                      Buscando...
+                      {t("ui.commandPalette.searching")}
                     </div>
                   </Command.Loading>
                 )}
 
                 {noResults && (
                   <Command.Empty className="px-4 py-6 text-center text-sm text-gray-500">
-                    No se encontraron resultados para &quot;{query}&quot;
+                    {t("ui.commandPalette.noResults", { query })}
                   </Command.Empty>
                 )}
 
@@ -200,7 +203,7 @@ export function CommandPalette({
                   <Command.Group
                     heading={
                       <span className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase">
-                        Accesos rápidos
+                        {t("ui.commandPalette.quickAccess")}
                       </span>
                     }
                   >
@@ -221,9 +224,9 @@ export function CommandPalette({
 
               <div className="flex items-center justify-between border-t px-4 py-2 text-[10px] text-gray-400">
                 <div className="flex items-center gap-3">
-                  <span><kbd className="rounded bg-gray-100 px-1 py-0.5 font-mono">↑↓</kbd> navegar</span>
-                  <span><kbd className="rounded bg-gray-100 px-1 py-0.5 font-mono">↵</kbd> abrir</span>
-                  <span><kbd className="rounded bg-gray-100 px-1 py-0.5 font-mono">esc</kbd> cerrar</span>
+                  <span><kbd className="rounded bg-gray-100 px-1 py-0.5 font-mono">↑↓</kbd> {t("ui.commandPalette.kbdNav")}</span>
+                  <span><kbd className="rounded bg-gray-100 px-1 py-0.5 font-mono">↵</kbd> {t("ui.commandPalette.kbdOpen")}</span>
+                  <span><kbd className="rounded bg-gray-100 px-1 py-0.5 font-mono">esc</kbd> {t("ui.commandPalette.kbdClose")}</span>
                 </div>
               </div>
             </Command>

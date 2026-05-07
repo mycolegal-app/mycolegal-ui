@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { cn } from "../../lib/utils";
+import { useI18n } from "../i18n/i18n-context";
 
 interface ForgotPasswordFormProps {
   /** App display name shown in the header. */
@@ -43,6 +44,7 @@ export function ForgotPasswordForm({
   loginPath = "/login",
   versionInfo,
 }: ForgotPasswordFormProps) {
+  const { t } = useI18n();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -61,12 +63,12 @@ export function ForgotPasswordForm({
       // Success is "accepted" regardless of whether the email exists —
       // avoids exposing account enumeration.
       if (!res.ok && res.status !== 202 && res.status !== 200) {
-        setError("No se pudo procesar la solicitud. Vuelve a intentarlo.");
+        setError(t("ui.forgotPassword.errProcess"));
         return;
       }
       setSent(true);
     } catch {
-      setError("Error de red. Vuelve a intentarlo.");
+      setError(t("ui.forgotPassword.errNetwork"));
     } finally {
       setLoading(false);
     }
@@ -128,7 +130,7 @@ export function ForgotPasswordForm({
 
         <div className="relative z-10 px-12 py-6 border-t border-white/10">
           <p className="text-xs text-mc-slate-500">
-            Una aplicación de la plataforma{" "}
+            {t("ui.login.platformPrefix")}{" "}
             <span className="text-mc-slate-400 font-medium">MycoLegal.app</span>
           </p>
           <p className="text-xs text-mc-slate-600 mt-1">
@@ -158,24 +160,22 @@ export function ForgotPasswordForm({
 
           {sent ? (
             <>
-              <h2 className="text-2xl font-bold text-mc-slate-900">Revisa tu correo</h2>
+              <h2 className="text-2xl font-bold text-mc-slate-900">{t("ui.forgotPassword.sentTitle")}</h2>
               <p className="mt-3 text-sm text-mc-slate-500">
-                Si ese email está en nuestro sistema, acabas de recibir un enlace para
-                restablecer tu contraseña. El enlace caduca en 1 hora.
+                {t("ui.forgotPassword.sentBody")}
               </p>
               <a
                 href={loginPath}
                 className="mt-6 inline-block text-sm text-mc-slate-500 hover:text-mc-slate-700 transition-colors"
               >
-                ← Volver al login
+                {t("ui.login.backToLogin")}
               </a>
             </>
           ) : (
             <>
-              <h2 className="text-2xl font-bold text-mc-slate-900">Restablecer contraseña</h2>
+              <h2 className="text-2xl font-bold text-mc-slate-900">{t("ui.forgotPassword.title")}</h2>
               <p className="mt-2 text-sm text-mc-slate-500">
-                Introduce el email de tu cuenta y te enviaremos un enlace para elegir una
-                nueva contraseña.
+                {t("ui.forgotPassword.subtitle")}
               </p>
 
               {error && (
@@ -190,7 +190,7 @@ export function ForgotPasswordForm({
               <form onSubmit={handleSubmit} className="mt-6 space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-mc-slate-700" htmlFor="forgot-email">
-                    Email
+                    {t("ui.login.email")}
                   </label>
                   <input
                     id="forgot-email"
@@ -208,7 +208,7 @@ export function ForgotPasswordForm({
                   disabled={loading}
                   className="w-full rounded-lg bg-mc-primary-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-mc-primary-600 transition-colors disabled:opacity-50"
                 >
-                  {loading ? "Enviando…" : "Enviar enlace"}
+                  {loading ? t("ui.forgotPassword.sending") : t("ui.forgotPassword.btnSend")}
                 </button>
               </form>
 
@@ -216,7 +216,7 @@ export function ForgotPasswordForm({
                 href={loginPath}
                 className="mt-4 block text-center text-sm text-mc-slate-500 hover:text-mc-slate-700 transition-colors"
               >
-                ← Volver al login
+                {t("ui.login.backToLogin")}
               </a>
             </>
           )}

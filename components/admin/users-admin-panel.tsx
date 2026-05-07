@@ -24,6 +24,7 @@ import { EmptyState } from '../shared/empty-state';
 import { InviteUserDialog } from '../shared/invite-user-dialog';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
+import { useI18n } from '../i18n/i18n-context';
 import {
   Dialog,
   DialogContent,
@@ -85,6 +86,7 @@ const STATUS_MAP: Record<
 };
 
 export function UsersAdminPanel(props: UsersAdminPanelProps) {
+  const { t } = useI18n();
   const {
     appName,
     assignableRoles,
@@ -397,15 +399,15 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
         ) : users.length === 0 ? (
           <EmptyState
             icon={Users}
-            title="No hay usuarios"
-            description="Invita usuarios a tu organización para que puedan acceder a la aplicación."
+            title={t("ui.usersAdmin.emptyTitle")}
+            description={t("ui.usersAdmin.emptyDescription")}
           />
         ) : (
           <DataTable
             columns={columns}
             data={users}
             searchKey="displayName"
-            searchPlaceholder="Buscar por nombre..."
+            searchPlaceholder={t("ui.usersAdmin.searchByName")}
             pageSize={20}
             scrollable
           />
@@ -427,7 +429,7 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Eliminar usuario</DialogTitle>
+            <DialogTitle>{t("ui.usersAdmin.deleteTitle")}</DialogTitle>
             <DialogDescription>
               {deleteUser?.displayName} ({deleteUser?.email})
             </DialogDescription>
@@ -436,7 +438,7 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
           {deleteUser?.otherApps && deleteUser.otherApps.length > 0 ? (
             <>
               <p className="text-sm text-muted-foreground">
-                Este usuario también tiene acceso a:
+                {t("ui.usersAdmin.alsoHasAccess")}
               </p>
               <ul className="list-disc pl-5 text-sm">
                 {deleteUser.otherApps.map((app) => (
@@ -451,32 +453,32 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
                   onClick={() => handleDelete(deleteUser, 'deactivate_app')}
                   disabled={!!deletingId}
                 >
-                  {deletingId ? '...' : `Desactivar en ${appName}`}
+                  {deletingId ? '...' : t("ui.usersAdmin.deactivateInApp", { app: appName })}
                 </Button>
                 <Button
                   variant="destructive"
                   onClick={() => handleDelete(deleteUser, 'destroy')}
                   disabled={!!deletingId}
                 >
-                  {deletingId ? '...' : 'Eliminar de la organización'}
+                  {deletingId ? '...' : t("ui.usersAdmin.deleteFromOrg")}
                 </Button>
               </DialogFooter>
             </>
           ) : (
             <>
               <p className="text-sm text-muted-foreground">
-                Se eliminará el usuario de la organización. Esta acción no se puede deshacer.
+                {t("ui.usersAdmin.deleteWarning")}
               </p>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setDeleteUser(null)}>
-                  Cancelar
+                  {t("ui.incidentThread.btnCancel")}
                 </Button>
                 <Button
                   variant="destructive"
                   onClick={() => handleDelete(deleteUser!, 'destroy')}
                   disabled={!!deletingId}
                 >
-                  {deletingId ? '...' : 'Eliminar'}
+                  {deletingId ? '...' : t("ui.usersAdmin.btnDelete")}
                 </Button>
               </DialogFooter>
             </>

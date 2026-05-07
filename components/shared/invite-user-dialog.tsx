@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
+import { useI18n } from "../i18n/i18n-context";
 
 export interface InviteFormData {
   email: string;
@@ -75,6 +76,7 @@ export function InviteUserDialog({
   emailPlaceholder = "usuario@ejemplo.com",
   submitting = false,
 }: InviteUserDialogProps) {
+  const { t } = useI18n();
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -117,16 +119,15 @@ export function InviteUserDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
-          <DialogTitle>Invitar usuario</DialogTitle>
+          <DialogTitle>{t("ui.inviteUser.title")}</DialogTitle>
           <DialogDescription>
-            Introduce los datos del nuevo usuario. Recibira un email de
-            activacion para establecer su contrasena.
+            {t("ui.inviteUser.description")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           <div>
-            <Label htmlFor="invite-email">Email</Label>
+            <Label htmlFor="invite-email">{t("ui.login.email")}</Label>
             <Input
               id="invite-email"
               type="email"
@@ -137,17 +138,17 @@ export function InviteUserDialog({
           </div>
 
           <div>
-            <Label htmlFor="invite-displayName">Nombre completo</Label>
+            <Label htmlFor="invite-displayName">{t("ui.inviteUser.fullName")}</Label>
             <Input
               id="invite-displayName"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Nombre y apellidos"
+              placeholder={t("ui.inviteUser.fullNamePlaceholder")}
             />
           </div>
 
           <div>
-            <Label htmlFor="invite-phone">Teléfono móvil</Label>
+            <Label htmlFor="invite-phone">{t("ui.inviteUser.phone")}</Label>
             <Input
               id="invite-phone"
               type="tel"
@@ -159,10 +160,10 @@ export function InviteUserDialog({
 
           {roles && roles.length > 0 && (
             <div>
-              <Label htmlFor="invite-role">Rol</Label>
+              <Label htmlFor="invite-role">{t("ui.inviteUser.role")}</Label>
               <Select value={appRole} onValueChange={setAppRole}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar rol..." />
+                  <SelectValue placeholder={t("ui.inviteUser.selectRole")} />
                 </SelectTrigger>
                 <SelectContent>
                   {roles.map((r) => (
@@ -182,7 +183,7 @@ export function InviteUserDialog({
 
           {languages && (
             <div>
-              <Label htmlFor="invite-language">Idioma</Label>
+              <Label htmlFor="invite-language">{t("ui.userAccount.fieldLanguage")}</Label>
               <Select value={language} onValueChange={setLanguage}>
                 <SelectTrigger>
                   <SelectValue />
@@ -207,10 +208,10 @@ export function InviteUserDialog({
             onClick={() => handleOpenChange(false)}
             disabled={submitting}
           >
-            Cancelar
+            {t("ui.incidentThread.btnCancel")}
           </Button>
           <Button onClick={handleSubmit} disabled={!canSubmit}>
-            {submitting ? "Invitando..." : "Invitar usuario"}
+            {submitting ? t("ui.inviteUser.inviting") : t("ui.inviteUser.btnInvite")}
           </Button>
         </DialogFooter>
       </DialogContent>

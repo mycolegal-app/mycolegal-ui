@@ -5,6 +5,7 @@ import { Info, X } from "lucide-react";
 import { useVersionInfo } from "../../hooks/use-version-info";
 import { useReleaseNotes } from "../../hooks/use-release-notes";
 import { ReleaseNotes } from "./release-notes";
+import { useI18n } from "../i18n/i18n-context";
 
 interface AppInfoButtonProps {
   appName: string;
@@ -24,6 +25,7 @@ export function AppInfoButton({
   appLogoUrl,
   className,
 }: AppInfoButtonProps) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const version = useVersionInfo();
   const notes = useReleaseNotes(open);
@@ -49,7 +51,7 @@ export function AppInfoButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label="Acerca de la aplicación"
+        aria-label={t("ui.appInfo.btnAria")}
         className={
           className ??
           "flex h-8 w-8 items-center justify-center rounded text-white/70 hover:text-white hover:bg-white/10"
@@ -86,7 +88,7 @@ export function AppInfoButton({
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                aria-label="Cerrar"
+                aria-label={t("ui.docfilling.close")}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X className="h-5 w-5" />
@@ -94,12 +96,12 @@ export function AppInfoButton({
             </div>
             <div className="overflow-y-auto px-6 py-4">
               <dl className="divide-y divide-gray-200 border-b border-gray-200 pb-2">
-                <VersionRow label="Aplicación" value={version?.app} />
-                <VersionRow label="UI" value={version?.ui} />
-                <VersionRow label="Auth" value={version?.auth} />
+                <VersionRow label={t("ui.appInfo.versionApp")} value={version?.app} />
+                <VersionRow label={t("ui.appInfo.versionUi")} value={version?.ui} />
+                <VersionRow label={t("ui.appInfo.versionAuth")} value={version?.auth} />
               </dl>
               <h3 className="mt-5 mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
-                Notas de la versión
+                {t("ui.appInfo.releaseNotes")}
               </h3>
               <NotesBody state={notes} />
             </div>
@@ -120,14 +122,15 @@ function VersionRow({ label, value }: { label: string; value?: string }) {
 }
 
 function NotesBody({ state }: { state: ReturnType<typeof useReleaseNotes> }) {
+  const { t } = useI18n();
   if (state.status === "loading") {
-    return <p className="text-sm text-gray-500">Cargando…</p>;
+    return <p className="text-sm text-gray-500">{t("ui.docfilling.loading")}</p>;
   }
   if (state.status === "empty") {
-    return <p className="text-sm text-gray-500">No hay notas de versión publicadas.</p>;
+    return <p className="text-sm text-gray-500">{t("ui.appInfo.notesEmpty")}</p>;
   }
   if (state.status === "error") {
-    return <p className="text-sm text-gray-500">No se han podido cargar las notas.</p>;
+    return <p className="text-sm text-gray-500">{t("ui.appInfo.notesError")}</p>;
   }
   return <ReleaseNotes markdown={state.markdown} />;
 }

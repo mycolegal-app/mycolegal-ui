@@ -5,6 +5,7 @@ import { Loader2, Send, CheckCircle2, RotateCcw, AlertCircle } from "lucide-reac
 import { cn } from "../../lib/utils";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
+import { useI18n } from "../i18n/i18n-context";
 
 export interface IncidentThreadIncident {
   id: string;
@@ -49,17 +50,23 @@ function formatDateTime(iso: string): string {
   });
 }
 
-function statusCopy(status: string, closedByRole?: string | null): { label: string; tone: string } {
+function statusCopy(
+  status: string,
+  closedByRole: string | null | undefined,
+  t: (key: string, params?: Record<string, string | number>) => string,
+): { label: string; tone: string } {
   switch (status) {
     case "open":
-      return { label: "Abierta", tone: "bg-amber-100 text-amber-800" };
+      return { label: t("ui.incidentThread.statusOpen"), tone: "bg-amber-100 text-amber-800" };
     case "awaiting_user":
-      return { label: "Esperando respuesta del usuario", tone: "bg-cyan-100 text-cyan-800" };
+      return { label: t("ui.incidentThread.statusAwaitingUser"), tone: "bg-cyan-100 text-cyan-800" };
     case "awaiting_admin":
-      return { label: "Esperando respuesta de soporte", tone: "bg-cyan-100 text-cyan-800" };
+      return { label: t("ui.incidentThread.statusAwaitingAdmin"), tone: "bg-cyan-100 text-cyan-800" };
     case "closed":
       return {
-        label: closedByRole === "user" ? "Cerrada por el usuario" : "Cerrada por soporte",
+        label: closedByRole === "user"
+          ? t("ui.incidentThread.statusClosedByUser")
+          : t("ui.incidentThread.statusClosedBySupport"),
         tone: "bg-gray-100 text-gray-700",
       };
     default:
@@ -83,6 +90,7 @@ export function IncidentThread({
   onRefresh,
   pollIntervalMs = 15_000,
 }: IncidentThreadProps) {
+  const { t } = useI18n();
   const [messages, setMessages] = useState<IncidentThreadMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -101,11 +109,11 @@ export function IncidentThread({
       const body = await res.json();
       setMessages(body.data || []);
     } catch (err) {
-      setError((err as Error).message || "No se pudo cargar el hilo");
+      setError((err as Error).message || t("ui.incidentThread.errLoad"));
     } finally {
       setLoading(false);
     }
-  }, [apiBase]);
+  }, [apiBase, t]);
 
   useEffect(() => {
     fetchMessages();
@@ -133,11 +141,11 @@ export function IncidentThread({
       await fetchMessages();
       onRefresh?.();
     } catch (err) {
-      setError((err as Error).message || "No se pudo enviar la respuesta");
+      setError((err as Error).message || t("ui.incidentThread.errSend"));
     } finally {
       setPosting(false);
     }
-  }, [apiBase, draft, fetchMessages, onRefresh]);
+  }, [apiBase, draft, fetchMessages, onRefresh, t]);
 
   const closeIncident = useCallback(async () => {
     const comment = closeDraft.trim();
@@ -160,11 +168,11 @@ export function IncidentThread({
       await fetchMessages();
       onRefresh?.();
     } catch (err) {
-      setError((err as Error).message || "No se pudo cerrar la incidencia");
+      setError((err as Error).message || t("ui.incidentThread.errClose"));
     } finally {
       setClosing(false);
     }
-  }, [apiBase, closeDraft, fetchMessages, onRefresh]);
+  }, [apiBase, closeDraft, fetchMessages, onRefresh, t]);
 
   const reopenIncident = useCallback(async () => {
     setReopening(true);
@@ -181,16 +189,16 @@ export function IncidentThread({
       await fetchMessages();
       onRefresh?.();
     } catch (err) {
-      setError((err as Error).message || "No se pudo reabrir la incidencia");
+      setError((err as Error).message || t("ui.incidentThread.errReopen"));
     } finally {
       setReopening(false);
     }
-  }, [apiBase, fetchMessages, onRefresh]);
+  }, [apiBase, fetchMessages, onRefresh, t]);
 
   const isClosed = incident.status === "closed";
-  const status = statusCopy(incident.status, incident.closedByRole);
+  const status = statusCopy(incident.status, incident.closedByRole, t);
 
-  const bodyLabel = viewerRole === "user" ? "Tu incidencia" : "Reporte original del usuario";
+  const bodyLabel = viewerRole === "user" ? t("ui.incidentThread.bodyLabelUser") : t("ui.incidentThread.bodyLabelAdmin");
 
   return (
     <div className="flex flex-col gap-4">
@@ -198,10 +206,10 @@ export function IncidentThread({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-lg font-semibold text-gray-900">
-            Incidencia #{incident.number}
+            {t("ui.incidentThread.heading", { num: String(incident.number) })}
           </h2>
           <p className="text-xs text-gray-500">
-            Abierta el {formatDateTime(incident.createdAt)}
+            {t("ui.incidentThread.openedOn", { date: formatDateTime(incident.createdAt) })}
           </p>
         </div>
         <span
@@ -225,11 +233,11 @@ export function IncidentThread({
         {loading && messages.length === 0 && (
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Cargando mensajes…
+            {t("ui.incidentThread.loadingMessages")}
           </div>
         )}
         {!loading && messages.length === 0 && (
-          <p className="text-sm text-gray-500">No hay mensajes todavía.</p>
+          <p className="text-sm text-gray-500">{t("ui.incidentThread.noMessages")}</p>
         )}
         {messages.map((m) => {
           const mine =
@@ -257,7 +265,7 @@ export function IncidentThread({
                     mine ? "text-white/70" : "text-gray-500",
                   )}
                 >
-                  {m.authorRole === "superadmin" ? "Soporte MycoLegal" : "Usuario"}
+                  {m.authorRole === "superadmin" ? t("ui.incidentThread.authorSupport") : t("ui.incidentThread.authorUser")}
                   {" · "}
                   {formatDateTime(m.createdAt)}
                 </p>
@@ -284,8 +292,8 @@ export function IncidentThread({
             rows={3}
             placeholder={
               viewerRole === "user"
-                ? "Responde a soporte…"
-                : "Responde al usuario — pide más detalles o propón solución."
+                ? t("ui.incidentThread.replyToSupport")
+                : t("ui.incidentThread.replyToUser")
             }
             disabled={posting}
           />
@@ -296,13 +304,13 @@ export function IncidentThread({
               disabled={posting}
             >
               <CheckCircle2 className="mr-1 h-4 w-4" />
-              Cerrar incidencia
+              {t("ui.incidentThread.btnClose")}
             </Button>
             <Button onClick={postReply} disabled={posting || !draft.trim()}>
               {posting ? (
-                <><Loader2 className="mr-1 h-4 w-4 animate-spin" />Enviando…</>
+                <><Loader2 className="mr-1 h-4 w-4 animate-spin" />{t("ui.incidentThread.sending")}</>
               ) : (
-                <><Send className="mr-1 h-4 w-4" />Enviar respuesta</>
+                <><Send className="mr-1 h-4 w-4" />{t("ui.incidentThread.btnSend")}</>
               )}
             </Button>
           </div>
@@ -311,15 +319,15 @@ export function IncidentThread({
 
       {!isClosed && closeMode && (
         <div className="space-y-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 p-3">
-          <p className="text-sm font-medium text-gray-900">Cerrar incidencia</p>
+          <p className="text-sm font-medium text-gray-900">{t("ui.incidentThread.btnClose")}</p>
           <p className="text-xs text-gray-600">
-            Añade un comentario de cierre. Se guardará en el hilo como mensaje final.
+            {t("ui.incidentThread.closeHint")}
           </p>
           <Textarea
             value={closeDraft}
             onChange={(e) => setCloseDraft(e.target.value)}
             rows={3}
-            placeholder="Comentario de cierre…"
+            placeholder={t("ui.incidentThread.closeCommentPlaceholder")}
             disabled={closing}
             autoFocus
           />
@@ -332,13 +340,13 @@ export function IncidentThread({
               }}
               disabled={closing}
             >
-              Cancelar
+              {t("ui.incidentThread.btnCancel")}
             </Button>
             <Button onClick={closeIncident} disabled={closing || !closeDraft.trim()}>
               {closing ? (
-                <><Loader2 className="mr-1 h-4 w-4 animate-spin" />Cerrando…</>
+                <><Loader2 className="mr-1 h-4 w-4 animate-spin" />{t("ui.incidentThread.closing")}</>
               ) : (
-                <><CheckCircle2 className="mr-1 h-4 w-4" />Confirmar cierre</>
+                <><CheckCircle2 className="mr-1 h-4 w-4" />{t("ui.incidentThread.btnConfirmClose")}</>
               )}
             </Button>
           </div>
@@ -349,9 +357,9 @@ export function IncidentThread({
         <div className="flex justify-end">
           <Button variant="outline" onClick={reopenIncident} disabled={reopening}>
             {reopening ? (
-              <><Loader2 className="mr-1 h-4 w-4 animate-spin" />Reabriendo…</>
+              <><Loader2 className="mr-1 h-4 w-4 animate-spin" />{t("ui.incidentThread.reopening")}</>
             ) : (
-              <><RotateCcw className="mr-1 h-4 w-4" />Reabrir incidencia</>
+              <><RotateCcw className="mr-1 h-4 w-4" />{t("ui.incidentThread.btnReopen")}</>
             )}
           </Button>
         </div>

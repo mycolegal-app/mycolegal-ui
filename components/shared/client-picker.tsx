@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useI18n } from "../i18n/i18n-context";
 
 export interface ClientOption {
   id: string;
@@ -51,12 +52,14 @@ export function ClientPicker({
   value,
   onChange,
   onCreateNew,
-  placeholder = "Buscar cliente por nombre o NIF...",
+  placeholder,
   label,
   required,
   apiBase = "/api/catalogs/clientes",
   formatNif,
 }: ClientPickerProps) {
+  const { t } = useI18n();
+  const resolvedPlaceholder = placeholder ?? t("ui.clientPicker.placeholder");
   const [query, setQuery] = useState("");
   const [options, setOptions] = useState<ClientOption[]>([]);
   const [open, setOpen] = useState(false);
@@ -144,7 +147,7 @@ export function ClientPicker({
           <button
             type="button"
             onClick={handleClear}
-            aria-label="Quitar selección"
+            aria-label={t("ui.clientPicker.clearAria")}
             className="ml-2 text-gray-400 hover:text-gray-600"
           >
             ✕
@@ -159,18 +162,18 @@ export function ClientPicker({
             setOpen(true);
           }}
           onFocus={() => query.length >= 2 && setOpen(true)}
-          placeholder={placeholder}
+          placeholder={resolvedPlaceholder}
           className="w-full rounded-md border px-3 py-2 text-sm"
         />
       )}
       {open && (query.length >= 2 || options.length > 0) && (
         <div className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border bg-white shadow-lg">
           {loading && (
-            <div className="px-3 py-2 text-sm text-gray-500">Buscando…</div>
+            <div className="px-3 py-2 text-sm text-gray-500">{t("ui.clientPicker.searching")}</div>
           )}
           {!loading && options.length === 0 && query.length >= 2 && (
             <div className="px-3 py-2 text-sm text-gray-500">
-              No se encontraron resultados
+              {t("ui.clientPicker.noResults")}
             </div>
           )}
           {options.map((client) => (
@@ -199,7 +202,7 @@ export function ClientPicker({
                 }}
                 className="w-full px-3 py-2 text-left text-sm font-medium text-cyan-600 hover:bg-cyan-50"
               >
-                + Crear nuevo cliente
+                {t("ui.clientPicker.createNew")}
               </button>
             </>
           )}

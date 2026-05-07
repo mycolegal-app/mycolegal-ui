@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { LayoutGrid } from "lucide-react";
+import { useI18n } from "../i18n/i18n-context";
 
 export interface AppInfo {
   slug: string;
@@ -17,6 +18,7 @@ interface AppSwitcherProps {
 }
 
 export function AppSwitcher({ apps, currentSlug }: AppSwitcherProps) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -40,14 +42,14 @@ export function AppSwitcher({ apps, currentSlug }: AppSwitcherProps) {
       <button
         onClick={() => setOpen(!open)}
         className="flex h-8 w-8 items-center justify-center rounded-md text-white/60 hover:bg-white/10 hover:text-white transition-colors"
-        title="Cambiar aplicación"
+        title={t("ui.appSwitcher.title")}
       >
         <LayoutGrid className="h-4 w-4" />
       </button>
       {open && (
         <div className="absolute right-0 top-full z-50 mt-2 min-w-[200px] rounded-lg border border-white/10 bg-navy-800 p-2 shadow-xl">
           <p className="px-2 pb-1.5 text-[10px] font-medium uppercase tracking-wider text-white/40">
-            Aplicaciones
+            {t("ui.appSwitcher.appsHeading")}
           </p>
           {otherApps.map((app) => (
             <a

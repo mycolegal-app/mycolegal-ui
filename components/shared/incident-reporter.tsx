@@ -12,6 +12,7 @@ import {
 } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
+import { useI18n } from "../i18n/i18n-context";
 
 interface IncidentReporterProps {
   /** App slug sent with the report (e.g. "notaria", "legifirma"). */
@@ -93,6 +94,7 @@ export function IncidentReporter({
   submitUrl = "/api/incidents",
   shortcut = DEFAULT_SHORTCUT,
 }: IncidentReporterProps) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [capturing, setCapturing] = useState(false);
   const [screenshot, setScreenshot] = useState<string | null>(null);
@@ -223,11 +225,11 @@ export function IncidentReporter({
       setTimeout(() => setOpen(false), 1200);
     } catch (err: any) {
       setResult("error");
-      setErrorMessage(err?.message || "No se pudo enviar la incidencia.");
+      setErrorMessage(err?.message || t("ui.incidentReporter.errSend"));
     } finally {
       setSubmitting(false);
     }
-  }, [appSlug, captureError, consoleErrors, description, screenshot, submitUrl]);
+  }, [appSlug, captureError, consoleErrors, description, screenshot, submitUrl, t]);
 
   const shortcutLabel = formatShortcut(shortcut);
 
@@ -237,8 +239,8 @@ export function IncidentReporter({
         <button
           type="button"
           onClick={openReporter}
-          title={`Reportar incidencia — ${shortcutLabel} para ocultar este botón`}
-          aria-label={`Reportar incidencia. Pulsa ${shortcutLabel} para ocultar este botón.`}
+          title={t("ui.incidentReporter.btnTooltip", { shortcut: shortcutLabel })}
+          aria-label={t("ui.incidentReporter.btnAria", { shortcut: shortcutLabel })}
           className="fixed bottom-6 right-6 z-40 inline-flex h-10 w-10 items-center justify-center rounded-full bg-navy text-white shadow-lg ring-1 ring-white/40 transition-transform hover:scale-105 hover:bg-navy-800 focus:outline-none focus:ring-2 focus:ring-cyan print:hidden"
         >
           <Bug className="h-5 w-5" />
@@ -248,10 +250,9 @@ export function IncidentReporter({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Reportar una incidencia</DialogTitle>
+            <DialogTitle>{t("ui.incidentReporter.title")}</DialogTitle>
             <DialogDescription>
-              Describe qué estabas intentando hacer y qué ha pasado. Adjuntamos una captura
-              de lo que ves ahora para ayudarnos a reproducirlo.
+              {t("ui.incidentReporter.description")}
             </DialogDescription>
           </DialogHeader>
 
@@ -261,21 +262,21 @@ export function IncidentReporter({
               {capturing && (
                 <div className="flex h-40 items-center justify-center text-sm text-gray-500">
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Capturando pantalla…
+                  {t("ui.incidentReporter.capturing")}
                 </div>
               )}
               {!capturing && screenshot && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={screenshot}
-                  alt="Captura de pantalla"
+                  alt={t("ui.incidentReporter.screenshotAlt")}
                   className="max-h-60 w-full rounded-md object-contain"
                 />
               )}
               {!capturing && !screenshot && (
                 <div className="flex h-40 flex-col items-center justify-center gap-2 text-sm text-gray-500">
                   <Camera className="h-5 w-5" />
-                  <span>No se pudo capturar la pantalla — el reporte se enviará sin imagen.</span>
+                  <span>{t("ui.incidentReporter.captureFailed")}</span>
                   {captureError && (
                     <span className="max-w-xs truncate text-[11px] text-gray-400" title={captureError}>
                       {captureError}
@@ -286,7 +287,7 @@ export function IncidentReporter({
                     onClick={captureScreenshot}
                     className="text-cyan hover:underline"
                   >
-                    Reintentar
+                    {t("ui.incidentReporter.retry")}
                   </button>
                 </div>
               )}
@@ -294,31 +295,30 @@ export function IncidentReporter({
 
             <div>
               <label htmlFor="incident-description" className="mb-1 block text-sm text-gray-700">
-                Descripción
+                {t("ui.incidentReporter.descriptionLabel")}
               </label>
               <Textarea
                 id="incident-description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Qué estabas haciendo cuando ocurrió, qué esperabas que pasara, y qué pasó realmente."
+                placeholder={t("ui.incidentReporter.descriptionPlaceholder")}
                 rows={5}
                 autoFocus
               />
             </div>
 
             <p className="text-xs text-gray-500">
-              La captura incluye lo que estás viendo ahora. Si contiene datos sensibles,
-              edita la descripción para indicarlo o cancela el envío.
+              {t("ui.incidentReporter.privacyHint")}
             </p>
 
             {result === "ok" && (
               <div className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
-                Incidencia enviada. Gracias.
+                {t("ui.incidentReporter.sentOk")}
               </div>
             )}
             {result === "error" && (
               <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-                {errorMessage || "Error al enviar la incidencia."}
+                {errorMessage || t("ui.incidentReporter.errSendShort")}
               </div>
             )}
           </div>
@@ -326,13 +326,13 @@ export function IncidentReporter({
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)} disabled={submitting}>
               <X className="mr-1 h-4 w-4" />
-              Cancelar
+              {t("ui.incidentThread.btnCancel")}
             </Button>
             <Button onClick={submit} disabled={submitting || capturing || !description.trim()}>
               {submitting ? (
-                <><Loader2 className="mr-1 h-4 w-4 animate-spin" />Enviando…</>
+                <><Loader2 className="mr-1 h-4 w-4 animate-spin" />{t("ui.forgotPassword.sending")}</>
               ) : (
-                <><Send className="mr-1 h-4 w-4" />Enviar</>
+                <><Send className="mr-1 h-4 w-4" />{t("ui.incidentReporter.btnSend")}</>
               )}
             </Button>
           </DialogFooter>

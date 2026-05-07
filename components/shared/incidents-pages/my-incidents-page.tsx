@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { NavLink as Link } from "../nav-link";
 import { Loader2, Inbox, Plus } from "lucide-react";
 import { PageTitle } from "../../layout/page-title";
+import { useI18n } from "../../i18n/i18n-context";
 
 interface IncidentListEntry {
   id: string;
@@ -16,11 +17,18 @@ interface IncidentListEntry {
   createdAt: string;
 }
 
-const STATUS_COPY: Record<string, { label: string; tone: string }> = {
-  open: { label: "Abierta", tone: "bg-amber-100 text-amber-800" },
-  awaiting_user: { label: "Esperando tu respuesta", tone: "bg-cyan-100 text-cyan-800" },
-  awaiting_admin: { label: "Esperando soporte", tone: "bg-cyan-100 text-cyan-800" },
-  closed: { label: "Cerrada", tone: "bg-gray-100 text-gray-700" },
+const STATUS_TONES: Record<string, string> = {
+  open: "bg-amber-100 text-amber-800",
+  awaiting_user: "bg-cyan-100 text-cyan-800",
+  awaiting_admin: "bg-cyan-100 text-cyan-800",
+  closed: "bg-gray-100 text-gray-700",
+};
+
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  open: "ui.userAccount.status.open",
+  awaiting_user: "ui.userAccount.status.awaitingUser",
+  awaiting_admin: "ui.userAccount.status.awaitingAdmin",
+  closed: "ui.userAccount.status.closed",
 };
 
 function formatWhen(iso: string): string {
@@ -49,6 +57,7 @@ interface MyIncidentsPageProps {
 }
 
 export function MyIncidentsPage({ onReport }: MyIncidentsPageProps = {}) {
+  const { t } = useI18n();
   const [items, setItems] = useState<IncidentListEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -61,11 +70,11 @@ export function MyIncidentsPage({ onReport }: MyIncidentsPageProps = {}) {
       const body = await res.json();
       setItems(body.data || []);
     } catch (err) {
-      setError((err as Error).message || "No se pudieron cargar las incidencias.");
+      setError((err as Error).message || t("ui.myIncidents.errLoad"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     load();
@@ -74,14 +83,14 @@ export function MyIncidentsPage({ onReport }: MyIncidentsPageProps = {}) {
   return (
     <div className="mx-auto max-w-4xl space-y-4">
       <PageTitle
-        title="Mis incidencias"
-        subtitle="Incidencias que has reportado desde esta aplicación u otras de la plataforma."
+        title={t("ui.myIncidents.title")}
+        subtitle={t("ui.myIncidents.subtitle")}
       />
 
       {loading && (
         <div className="flex items-center gap-2 text-sm text-gray-500">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Cargando…
+          {t("ui.docfilling.loading")}
         </div>
       )}
 
@@ -94,7 +103,7 @@ export function MyIncidentsPage({ onReport }: MyIncidentsPageProps = {}) {
       {!loading && !error && items.length === 0 && (
         <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-gray-300 bg-gray-50 py-10 text-sm text-gray-500">
           <Inbox className="h-6 w-6" />
-          <p>Todavía no has abierto ninguna incidencia.</p>
+          <p>{t("ui.myIncidents.empty")}</p>
           {onReport && (
             <button
               type="button"
@@ -102,7 +111,7 @@ export function MyIncidentsPage({ onReport }: MyIncidentsPageProps = {}) {
               className="inline-flex items-center gap-2 rounded-lg bg-mc-primary-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-mc-primary-700"
             >
               <Plus className="h-3.5 w-3.5" />
-              Reportar incidencia
+              {t("ui.myIncidents.btnReport")}
             </button>
           )}
         </div>
@@ -114,15 +123,17 @@ export function MyIncidentsPage({ onReport }: MyIncidentsPageProps = {}) {
             <thead>
               <tr className="border-b border-gray-100 text-left text-xs uppercase tracking-wide text-gray-500">
                 <th className="px-4 py-2">#</th>
-                <th className="px-4 py-2">Descripción</th>
-                <th className="px-4 py-2">Aplicación</th>
-                <th className="px-4 py-2">Estado</th>
-                <th className="px-4 py-2">Última actividad</th>
+                <th className="px-4 py-2">{t("ui.myIncidents.colDescription")}</th>
+                <th className="px-4 py-2">{t("ui.myIncidents.colApp")}</th>
+                <th className="px-4 py-2">{t("ui.myIncidents.colStatus")}</th>
+                <th className="px-4 py-2">{t("ui.myIncidents.colLastActivity")}</th>
               </tr>
             </thead>
             <tbody>
               {items.map((i) => {
-                const status = STATUS_COPY[i.status] || { label: i.status, tone: "bg-gray-100 text-gray-700" };
+                const tone = STATUS_TONES[i.status] || "bg-gray-100 text-gray-700";
+                const labelKey = STATUS_LABEL_KEYS[i.status];
+                const statusLabel = labelKey ? t(labelKey) : i.status;
                 return (
                   <tr key={i.id} className="border-b border-gray-50 last:border-b-0 hover:bg-gray-50">
                     <td className="px-4 py-2 font-mono font-medium text-gray-900">
@@ -137,8 +148,8 @@ export function MyIncidentsPage({ onReport }: MyIncidentsPageProps = {}) {
                     </td>
                     <td className="px-4 py-2 text-gray-500">{i.appSlug}</td>
                     <td className="px-4 py-2">
-                      <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${status.tone}`}>
-                        {status.label}
+                      <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${tone}`}>
+                        {statusLabel}
                       </span>
                     </td>
                     <td className="px-4 py-2 text-gray-500">{formatWhen(i.lastActivityAt)}</td>

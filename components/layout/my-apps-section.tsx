@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ChevronRight, LayoutGrid, Loader2 } from "lucide-react";
 import type { AppInfo } from "./app-switcher";
 import { SidebarFlyout } from "./sidebar-flyout";
+import { useI18n } from "../i18n/i18n-context";
 
 interface MyAppsSectionProps {
   apps: AppInfo[];
@@ -19,7 +20,9 @@ interface MyAppsSectionProps {
  * shows a full-screen overlay (spinner + click capture) while the browser
  * navigates to the target app.
  */
-export function MyAppsSection({ apps, currentSlug, label = "Mis aplicaciones" }: MyAppsSectionProps) {
+export function MyAppsSection({ apps, currentSlug, label }: MyAppsSectionProps) {
+  const { t } = useI18n();
+  const resolvedLabel = label ?? t("ui.myApps.label");
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
 
   const otherApps = apps.filter((a) => a.slug !== currentSlug);
@@ -34,17 +37,17 @@ export function MyAppsSection({ apps, currentSlug, label = "Mis aplicaciones" }:
   return (
     <>
       <SidebarFlyout
-        ariaLabel={label}
+        ariaLabel={resolvedLabel}
         trigger={
           <>
             <LayoutGrid className="h-4 w-4 shrink-0" />
-            {label}
+            {resolvedLabel}
             <ChevronRight className="ml-auto h-4 w-4" />
           </>
         }
       >
         <p className="px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">
-          Mis aplicaciones
+          {resolvedLabel}
         </p>
         {otherApps.map((app) => {
           const isNavigating = navigatingTo === app.slug;
@@ -87,6 +90,7 @@ function AppLogo({ app }: { app: AppInfo }) {
 }
 
 function AppNavigatingOverlay() {
+  const { t } = useI18n();
   return (
     <div
       role="status"
@@ -96,7 +100,7 @@ function AppNavigatingOverlay() {
     >
       <div className="flex flex-col items-center gap-3 rounded-lg bg-white px-6 py-5 shadow-xl">
         <Loader2 className="h-7 w-7 animate-spin text-cyan-600" />
-        <p className="text-sm font-medium text-gray-700">Cargando aplicación…</p>
+        <p className="text-sm font-medium text-gray-700">{t("ui.myApps.loadingApp")}</p>
       </div>
     </div>
   );

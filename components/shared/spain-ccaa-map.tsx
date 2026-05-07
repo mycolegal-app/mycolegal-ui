@@ -10,6 +10,7 @@ import {
   MELILLA_POS,
 } from "./spain-ccaa-paths";
 import { SPAIN_MAP_SVG } from "./spain-ccaa-map-svg";
+import { useI18n } from "../i18n/i18n-context";
 
 // Canonical slug derived from the official CCAA nombre. We normalise the
 // caller's jurisdicciones at runtime and match them against the SVG path
@@ -119,6 +120,8 @@ export function SpainCCAAMap({
   variant = "realistic",
   svgSrc,
 }: SpainCCAAMapProps) {
+  const { t } = useI18n();
+  const mapAriaLabel = t("ui.spainMap.aria");
   const selSet = toSet(selectedCodigos);
   const filledSet = toSet(filledCodigos);
 
@@ -303,7 +306,7 @@ export function SpainCCAAMap({
       height={(width * vbH) / vbW}
       className={cn("select-none", className)}
       role="img"
-      aria-label="Mapa de España por comunidades autónomas"
+      aria-label={mapAriaLabel}
     >
       {/* Canarias inset frame */}
       <rect
@@ -409,6 +412,8 @@ function RealisticCCAAMap({
   width,
   onError,
 }: RealisticProps) {
+  const { t } = useI18n();
+  const mapAriaLabel = t("ui.spainMap.aria");
   const hostRef = React.useRef<HTMLDivElement | null>(null);
   const [svgMarkup, setSvgMarkup] = React.useState<string | null>(null);
 
@@ -630,7 +635,7 @@ function RealisticCCAAMap({
       className={cn("select-none", className)}
       style={{ width: "100%", maxWidth: width }}
       role="img"
-      aria-label="Mapa de España por comunidades autónomas"
+      aria-label={mapAriaLabel}
       dangerouslySetInnerHTML={{ __html: svgMarkup }}
     />
   );
