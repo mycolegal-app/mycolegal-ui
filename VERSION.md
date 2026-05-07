@@ -5,6 +5,21 @@
 
 ---
 
+## 1.44.4 — TranslationMessages recursivo para defaults i18n del paquete (2026-05-07)
+
+Type: **patch**
+
+El tipo `TranslationMessages` estaba definido como
+`Record<string, string | Record<string, string>>`, lo que solo permitía 2
+niveles de anidamiento. Las defaults shippeadas con el paquete
+(`i18n/cast.json`, etc.) tienen 3+ niveles (p. ej. `ui.userAccount.lang.cast`),
+lo que rompía el `tsc` de cualquier app consumidora con un error de
+"Conversion of type ... may be a mistake" en `i18n/index.ts:23`.
+
+Se cambia a una `interface` recursiva: `{ [key: string]: string | TranslationMessages }`.
+
+---
+
 ## 1.44.3 — Fix type error en NotificationsBell tras refactor i18n (2026-05-07)
 
 Type: **patch**

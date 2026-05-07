@@ -9,7 +9,9 @@ import {
 
 export type Language = "CAST" | "CAT" | "VAL" | "GAL" | "EUS";
 
-export type TranslationMessages = Record<string, string | Record<string, string>>;
+export interface TranslationMessages {
+  [key: string]: string | TranslationMessages;
+}
 
 interface I18nContextValue {
   /** Current language code */
