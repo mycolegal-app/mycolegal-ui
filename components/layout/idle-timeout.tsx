@@ -18,6 +18,22 @@ interface IdleTimeoutProps {
    * a regular LOGOUT. Falls back to onLogout when not provided.
    */
   onTimeout?: () => void;
+  /**
+   * Silent JWT refresh, fired while the user is actively interacting with
+   * the UI (rate-limited by `refreshIntervalMinutes`). Closes the gap
+   * between client-side activity (mouse/keyboard/scroll) and server-side
+   * JWT TTL: without this, an active user who doesn't trigger API calls for
+   * `inactivityTimeout + 2 min` is silently logged out on the next request.
+   * Errors are swallowed — the next 401 is handled by `useAuthFetchGuard`.
+   */
+  onSilentRefresh?: () => Promise<void>;
+  /**
+   * Minimum interval between silent refreshes. Defaults to half of
+   * `timeoutMinutes` (capped to ≥1). Must stay strictly below the JWT TTL
+   * (`timeoutMinutes + 2`) so the access token never expires while the
+   * user is active.
+   */
+  refreshIntervalMinutes?: number;
 }
 
 const ACTIVITY_EVENTS: (keyof DocumentEventMap)[] = [
@@ -34,6 +50,8 @@ export function IdleTimeout({
   onContinue,
   onLogout,
   onTimeout,
+  onSilentRefresh,
+  refreshIntervalMinutes,
 }: IdleTimeoutProps) {
   const { t } = useI18n();
   const [showModal, setShowModal] = useState(false);
@@ -43,8 +61,16 @@ export function IdleTimeout({
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countdownTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastActivity = useRef(Date.now());
+  const lastRefreshAt = useRef(Date.now());
+  const silentRefreshing = useRef(false);
+  const onSilentRefreshRef = useRef(onSilentRefresh);
+  useEffect(() => {
+    onSilentRefreshRef.current = onSilentRefresh;
+  }, [onSilentRefresh]);
 
   const timeoutMs = timeoutMinutes * 60 * 1000;
+  const refreshIntervalMs =
+    (refreshIntervalMinutes ?? Math.max(timeoutMinutes / 2, 1)) * 60 * 1000;
 
   const resetIdleTimer = useCallback(() => {
     lastActivity.current = Date.now();
@@ -56,10 +82,32 @@ export function IdleTimeout({
     }, timeoutMs);
   }, [timeoutMs, countdownSeconds, showModal]);
 
+  const maybeSilentRefresh = useCallback(() => {
+    const fn = onSilentRefreshRef.current;
+    if (!fn) return;
+    if (silentRefreshing.current) return;
+    if (Date.now() - lastRefreshAt.current < refreshIntervalMs) return;
+    silentRefreshing.current = true;
+    fn()
+      .then(() => {
+        lastRefreshAt.current = Date.now();
+      })
+      .catch(() => {
+        // Swallow — the next 401 is caught by useAuthFetchGuard, which
+        // already redirects to /login. Surfacing this here would just
+        // duplicate that path.
+      })
+      .finally(() => {
+        silentRefreshing.current = false;
+      });
+  }, [refreshIntervalMs]);
+
   // Set up activity listeners
   useEffect(() => {
     function handleActivity() {
-      if (!showModal) resetIdleTimer();
+      if (showModal) return;
+      resetIdleTimer();
+      maybeSilentRefresh();
     }
 
     ACTIVITY_EVENTS.forEach((event) =>
@@ -77,6 +125,7 @@ export function IdleTimeout({
           setRemaining(countdownSeconds);
         } else {
           resetIdleTimer();
+          maybeSilentRefresh();
         }
       }
     }
@@ -92,7 +141,7 @@ export function IdleTimeout({
       document.removeEventListener("visibilitychange", handleVisibility);
       if (idleTimer.current) clearTimeout(idleTimer.current);
     };
-  }, [resetIdleTimer, timeoutMs, countdownSeconds, showModal]);
+  }, [resetIdleTimer, maybeSilentRefresh, timeoutMs, countdownSeconds, showModal]);
 
   // Countdown when modal is showing
   useEffect(() => {
@@ -129,6 +178,7 @@ export function IdleTimeout({
       setShowModal(false);
       setRefreshing(false);
       lastActivity.current = Date.now();
+      lastRefreshAt.current = Date.now();
       if (idleTimer.current) clearTimeout(idleTimer.current);
       idleTimer.current = setTimeout(() => {
         setShowModal(true);

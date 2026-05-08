@@ -213,6 +213,13 @@ export default function AppShell({
         onContinue={async () => {
           await fetch("/api/auth/refresh", { method: "POST" });
         }}
+        onSilentRefresh={async () => {
+          // Throwing on non-2xx lets IdleTimeout's interval guard skip
+          // updating `lastRefreshAt`, so the next activity event retries
+          // instead of waiting another full window with a stale token.
+          const r = await fetch("/api/auth/refresh", { method: "POST" });
+          if (!r.ok) throw new Error("refresh failed");
+        }}
         onLogout={() => {
           // keepalive lets the POST finish even after navigation, so we can
           // redirect immediately instead of waiting for the fetch to settle —
