@@ -5,6 +5,54 @@
 
 ---
 
+## 1.45.2 — Recuperar "crear con contraseña inicial" en el invite dialog (2026-05-08)
+
+Type: **patch**
+
+Restaura la capacidad de crear usuarios con una contraseña que el admin
+introduce a mano, perdida cuando se migró el panel inline de
+mycolegal-admin al `UsersAdminPanel` compartido. Ahora disponible en
+las 11 apps + admin (`allowInitialPasswordInvite` por defecto `true`).
+
+**`InviteUserDialog`**
+
+- Nuevo prop `allowInitialPassword?: boolean` (default `true`).
+- Cuando está activo, el modal expone un radio "Modo de creación":
+  **Enviar invitación por email** (default) / **Crear con contraseña inicial**.
+- En modo password aparece un campo `password` con botón ojo
+  (`Eye`/`EyeOff`) y un hint *"El usuario tendrá que cambiarla en el
+  primer login"*. Validación cliente mín. 8 caracteres (alineado con
+  el `createWithPasswordSchema` de auth).
+- `onSubmit` recibe `data.initialPassword?` cuando aplica; el panel
+  decide qué endpoint llamar (`/invite` o `/create-with-password`).
+
+**Factory `createUsuariosCreateWithPasswordRoute`**
+
+- `POST /api/admin/usuarios/create-with-password` proxiea a auth's
+  `POST /orgs/:orgId/users/create-with-password` (ya existente; guard
+  `requireOrgUserManagement()` permite org_admin desde 2.4.9).
+- Validaciones: 422 si falta cualquier campo o si la password tiene
+  <8 chars (igual que auth's zod schema, pero validado en frontend
+  para feedback inmediato).
+- Tras crear, override del rol con `appRoleKey=appRole` vía
+  `PUT /orgs/:orgId/users/:uid/permissions/:appSlug` (mismo patrón
+  que `createUsuariosInviteRoute`). Local UserRole upsert si hay
+  prisma.
+
+**`UsersAdminPanel`**
+
+- Nuevo prop `allowInitialPasswordInvite?: boolean` (default `true`).
+- `handleInvite` ahora ramifica por `data.initialPassword`: pega a
+  `/create-with-password` si viene, a `/invite` si no.
+
+**i18n** (cast/cat/eus/gal)
+
+- `inviteModeLabel`, `inviteModeEmail`, `inviteModePassword`,
+  `invitePassword`, `invitePasswordHint`, `invitePasswordPlaceholder`,
+  `invitePasswordTooShort`, `btnShowPassword`, `btnHidePassword`,
+  `btnCreateUser`, `btnCreatingUser`, `toastUserCreatedWithPassword`.
+
+
 ## 1.45.1 — Modal: reenvío de invitación + escala a 11+ apps + factory sin prisma (2026-05-08)
 
 Type: **patch**

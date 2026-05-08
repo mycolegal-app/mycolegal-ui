@@ -80,6 +80,12 @@ export interface UsersAdminPanelProps {
   toolbar?: React.ReactNode;
   /** Whether the org-level role toggle (org_admin) appears in the modal. */
   showOrgRoleInModal?: boolean;
+  /**
+   * Whether the invite dialog exposes the "create with initial password"
+   * mode in addition to the email-invite mode. Default: true. Apps can
+   * pass `false` to limit invitations to the email flow.
+   */
+  allowInitialPasswordInvite?: boolean;
 }
 
 const STATUS_VARIANTS: Record<
@@ -106,6 +112,7 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
     apiBase = '/api/admin/usuarios',
     toolbar,
     showOrgRoleInModal = true,
+    allowInitialPasswordInvite = true,
   } = props;
 
   const [users, setUsers] = useState<UserRow[]>([]);
@@ -164,10 +171,17 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
     displayName: string;
     phoneNumber?: string;
     appRole?: string;
+    initialPassword?: string;
   }) {
     setInviteSubmitting(true);
+    const withPassword = !!data.initialPassword;
+    const endpoint = withPassword ? `${apiBase}/create-with-password` : `${apiBase}/invite`;
+    const errorKey = withPassword ? 'ui.usersAdmin.toastInviteError' : 'ui.usersAdmin.toastInviteError';
+    const successKey = withPassword
+      ? 'ui.usersAdmin.toastUserCreatedWithPassword'
+      : 'ui.usersAdmin.toastInviteSuccess';
     try {
-      const res = await fetch(`${apiBase}/invite`, {
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -175,17 +189,17 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
       if (!res.ok) {
         const err = await res.json();
         toast({
-          title: err.error?.message || t('ui.usersAdmin.toastInviteError'),
+          title: err.error?.message || t(errorKey),
           variant: 'destructive',
         });
         return;
       }
-      toast({ title: t('ui.usersAdmin.toastInviteSuccess'), variant: 'success' });
+      toast({ title: t(successKey), variant: 'success' });
       setInviteOpen(false);
       fetchUsers();
     } catch (error) {
       console.error(error);
-      toast({ title: t('ui.usersAdmin.toastInviteError'), variant: 'destructive' });
+      toast({ title: t(errorKey), variant: 'destructive' });
     } finally {
       setInviteSubmitting(false);
     }
@@ -413,6 +427,7 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
         roles={assignableRoles.map((r) => ({ value: r, label: roleLabel(r) }))}
         roleHint={orgAdminRoleHint}
         submitting={inviteSubmitting}
+        allowInitialPassword={allowInitialPasswordInvite}
       />
 
       <UserPermissionsModal

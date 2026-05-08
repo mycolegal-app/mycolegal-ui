@@ -819,6 +819,144 @@ export function createUsuariosByIdPermissionsRoute(deps: UsuariosRoutesDeps) {
 }
 
 // --------------------------------------------------------------------------
+// /api/admin/usuarios/create-with-password — POST
+//
+// Alternative to the email invite: the admin sets the initial password
+// directly. The user is forced onto /set-password on first login (auth
+// flips `mustChangePassword=true` server-side). Same body validation as
+// the email invite plus `initialPassword` (≥8 chars, matches auth's
+// `createWithPasswordSchema`).
+// --------------------------------------------------------------------------
+
+export function createUsuariosCreateWithPasswordRoute(deps: UsuariosRoutesDeps) {
+  const {
+    appSlug,
+    validRoles,
+    prisma,
+    withPermission,
+    successResponse,
+    errorResponse,
+    fetchFromAuth,
+    jwtCookieName,
+    audit,
+  } = deps;
+
+  const POST = withPermission('admin:users')(async (req: NextRequest, ctx: AdminCtx) => {
+    try {
+      const { auth } = ctx;
+      const params = await ctx.params;
+      const orgId = getTargetOrgId(deps, auth, params);
+      const body = (await req.json()) as {
+        email?: string;
+        displayName?: string;
+        initialPassword?: string;
+        phoneNumber?: string;
+        language?: string;
+        appRole?: string;
+      };
+      const { email, displayName, initialPassword, phoneNumber, language, appRole } = body;
+
+      if (!email || !displayName || !initialPassword || !appRole) {
+        return errorResponse(
+          'VALIDATION_ERROR',
+          'Los campos email, displayName, initialPassword y appRole son obligatorios',
+          422,
+        );
+      }
+      if (initialPassword.length < 8) {
+        return errorResponse('VALIDATION_ERROR', 'La contraseña debe tener al menos 8 caracteres', 422);
+      }
+      if (!validRoles.includes(appRole)) {
+        return errorResponse(
+          'VALIDATION_ERROR',
+          `Rol no válido. Roles permitidos: ${validRoles.join(', ')}`,
+          422,
+        );
+      }
+
+      const cookieStore = await cookies();
+      const token = cookieStore.get(jwtCookieName)?.value;
+      if (!token) return errorResponse('UNAUTHORIZED', 'No token', 401);
+
+      const createRes = await fetchFromAuth(
+        `/orgs/${orgId}/users/create-with-password`,
+        token,
+        {
+          method: 'POST',
+          body: {
+            email,
+            displayName,
+            initialPassword,
+            phoneNumber: phoneNumber || undefined,
+            language: language || undefined,
+            appSlugs: [appSlug],
+          },
+        },
+      );
+
+      if (createRes.status >= 400) {
+        const data = createRes.data ?? {};
+        const msg =
+          data?.error?.message ||
+          data?.message ||
+          (typeof data?.error === 'string' ? data.error : null) ||
+          'Error al crear usuario';
+        return errorResponse('AUTH_ERROR', msg, createRes.status);
+      }
+
+      const newUser = createRes.data?.user || createRes.data?.data || createRes.data;
+      const authUserId = newUser?.id;
+      if (!authUserId) {
+        return errorResponse('AUTH_ERROR', 'No se recibió ID del usuario creado', 502);
+      }
+
+      // Override the default role with the requested one (matches the
+      // email-invite flow). Best-effort — auth already created the user.
+      await fetchFromAuth(
+        `/orgs/${orgId}/users/${authUserId}/permissions/${appSlug}`,
+        token,
+        { method: 'PUT', body: { appRoleKey: appRole } },
+      ).catch((err) =>
+        console.warn('[admin/usuarios/create-with-password] role assign failed:', err),
+      );
+
+      const userRole = prisma
+        ? await prisma.userRole.upsert({
+            where: { authUserId_orgId: { authUserId, orgId } },
+            create: {
+              authUserId,
+              orgId,
+              role: appRole,
+              displayName,
+              email,
+              active: true,
+            },
+            update: { role: appRole, displayName, email },
+          })
+        : { id: authUserId, authUserId, orgId, role: appRole, displayName, email, active: true };
+
+      if (audit) {
+        await audit({
+          orgId,
+          userId: auth.userRoleId,
+          accion: 'CREAR_USUARIO_CON_PASSWORD',
+          entidad: 'UserRole',
+          entidadId: userRole.id,
+          valorNuevo: { authUserId, email, role: appRole, displayName },
+        }).catch((err) => console.error('[admin/usuarios/create-with-password] audit error:', err));
+      }
+
+      return successResponse({ ...userRole, authStatus: newUser.status });
+    } catch (error) {
+      console.error('[admin/usuarios/create-with-password] POST error:', error);
+      return errorResponse('INTERNAL_ERROR', 'Error al crear usuario', 500);
+    }
+  });
+
+  return { POST };
+}
+
+// --------------------------------------------------------------------------
 // /api/admin/usuarios/[authUserId]/resend-invitation — POST
 //
 // Used by the modal when the target user is still in `status='invited'`:
