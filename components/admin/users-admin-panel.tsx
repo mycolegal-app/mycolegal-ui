@@ -2,21 +2,24 @@
 
 /**
  * Shared users admin panel — renders the entire "Usuarios" tab content
- * (table, search, invite dialog, role edit, activate/deactivate, delete).
+ * (table, search, invite dialog, edit-permissions modal, delete).
  *
- * Each app embeds it inside its own `/admin` page tab structure:
+ * Embedded by each app's `/admin` page. Cross-app permissions edits go
+ * through the shared modal: one card per app of the org plus an
+ * org-level role toggle. Inline role editing has been retired in favour
+ * of the modal — fewer affordances on the row, more comfort on the dialog.
  *
  *   <UsersAdminPanel
  *     appName="Notaría"
+ *     appSlug="notaria"
  *     assignableRoles={['OFICIAL', 'TRAMITADOR', 'CONSULTOR']}
  *     protectedRole="NOTARIO"
- *     orgAdminRoleHint="El rol Notario se asigna automáticamente al administrador de la organización."
  *   />
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Users, Lock, Pencil, UserPlus, Trash2, KeyRound } from 'lucide-react';
+import { Users, Lock, UserPlus, Trash2, Pencil } from 'lucide-react';
 
 import { DataTable } from '../shared/data-table';
 import { LoadingSpinner } from '../shared/loading-spinner';
@@ -33,38 +36,41 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../ui/select';
 import { formatDateTime } from '../../lib/utils';
 import { toast } from '../../hooks/use-toast';
 import { roleLabel, roleColor } from './role-catalog';
+import { UserPermissionsModal, type AppCatalogEntry } from './user-permissions-modal';
 
 export interface UserRow {
   id: string;
   authUserId: string;
   displayName: string;
   email: string;
+  /** App-level role for the current app, or null when hasAppAccess=false. */
   role: string | null;
   active: boolean;
   lastLoginAt: string | null;
   avatarUrl: string | null;
   authStatus?: string;
+  /** Org-level role from auth (`org_admin` | `user` | `superadmin`). */
+  authRole?: string;
   /** Whether the user has UserAppPermission for the current app. */
   hasAppAccess?: boolean;
-  otherApps?: Array<{ slug: string; name: string }>;
+  /** Other apps the user has UserAppPermission in (slug + name + role). */
+  otherApps?: Array<{ slug: string; name: string; appRoleKey?: string }>;
 }
 
 export interface UsersAdminPanelProps {
-  /** Human-readable app name shown in the delete dialog ("Desactivar en <name>"). */
+  /** Human-readable app name. */
   appName: string;
-  /** Roles selectable in the invite dialog and the inline role editor. */
+  /**
+   * App slug. Required for the cross-app permissions modal to seed the
+   * initial state and to identify the "current app" card.
+   */
+  appSlug: string;
+  /** Roles selectable in the invite dialog. The modal pulls roles per app from the catalog endpoint. */
   assignableRoles: readonly string[];
-  /** Role that cannot be edited / deleted via this panel (lockout protection). Default: 'NOTARIO'. */
+  /** Role that cannot be edited / deleted via this panel (lockout protection). */
   protectedRole?: string;
   /** Hint shown next to the invite role selector. */
   orgAdminRoleHint?: string;
@@ -72,41 +78,50 @@ export interface UsersAdminPanelProps {
   apiBase?: string;
   /** Slot at the top of the panel (e.g. extra filters). */
   toolbar?: React.ReactNode;
+  /** Whether the org-level role toggle (org_admin) appears in the modal. */
+  showOrgRoleInModal?: boolean;
 }
 
-const STATUS_MAP: Record<
+const STATUS_VARIANTS: Record<
   string,
-  { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }
+  'default' | 'secondary' | 'outline' | 'destructive'
 > = {
-  active: { label: 'Activo', variant: 'default' },
-  invited: { label: 'Invitado', variant: 'outline' },
-  pending_approval: { label: 'Pte. aprobación', variant: 'outline' },
-  approved: { label: 'Aprobado', variant: 'outline' },
-  suspended: { label: 'Suspendido', variant: 'destructive' },
-  disabled: { label: 'Inactivo', variant: 'secondary' },
-  denied: { label: 'Denegado', variant: 'destructive' },
+  active: 'default',
+  invited: 'outline',
+  pending_approval: 'outline',
+  approved: 'outline',
+  suspended: 'destructive',
+  disabled: 'secondary',
+  denied: 'destructive',
 };
 
 export function UsersAdminPanel(props: UsersAdminPanelProps) {
   const { t } = useI18n();
   const {
     appName,
+    appSlug,
     assignableRoles,
     protectedRole = 'NOTARIO',
     orgAdminRoleHint,
     apiBase = '/api/admin/usuarios',
     toolbar,
+    showOrgRoleInModal = true,
   } = props;
 
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteSubmitting, setInviteSubmitting] = useState(false);
-  const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [deleteUser, setDeleteUser] = useState<UserRow | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [grantingId, setGrantingId] = useState<string | null>(null);
+  const [editUser, setEditUser] = useState<UserRow | null>(null);
+
+  const [appsCatalog, setAppsCatalog] = useState<AppCatalogEntry[]>([]);
+  const [loadingCatalog, setLoadingCatalog] = useState(true);
+
+  function statusLabel(status: string): string {
+    return t(`ui.usersAdmin.statusEnum.${status}`);
+  }
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -123,9 +138,26 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
     }
   }, [apiBase]);
 
+  const fetchCatalog = useCallback(async () => {
+    setLoadingCatalog(true);
+    try {
+      const res = await fetch(`${apiBase}/apps-catalog`);
+      if (res.ok) {
+        const data = await res.json();
+        const apps = data.data?.apps ?? data.apps ?? [];
+        setAppsCatalog(apps);
+      }
+    } catch (err) {
+      console.error('Error fetching apps catalog:', err);
+    } finally {
+      setLoadingCatalog(false);
+    }
+  }, [apiBase]);
+
   useEffect(() => {
     fetchUsers();
-  }, [fetchUsers]);
+    fetchCatalog();
+  }, [fetchUsers, fetchCatalog]);
 
   async function handleInvite(data: {
     email: string;
@@ -143,104 +175,19 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
       if (!res.ok) {
         const err = await res.json();
         toast({
-          title: err.error?.message || 'Error al invitar usuario',
+          title: err.error?.message || t('ui.usersAdmin.toastInviteError'),
           variant: 'destructive',
         });
         return;
       }
-      toast({ title: 'Usuario invitado. Se ha enviado un email de activación.', variant: 'success' });
+      toast({ title: t('ui.usersAdmin.toastInviteSuccess'), variant: 'success' });
       setInviteOpen(false);
       fetchUsers();
     } catch (error) {
       console.error(error);
-      toast({ title: 'Error al invitar usuario', variant: 'destructive' });
+      toast({ title: t('ui.usersAdmin.toastInviteError'), variant: 'destructive' });
     } finally {
       setInviteSubmitting(false);
-    }
-  }
-
-  async function handleChangeRole(userRoleId: string, newRole: string) {
-    setUpdatingId(userRoleId);
-    try {
-      const res = await fetch(`${apiBase}/${userRoleId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: newRole }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        toast({ title: err.error?.message || 'Error al cambiar rol', variant: 'destructive' });
-        return;
-      }
-      toast({ title: 'Rol actualizado', variant: 'success' });
-      setEditingRoleId(null);
-      fetchUsers();
-    } catch (error) {
-      console.error(error);
-      toast({ title: 'Error al cambiar rol', variant: 'destructive' });
-    } finally {
-      setUpdatingId(null);
-    }
-  }
-
-  async function handleToggleActive(user: UserRow) {
-    setUpdatingId(user.id);
-    try {
-      const res = await fetch(`${apiBase}/${user.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ active: !user.active }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        toast({
-          title: err.error?.message || 'Error al actualizar estado',
-          variant: 'destructive',
-        });
-        return;
-      }
-      toast({
-        title: user.active ? 'Usuario desactivado' : 'Usuario activado',
-        variant: 'success',
-      });
-      fetchUsers();
-    } catch (error) {
-      console.error(error);
-      toast({ title: 'Error al actualizar estado', variant: 'destructive' });
-    } finally {
-      setUpdatingId(null);
-    }
-  }
-
-  async function handleGrantAccess(user: UserRow, role: string) {
-    setUpdatingId(user.authUserId);
-    try {
-      const res = await fetch(apiBase, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          authUserId: user.authUserId,
-          role,
-          displayName: user.displayName,
-          email: user.email,
-        }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        toast({
-          title: err.error?.message || `Error al dar acceso a ${appName}`,
-          variant: 'destructive',
-        });
-        return;
-      }
-      toast({ title: `Acceso a ${appName} concedido`, variant: 'success' });
-      setGrantingId(null);
-      fetchUsers();
-    } catch (error) {
-      console.error(error);
-      toast({ title: `Error al dar acceso a ${appName}`, variant: 'destructive' });
-    } finally {
-      setUpdatingId(null);
     }
   }
 
@@ -255,7 +202,7 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
       if (!res.ok) {
         const err = await res.json();
         toast({
-          title: err.error?.message || 'Error al eliminar usuario',
+          title: err.error?.message || t('ui.usersAdmin.toastDeleteError'),
           variant: 'destructive',
         });
         return;
@@ -263,15 +210,15 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
       toast({
         title:
           action === 'deactivate_app'
-            ? `Usuario desactivado de ${appName}`
-            : 'Usuario eliminado de la organización',
+            ? t('ui.usersAdmin.toastDeactivatedFromApp', { app: appName })
+            : t('ui.usersAdmin.toastDeletedFromOrg'),
         variant: 'success',
       });
       setDeleteUser(null);
       fetchUsers();
     } catch (error) {
       console.error(error);
-      toast({ title: 'Error al eliminar usuario', variant: 'destructive' });
+      toast({ title: t('ui.usersAdmin.toastDeleteError'), variant: 'destructive' });
     } finally {
       setDeletingId(null);
     }
@@ -280,12 +227,12 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
   const columns: ColumnDef<UserRow, unknown>[] = [
     {
       accessorKey: 'displayName',
-      header: 'Nombre',
+      header: t('ui.usersAdmin.colName'),
       cell: ({ row }) => {
         const u = row.original;
         return (
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
+            <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-[10px] font-medium shrink-0">
               {u.displayName
                 .split(' ')
                 .map((n) => n[0])
@@ -293,34 +240,30 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
                 .slice(0, 2)
                 .toUpperCase()}
             </div>
-            <span className="font-medium">{u.displayName}</span>
+            <div className="min-w-0">
+              <div className="font-medium text-sm truncate">{u.displayName}</div>
+              <div className="text-xs text-muted-foreground truncate">{u.email}</div>
+            </div>
           </div>
         );
       },
     },
     {
-      accessorKey: 'email',
-      header: 'Email',
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">{row.original.email}</span>
-      ),
-    },
-    {
       accessorKey: 'role',
-      header: 'Rol',
+      header: t('ui.usersAdmin.colRole'),
       cell: ({ row }) => {
         const u = row.original;
         if (!u.hasAppAccess) {
-          return <span className="text-sm text-muted-foreground">—</span>;
+          return <span className="text-xs text-muted-foreground">—</span>;
         }
         return (
-          <div className="flex items-center gap-1.5">
-            <Badge variant="outline" className={roleColor(u.role!)}>
+          <div className="flex items-center gap-1">
+            <Badge variant="outline" className={`${roleColor(u.role!)} text-xs px-1.5 py-0`}>
               {roleLabel(u.role!)}
             </Badge>
             {u.role === protectedRole && (
-              <span title={`El rol ${roleLabel(protectedRole)} se asigna automáticamente al administrador de la organización`}>
-                <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+              <span title={t('ui.usersAdmin.protectedRoleHint', { role: roleLabel(protectedRole) })}>
+                <Lock className="h-3 w-3 text-muted-foreground" />
               </span>
             )}
           </div>
@@ -329,25 +272,33 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
     },
     {
       id: 'apps',
-      header: 'Apps activadas',
+      header: t('ui.usersAdmin.colApps'),
       enableSorting: false,
       cell: ({ row }) => {
         const u = row.original;
         const otherApps = u.otherApps ?? [];
         if (!u.hasAppAccess && otherApps.length === 0) {
-          return <span className="text-sm text-muted-foreground">—</span>;
+          return <span className="text-xs text-muted-foreground">—</span>;
         }
+        const chipBase = 'inline-flex items-center justify-center rounded-md text-[10px] font-medium px-2 h-5 min-w-[4.5rem] max-w-[7rem] truncate';
         return (
           <div className="flex flex-wrap gap-1">
             {u.hasAppAccess && (
-              <Badge variant="default" className="font-normal">
+              <span
+                className={`${chipBase} bg-primary text-primary-foreground`}
+                title={appName}
+              >
                 {appName}
-              </Badge>
+              </span>
             )}
             {otherApps.map((a) => (
-              <Badge key={a.slug} variant="outline" className="font-normal text-muted-foreground">
+              <span
+                key={a.slug}
+                className={`${chipBase} border bg-background text-muted-foreground`}
+                title={a.appRoleKey ? `${a.name} · ${roleLabel(a.appRoleKey)}` : a.name}
+              >
                 {a.name}
-              </Badge>
+              </span>
             ))}
           </div>
         );
@@ -355,142 +306,66 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
     },
     {
       accessorKey: 'lastLoginAt',
-      header: 'Último acceso',
+      header: t('ui.usersAdmin.colLastLogin'),
       cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">
-          {row.original.lastLoginAt ? formatDateTime(row.original.lastLoginAt) : 'Nunca'}
+        <span className="text-xs text-muted-foreground">
+          {row.original.lastLoginAt ? formatDateTime(row.original.lastLoginAt) : t('ui.usersAdmin.never')}
         </span>
       ),
     },
     {
       accessorKey: 'active',
-      header: 'Estado',
+      header: t('ui.usersAdmin.colStatus'),
       cell: ({ row }) => {
         const u = row.original;
         if (!u.hasAppAccess) {
           return (
-            <Badge variant="secondary" title={`Este usuario no tiene acceso a ${appName}`}>
-              Sin acceso
+            <Badge
+              variant="secondary"
+              className="text-xs px-1.5 py-0"
+              title={t('ui.usersAdmin.noAccessHint', { app: appName })}
+            >
+              {t('ui.usersAdmin.statusNoAccess')}
             </Badge>
           );
         }
         const status = u.authStatus || (u.active ? 'active' : 'disabled');
-        const s = STATUS_MAP[status] || { label: status, variant: 'secondary' as const };
-        return <Badge variant={s.variant}>{s.label}</Badge>;
+        const variant = STATUS_VARIANTS[status] ?? 'secondary';
+        return <Badge variant={variant} className="text-xs px-1.5 py-0">{statusLabel(status)}</Badge>;
       },
     },
     {
       id: 'acciones',
-      header: 'Acciones',
+      header: t('ui.usersAdmin.colActions'),
       enableSorting: false,
       cell: ({ row }) => {
         const u = row.original;
         const isProtected = u.role === protectedRole;
-        const isUpdating = updatingId === u.id || updatingId === u.authUserId;
-        const isEditing = editingRoleId === u.id;
-        const isGranting = grantingId === u.authUserId;
-
-        if (!u.hasAppAccess) {
-          if (isGranting) {
-            return (
-              <div className="flex items-center gap-2">
-                <Select
-                  defaultValue={assignableRoles[0]}
-                  onValueChange={(value) => handleGrantAccess(u, value)}
-                >
-                  <SelectTrigger className="w-[160px] h-8">
-                    <SelectValue placeholder="Selecciona rol..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {assignableRoles.map((r) => (
-                      <SelectItem key={r} value={r}>
-                        {roleLabel(r)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setGrantingId(null)}
-                  disabled={isUpdating}
-                  className="h-8 px-2"
-                >
-                  {t('ui.incidentThread.btnCancel')}
-                </Button>
-              </div>
-            );
-          }
-          return (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setGrantingId(u.authUserId)}
-              disabled={isUpdating}
-              className="h-8"
-            >
-              <KeyRound className="h-3.5 w-3.5 mr-1.5" />
-              {isUpdating ? '...' : `Dar acceso a ${appName}`}
-            </Button>
-          );
-        }
-
         return (
-          <div className="flex items-center gap-2">
-            {isEditing ? (
-              <Select
-                defaultValue={u.role!}
-                onValueChange={(value) => handleChangeRole(u.id, value)}
-              >
-                <SelectTrigger className="w-[140px] h-8">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {assignableRoles.map((r) => (
-                    <SelectItem key={r} value={r}>
-                      {roleLabel(r)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setEditingRoleId(u.id)}
-                disabled={isProtected || isUpdating}
-                title={
-                  isProtected
-                    ? `El rol ${roleLabel(protectedRole)} no se puede cambiar`
-                    : 'Cambiar rol'
-                }
-              >
-                <Pencil className="h-3.5 w-3.5" />
-              </Button>
-            )}
+          <div className="flex items-center gap-1">
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => handleToggleActive(u)}
-              disabled={isUpdating}
-              className="h-8 px-2 text-muted-foreground hover:text-foreground"
+              onClick={() => setEditUser(u)}
+              className="h-7 px-2 text-xs"
+              title={t('ui.usersAdmin.btnEdit')}
             >
-              {isUpdating ? '...' : u.active ? 'Desactivar' : 'Activar'}
+              <Pencil className="h-3.5 w-3.5 mr-1" />
+              {t('ui.usersAdmin.btnEdit')}
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setDeleteUser(u)}
-              disabled={isProtected || isUpdating}
+              disabled={isProtected}
               title={
                 isProtected
-                  ? `No se puede eliminar al ${roleLabel(protectedRole)}`
-                  : 'Eliminar usuario'
+                  ? t('ui.usersAdmin.protectedRoleDeleteHint', { role: roleLabel(protectedRole) })
+                  : t('ui.usersAdmin.deleteUserTip')
               }
-              className="h-8 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+              className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
             >
-              <Trash2 className="h-3.5 w-3.5 mr-1" />
-              Eliminar
+              <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
         );
@@ -500,12 +375,12 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
 
   return (
     <>
-      <div className="space-y-4">
+      <div className="space-y-3">
         <div className="flex items-center justify-between">
           {toolbar ?? <div />}
           <Button onClick={() => setInviteOpen(true)} size="sm">
             <UserPlus className="h-4 w-4 mr-1.5" />
-            Invitar usuario
+            {t('ui.usersAdmin.btnInvite')}
           </Button>
         </div>
 
@@ -516,16 +391,16 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
         ) : users.length === 0 ? (
           <EmptyState
             icon={Users}
-            title={t("ui.usersAdmin.emptyTitle")}
-            description={t("ui.usersAdmin.emptyDescription")}
+            title={t('ui.usersAdmin.emptyTitle')}
+            description={t('ui.usersAdmin.emptyDescription')}
           />
         ) : (
           <DataTable
             columns={columns}
             data={users}
             searchKey="displayName"
-            searchPlaceholder={t("ui.usersAdmin.searchByName")}
-            pageSize={20}
+            searchPlaceholder={t('ui.usersAdmin.searchByName')}
+            pageSize={25}
             scrollable
           />
         )}
@@ -540,13 +415,28 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
         submitting={inviteSubmitting}
       />
 
+      <UserPermissionsModal
+        open={!!editUser}
+        user={editUser}
+        apps={appsCatalog}
+        loadingCatalog={loadingCatalog}
+        apiBase={apiBase}
+        currentAppSlug={appSlug}
+        showOrgRole={showOrgRoleInModal}
+        protectedAppSlug={appSlug}
+        onClose={() => setEditUser(null)}
+        onSaved={() => {
+          fetchUsers();
+        }}
+      />
+
       <Dialog
         open={!!deleteUser}
         onOpenChange={(open) => !open && setDeleteUser(null)}
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t("ui.usersAdmin.deleteTitle")}</DialogTitle>
+            <DialogTitle>{t('ui.usersAdmin.deleteTitle')}</DialogTitle>
             <DialogDescription>
               {deleteUser?.displayName} ({deleteUser?.email})
             </DialogDescription>
@@ -555,7 +445,7 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
           {deleteUser?.otherApps && deleteUser.otherApps.length > 0 ? (
             <>
               <p className="text-sm text-muted-foreground">
-                {t("ui.usersAdmin.alsoHasAccess")}
+                {t('ui.usersAdmin.alsoHasAccess')}
               </p>
               <ul className="list-disc pl-5 text-sm">
                 {deleteUser.otherApps.map((app) => (
@@ -570,32 +460,32 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
                   onClick={() => handleDelete(deleteUser, 'deactivate_app')}
                   disabled={!!deletingId}
                 >
-                  {deletingId ? '...' : t("ui.usersAdmin.deactivateInApp", { app: appName })}
+                  {deletingId ? '...' : t('ui.usersAdmin.deactivateInApp', { app: appName })}
                 </Button>
                 <Button
                   variant="destructive"
                   onClick={() => handleDelete(deleteUser, 'destroy')}
                   disabled={!!deletingId}
                 >
-                  {deletingId ? '...' : t("ui.usersAdmin.deleteFromOrg")}
+                  {deletingId ? '...' : t('ui.usersAdmin.deleteFromOrg')}
                 </Button>
               </DialogFooter>
             </>
           ) : (
             <>
               <p className="text-sm text-muted-foreground">
-                {t("ui.usersAdmin.deleteWarning")}
+                {t('ui.usersAdmin.deleteWarning')}
               </p>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setDeleteUser(null)}>
-                  {t("ui.incidentThread.btnCancel")}
+                  {t('ui.usersAdmin.btnCancel')}
                 </Button>
                 <Button
                   variant="destructive"
                   onClick={() => handleDelete(deleteUser!, 'destroy')}
                   disabled={!!deletingId}
                 >
-                  {deletingId ? '...' : t("ui.usersAdmin.btnDelete")}
+                  {deletingId ? '...' : t('ui.usersAdmin.btnDelete')}
                 </Button>
               </DialogFooter>
             </>

@@ -29,7 +29,7 @@ type AuthUser = {
   status: string;
   lastLogin: string | null;
   appPermission: { appRoleKey: string; permissions: string[] } | null;
-  otherApps: Array<{ slug: string; name: string }>;
+  otherApps: Array<{ slug: string; name: string; appRoleKey?: string }>;
 };
 
 function resolveOrgAdminRole(deps: UsuariosRoutesDeps): string {
@@ -112,6 +112,7 @@ export function createUsuariosRoutes(deps: UsuariosRoutesDeps) {
             lastLoginAt: local.lastLoginAt,
             avatarUrl: local.avatarUrl,
             authStatus: au.status,
+            authRole: au.role,
             hasAppAccess,
             otherApps: au.otherApps,
           });
@@ -128,6 +129,7 @@ export function createUsuariosRoutes(deps: UsuariosRoutesDeps) {
             lastLoginAt: null,
             avatarUrl: null,
             authStatus: au.status,
+            authRole: au.role,
             hasAppAccess,
             otherApps: au.otherApps,
           });
@@ -565,4 +567,195 @@ export function createUsuariosInviteRoute(deps: UsuariosRoutesDeps) {
   });
 
   return { POST };
+}
+
+// --------------------------------------------------------------------------
+// /api/admin/usuarios/apps-catalog — GET
+// Returns the list of apps active in the org plus their assignable roles,
+// so the cross-app permissions modal can render same-size cards with a
+// role selector each. Pure passthrough to auth's /orgs/:orgId/apps-catalog.
+// --------------------------------------------------------------------------
+
+export function createUsuariosAppsCatalogRoute(deps: UsuariosRoutesDeps) {
+  const { withPermission, successResponse, errorResponse, fetchFromAuth, jwtCookieName } = deps;
+
+  const GET = withPermission('admin:users')(async (_req: NextRequest, { auth }: AdminCtx) => {
+    try {
+      const cookieStore = await cookies();
+      const token = cookieStore.get(jwtCookieName)?.value;
+      if (!token) return errorResponse('UNAUTHORIZED', 'No token', 401);
+
+      const res = await fetchFromAuth(`/orgs/${auth.orgId}/apps-catalog`, token);
+      if (res.status >= 400) {
+        const msg = res.data?.error?.message || res.data?.message || 'Error al cargar catálogo';
+        return errorResponse('AUTH_ERROR', msg, res.status);
+      }
+      const apps = res.data?.data?.apps || res.data?.apps || [];
+      return successResponse({ apps });
+    } catch (error) {
+      console.error('[admin/usuarios/apps-catalog] GET error:', error);
+      return errorResponse('INTERNAL_ERROR', 'Error al cargar catálogo', 500);
+    }
+  });
+
+  return { GET };
+}
+
+// --------------------------------------------------------------------------
+// /api/admin/usuarios/[authUserId]/permissions — PUT
+// Cross-app permissions update used by the shared modal. Body:
+//   {
+//     apps: [{ slug, appRoleKey }],   // grant or change role
+//     removeApps: string[],            // revoke
+//     authRole?: 'org_admin' | 'user'  // optional org-level role change
+//   }
+// Each operation maps to one auth call. Local UserRole is only touched
+// when the change concerns the *current* app's slug — other apps own their
+// own provisioning on next login (see provisionUserRole in `auth-provision`).
+// --------------------------------------------------------------------------
+
+export function createUsuariosByIdPermissionsRoute(deps: UsuariosRoutesDeps) {
+  const {
+    appSlug,
+    prisma,
+    withPermission,
+    successResponse,
+    errorResponse,
+    fetchFromAuth,
+    jwtCookieName,
+    audit,
+  } = deps;
+
+  const PUT = withPermission('admin:users')(
+    async (req: NextRequest, ctx: AdminCtx<{ authUserId: string }>) => {
+      try {
+        const { authUserId } = await ctx.params;
+        const body = (await req.json()) as {
+          apps?: Array<{ slug?: string; appRoleKey?: string }>;
+          removeApps?: string[];
+          authRole?: 'org_admin' | 'user' | null;
+          displayName?: string;
+          email?: string;
+        };
+        const { apps = [], removeApps = [], authRole, displayName, email } = body;
+
+        const cookieStore = await cookies();
+        const token = cookieStore.get(jwtCookieName)?.value;
+        if (!token) return errorResponse('UNAUTHORIZED', 'No token', 401);
+
+        const errors: Array<{ slug?: string; status: number; message: string }> = [];
+
+        // Org-level role first — keeps the door open even if a per-app
+        // change later promotes/demotes the same user.
+        if (authRole === 'org_admin' || authRole === 'user') {
+          const r = await fetchFromAuth(
+            `/orgs/${ctx.auth.orgId}/users/${authUserId}`,
+            token,
+            { method: 'PATCH', body: { role: authRole } },
+          );
+          if (r.status >= 400) {
+            errors.push({ status: r.status, message: r.data?.error?.message || r.data?.message || 'Error al cambiar rol org' });
+          } else if (audit) {
+            await audit({
+              orgId: ctx.auth.orgId,
+              userId: ctx.auth.userRoleId,
+              accion: 'MODIFICAR_ROL_ORG',
+              entidad: 'User',
+              entidadId: authUserId,
+              valorNuevo: { role: authRole },
+            }).catch(() => {});
+          }
+        }
+
+        // Grants / role updates per app.
+        for (const a of apps) {
+          if (!a.slug || !a.appRoleKey) continue;
+          const r = await fetchFromAuth(
+            `/orgs/${ctx.auth.orgId}/users/${authUserId}/permissions/${a.slug}`,
+            token,
+            { method: 'PUT', body: { appRoleKey: a.appRoleKey } },
+          );
+          if (r.status >= 400) {
+            errors.push({ slug: a.slug, status: r.status, message: r.data?.error?.message || r.data?.message || 'Error al asignar rol' });
+            continue;
+          }
+          if (a.slug === appSlug && displayName && email) {
+            // Sync local UserRole — keeps the per-app DB consistent so the
+            // table re-renders without waiting for the next provision pass.
+            await prisma.userRole
+              .upsert({
+                where: { authUserId_orgId: { authUserId, orgId: ctx.auth.orgId } },
+                create: {
+                  authUserId,
+                  orgId: ctx.auth.orgId,
+                  role: a.appRoleKey,
+                  displayName,
+                  email,
+                  active: true,
+                },
+                update: { role: a.appRoleKey, displayName, email, active: true },
+              })
+              .catch((err) => console.warn('[admin/usuarios/permissions] local upsert failed:', err));
+          }
+          if (audit) {
+            await audit({
+              orgId: ctx.auth.orgId,
+              userId: ctx.auth.userRoleId,
+              accion: 'ASIGNAR_ROL',
+              entidad: 'UserAppPermission',
+              entidadId: `${authUserId}:${a.slug}`,
+              valorNuevo: { authUserId, appSlug: a.slug, appRoleKey: a.appRoleKey },
+            }).catch(() => {});
+          }
+        }
+
+        // Revokes.
+        for (const slug of removeApps) {
+          if (!slug) continue;
+          const r = await fetchFromAuth(
+            `/orgs/${ctx.auth.orgId}/users/${authUserId}/permissions/${slug}`,
+            token,
+            { method: 'DELETE' },
+          );
+          if (r.status >= 400) {
+            errors.push({ slug, status: r.status, message: r.data?.error?.message || r.data?.message || 'Error al revocar acceso' });
+            continue;
+          }
+          if (slug === appSlug) {
+            await prisma.userRole
+              .updateMany({
+                where: { authUserId, orgId: ctx.auth.orgId },
+                data: { active: false },
+              })
+              .catch((err: unknown) => console.warn('[admin/usuarios/permissions] local deactivate failed:', err));
+          }
+          if (audit) {
+            await audit({
+              orgId: ctx.auth.orgId,
+              userId: ctx.auth.userRoleId,
+              accion: 'DESACTIVAR_USUARIO_APP',
+              entidad: 'UserAppPermission',
+              entidadId: `${authUserId}:${slug}`,
+              valorAnterior: { active: true },
+              valorNuevo: { active: false },
+            }).catch(() => {});
+          }
+        }
+
+        if (errors.length > 0) {
+          return errorResponse(
+            'PARTIAL_FAILURE',
+            `Algunos cambios fallaron: ${errors.map((e) => `${e.slug ?? 'org'} (${e.status})`).join(', ')}`,
+            errors.some((e) => e.status >= 500) ? 502 : 422,
+          );
+        }
+        return successResponse({ updated: true });
+      } catch (error) {
+        console.error('[admin/usuarios/permissions] PUT error:', error);
+        return errorResponse('INTERNAL_ERROR', 'Error al actualizar permisos', 500);
+      }
+    },
+  );
+
+  return { PUT };
 }

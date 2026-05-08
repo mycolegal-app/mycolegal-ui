@@ -5,6 +5,65 @@
 
 ---
 
+## 1.45.0 — Panel compacto + modal cross-app + i18n completo en `usersAdmin` (2026-05-08)
+
+Type: **minor**
+
+Acompaña a `mycolegal-auth@2.4.8` (catálogo apps+roles, `otherApps[i].appRoleKey`).
+
+**Panel `UsersAdminPanel`**
+
+- Filas más densas: avatar pequeño + nombre/email apilados, badges
+  `text-xs px-1.5 py-0`.
+- Columna **Apps activadas** con chips de tamaño uniforme
+  (`min-w-[4.5rem] max-w-[7rem] truncate`); la app actual destacada en
+  variante `default`, el resto en `outline`.
+- Edición inline retirada: ahora una sola acción `Editar permisos` por
+  fila abre el modal cross-app. `Eliminar` queda como icon-only con
+  `title=` para accesibilidad.
+- Nuevo prop **requerido `appSlug`** (las 9 apps consumidoras se
+  actualizan en este mismo turno).
+- Nuevo prop opcional `showOrgRoleInModal` (default `true`).
+
+**Nuevo componente `UserPermissionsModal`**
+
+- Una tarjeta del mismo tamaño por cada app activa de la org
+  (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`).
+- Cada tarjeta tiene un toggle (acceso sí/no) + selector de rol; el
+  default role para "grant" se toma del `AppRole.isDefault` que llega
+  del catálogo.
+- Toggle org-level `org_admin`/`user` arriba (configurable vía
+  `showOrgRoleInModal`).
+- Diff sobre el estado inicial al guardar → llama una sola vez a
+  `PUT /api/admin/usuarios/permissions/[authUserId]`.
+
+**Nuevos endpoints en `server/admin`**
+
+- `createUsuariosAppsCatalogRoute(deps)` — `GET /apps-catalog`
+  passthrough a auth.
+- `createUsuariosByIdPermissionsRoute(deps)` — `PUT
+  /permissions/[authUserId]` con shape `{ apps:[{slug,appRoleKey}],
+  removeApps:[slug], authRole? }`. Aplica diffs vía PUT/DELETE de
+  `/orgs/:orgId/users/:uid/permissions/:slug` y, si la app actual
+  cambia, sincroniza el `UserRole` local.
+
+**i18n**
+
+- Bloque `ui.usersAdmin` reescrito con TODOS los literales del panel
+  + modal en `cast.json`, `cat.json`, `eus.json`, `gal.json`. Se
+  retiran los hardcodes que se habían colado en 1.44.5
+  (`Sin acceso`, `Dar acceso a [App]`, `Apps activadas`, toasts).
+- Nuevo subobjeto `statusEnum.*` para los badges de estado de auth.
+
+**Tipo `UserRow`**
+
+- `role` pasa a `string | null` (se pone a `null` cuando
+  `hasAppAccess === false`).
+- Nuevo campo opcional `authRole` (`org_admin` | `user` | …) — fuente
+  para el toggle del modal.
+- `otherApps[i]` ahora puede traer `appRoleKey`.
+
+
 ## 1.44.5 — Panel de administración: distinguir acceso por app y mostrar apps activadas (2026-05-07)
 
 Type: **patch**

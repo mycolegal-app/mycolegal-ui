@@ -53,6 +53,7 @@ export interface UserRolePrismaTable {
   findFirst(args: any): Promise<any | null>;
   upsert(args: any): Promise<any>;
   update(args: any): Promise<any>;
+  updateMany(args: any): Promise<{ count: number }>;
   delete(args: any): Promise<any>;
   count(args?: any): Promise<number>;
 }
