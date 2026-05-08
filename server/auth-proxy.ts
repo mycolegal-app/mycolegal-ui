@@ -71,12 +71,17 @@ export async function fetchFromAuth(
   options: { method?: string; body?: unknown } = {},
 ): Promise<{ status: number; data: unknown }> {
   const method = options.method || 'GET';
-  const headers: Record<string, string> = {
-    Authorization: `Bearer ${token}`,
-    'Content-Type': 'application/json',
-  };
+  const hasBody = options.body !== undefined && options.body !== null && method !== 'GET';
+  // Only set Content-Type when we actually send a body. Sending
+  // `Content-Type: application/json` on a body-less DELETE/POST tricks
+  // Fastify's JSON parser into rejecting the request as "Unexpected end
+  // of JSON input" → 400. Observed on
+  //   DELETE /orgs/:orgId/users/:userId/permissions/:appSlug
+  // which deliberately takes no body.
+  const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
+  if (hasBody) headers['Content-Type'] = 'application/json';
   const fetchOptions: RequestInit = { method, headers };
-  if (options.body && method !== 'GET') {
+  if (hasBody) {
     fetchOptions.body = JSON.stringify(options.body);
   }
   const res = await fetch(`${config.authInternalUrl}${path}`, fetchOptions);
