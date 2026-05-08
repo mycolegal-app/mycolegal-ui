@@ -342,14 +342,54 @@ export function createUsuariosByIdRoutes(deps: UsuariosRoutesDeps) {
         if (!token) return errorResponse('UNAUTHORIZED', 'No token', 401);
 
         if (action === 'deactivate_app') {
+          // 1) Quitar la permission de ESTA app en auth (fuente de verdad
+          //    para hasAppAccess).
           await fetchFromAuth(
             `/orgs/${ctx.auth.orgId}/users/${resolvedAuthUserId}/permissions/${appSlug}`,
             token,
             { method: 'DELETE' },
           );
-          if (existing) {
-            await prisma.userRole.update({ where: { id: existing.id }, data: { active: false } });
+
+          // 2) Comprobar si al usuario le quedan otras apps en esta org. Si
+          //    no le queda ninguna, desactivamos también el UserRole local
+          //    (que es kill-switch org-wide: getAuthContext lo verifica).
+          //    Si le quedan otras apps, NO tocamos UserRole.active — eso
+          //    rompería las otras apps.
+          //    NOTE (semántica C, fix v1.44.6): antes de este cambio, el
+          //    handler ponía `active: false` incondicionalmente, lo que
+          //    deshabilitaba al usuario en las otras apps de la misma org
+          //    pese a tener UserAppPermission válida.
+          let remainingApps = 0;
+          let userRoleDeactivated = false;
+          try {
+            const permsRes = await fetchFromAuth(
+              `/orgs/${ctx.auth.orgId}/users/${resolvedAuthUserId}/permissions`,
+              token,
+            );
+            if (permsRes.status === 200) {
+              const list = (permsRes.data as { data?: unknown[] })?.data;
+              remainingApps = Array.isArray(list) ? list.length : 0;
+            } else {
+              // Best-effort: si no podemos contar (auth caído / 5xx), no
+              // tocamos UserRole.active para evitar falso positivo.
+              console.warn(
+                `[admin/usuarios] no se pudo enumerar permissions restantes (${permsRes.status}) — no se tocará UserRole.active`,
+              );
+              remainingApps = -1;
+            }
+          } catch (err) {
+            console.error('[admin/usuarios] error enumerando permissions restantes:', err);
+            remainingApps = -1;
           }
+
+          if (existing && remainingApps === 0) {
+            await prisma.userRole.update({
+              where: { id: existing.id },
+              data: { active: false },
+            });
+            userRoleDeactivated = true;
+          }
+
           if (audit) {
             await audit({
               orgId: ctx.auth.orgId,
@@ -357,11 +397,21 @@ export function createUsuariosByIdRoutes(deps: UsuariosRoutesDeps) {
               accion: 'DESACTIVAR_USUARIO_APP',
               entidad: 'UserRole',
               entidadId: existing?.id || resolvedAuthUserId,
-              valorAnterior: { active: true },
-              valorNuevo: { active: false },
+              valorAnterior: { active: existing?.active ?? true },
+              valorNuevo: {
+                active: userRoleDeactivated ? false : (existing?.active ?? true),
+                appsRemaining: remainingApps,
+                userRoleDeactivated,
+              },
             }).catch((err) => console.error('[admin/usuarios] audit error:', err));
           }
-          return successResponse({ action: 'deactivated', userId: resolvedAuthUserId });
+
+          return successResponse({
+            action: 'deactivated',
+            userId: resolvedAuthUserId,
+            userRoleDeactivated,
+            appsRemaining: remainingApps,
+          });
         }
 
         const destroyRes = await fetchFromAuth(
