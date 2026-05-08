@@ -75,6 +75,7 @@ export function createUsuariosRoutes(deps: UsuariosRoutesDeps) {
           localUsers.map((u: any) => ({
             ...u,
             authStatus: u.active ? 'active' : 'disabled',
+            hasAppAccess: true,
             otherApps: [],
           })),
         );
@@ -89,6 +90,9 @@ export function createUsuariosRoutes(deps: UsuariosRoutesDeps) {
       const result: any[] = [];
       for (const au of authUsers) {
         const local = localByAuthId.get(au.id);
+        // Source of truth for "is in this app" is auth's UserAppPermission.
+        // A local UserRole alone (orphan) does NOT count as access.
+        const hasAppAccess = !!au.appPermission;
         if (local) {
           if (local.displayName !== au.displayName || local.email !== au.email) {
             await prisma.userRole
@@ -103,25 +107,28 @@ export function createUsuariosRoutes(deps: UsuariosRoutesDeps) {
             authUserId: au.id,
             displayName: au.displayName,
             email: au.email,
-            role: local.role,
-            active: local.active,
+            role: hasAppAccess ? local.role : null,
+            active: hasAppAccess ? local.active : false,
             lastLoginAt: local.lastLoginAt,
             avatarUrl: local.avatarUrl,
             authStatus: au.status,
+            hasAppAccess,
             otherApps: au.otherApps,
           });
         } else {
-          // Auth-only user: invited but hasn't logged into this app yet.
           result.push({
             id: au.id,
             authUserId: au.id,
             displayName: au.displayName,
             email: au.email,
-            role: au.appPermission?.appRoleKey?.toUpperCase() || validRoles[1] || validRoles[0],
+            role: hasAppAccess
+              ? au.appPermission!.appRoleKey?.toUpperCase() || validRoles[1] || validRoles[0]
+              : null,
             active: false,
             lastLoginAt: null,
             avatarUrl: null,
             authStatus: au.status,
+            hasAppAccess,
             otherApps: au.otherApps,
           });
         }

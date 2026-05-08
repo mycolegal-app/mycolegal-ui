@@ -5,6 +5,30 @@
 
 ---
 
+## 1.44.5 — Panel de administración: distinguir acceso por app y mostrar apps activadas (2026-05-07)
+
+Type: **patch**
+
+`UsersAdminPanel` y el route factory `createUsuariosRoutes` se actualizan
+en tándem con `mycolegal-auth@2.4.6` (`/sync/:appSlug` ahora devuelve
+todos los miembros de la org).
+
+Cambios:
+
+- Cada fila incluye `hasAppAccess: boolean` (canónico desde
+  `UserAppPermission` en auth, no del `UserRole` local).
+- Nueva columna **Apps activadas** con badges para cada app que el
+  usuario tiene activa (la actual destacada en `default`, el resto en
+  `outline`).
+- Cuando `hasAppAccess === false`: el rol se muestra como `—`, el
+  estado como **Sin acceso** y el bloque de acciones se reduce a
+  **Dar acceso a [App]**, que abre un selector de rol y llama al
+  POST `/api/admin/usuarios` existente (que crea la
+  `UserAppPermission` y el `UserRole` local).
+- `UserRow.role` pasa a `string | null` para reflejar el caso "sin
+  acceso aún".
+
+
 ## 1.44.4 — TranslationMessages recursivo para defaults i18n del paquete (2026-05-07)
 
 Type: **patch**

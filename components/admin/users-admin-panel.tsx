@@ -16,7 +16,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Users, Lock, Pencil, UserPlus, Trash2 } from 'lucide-react';
+import { Users, Lock, Pencil, UserPlus, Trash2, KeyRound } from 'lucide-react';
 
 import { DataTable } from '../shared/data-table';
 import { LoadingSpinner } from '../shared/loading-spinner';
@@ -49,11 +49,13 @@ export interface UserRow {
   authUserId: string;
   displayName: string;
   email: string;
-  role: string;
+  role: string | null;
   active: boolean;
   lastLoginAt: string | null;
   avatarUrl: string | null;
   authStatus?: string;
+  /** Whether the user has UserAppPermission for the current app. */
+  hasAppAccess?: boolean;
   otherApps?: Array<{ slug: string; name: string }>;
 }
 
@@ -104,6 +106,7 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [deleteUser, setDeleteUser] = useState<UserRow | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [grantingId, setGrantingId] = useState<string | null>(null);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -209,6 +212,38 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
     }
   }
 
+  async function handleGrantAccess(user: UserRow, role: string) {
+    setUpdatingId(user.authUserId);
+    try {
+      const res = await fetch(apiBase, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          authUserId: user.authUserId,
+          role,
+          displayName: user.displayName,
+          email: user.email,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        toast({
+          title: err.error?.message || `Error al dar acceso a ${appName}`,
+          variant: 'destructive',
+        });
+        return;
+      }
+      toast({ title: `Acceso a ${appName} concedido`, variant: 'success' });
+      setGrantingId(null);
+      fetchUsers();
+    } catch (error) {
+      console.error(error);
+      toast({ title: `Error al dar acceso a ${appName}`, variant: 'destructive' });
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
   async function handleDelete(user: UserRow, action: 'deactivate_app' | 'destroy') {
     setDeletingId(user.id);
     try {
@@ -275,16 +310,45 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
       header: 'Rol',
       cell: ({ row }) => {
         const u = row.original;
+        if (!u.hasAppAccess) {
+          return <span className="text-sm text-muted-foreground">—</span>;
+        }
         return (
           <div className="flex items-center gap-1.5">
-            <Badge variant="outline" className={roleColor(u.role)}>
-              {roleLabel(u.role)}
+            <Badge variant="outline" className={roleColor(u.role!)}>
+              {roleLabel(u.role!)}
             </Badge>
             {u.role === protectedRole && (
               <span title={`El rol ${roleLabel(protectedRole)} se asigna automáticamente al administrador de la organización`}>
                 <Lock className="h-3.5 w-3.5 text-muted-foreground" />
               </span>
             )}
+          </div>
+        );
+      },
+    },
+    {
+      id: 'apps',
+      header: 'Apps activadas',
+      enableSorting: false,
+      cell: ({ row }) => {
+        const u = row.original;
+        const otherApps = u.otherApps ?? [];
+        if (!u.hasAppAccess && otherApps.length === 0) {
+          return <span className="text-sm text-muted-foreground">—</span>;
+        }
+        return (
+          <div className="flex flex-wrap gap-1">
+            {u.hasAppAccess && (
+              <Badge variant="default" className="font-normal">
+                {appName}
+              </Badge>
+            )}
+            {otherApps.map((a) => (
+              <Badge key={a.slug} variant="outline" className="font-normal text-muted-foreground">
+                {a.name}
+              </Badge>
+            ))}
           </div>
         );
       },
@@ -303,6 +367,13 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
       header: 'Estado',
       cell: ({ row }) => {
         const u = row.original;
+        if (!u.hasAppAccess) {
+          return (
+            <Badge variant="secondary" title={`Este usuario no tiene acceso a ${appName}`}>
+              Sin acceso
+            </Badge>
+          );
+        }
         const status = u.authStatus || (u.active ? 'active' : 'disabled');
         const s = STATUS_MAP[status] || { label: status, variant: 'secondary' as const };
         return <Badge variant={s.variant}>{s.label}</Badge>;
@@ -315,14 +386,60 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
       cell: ({ row }) => {
         const u = row.original;
         const isProtected = u.role === protectedRole;
-        const isUpdating = updatingId === u.id;
+        const isUpdating = updatingId === u.id || updatingId === u.authUserId;
         const isEditing = editingRoleId === u.id;
+        const isGranting = grantingId === u.authUserId;
+
+        if (!u.hasAppAccess) {
+          if (isGranting) {
+            return (
+              <div className="flex items-center gap-2">
+                <Select
+                  defaultValue={assignableRoles[0]}
+                  onValueChange={(value) => handleGrantAccess(u, value)}
+                >
+                  <SelectTrigger className="w-[160px] h-8">
+                    <SelectValue placeholder="Selecciona rol..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {assignableRoles.map((r) => (
+                      <SelectItem key={r} value={r}>
+                        {roleLabel(r)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setGrantingId(null)}
+                  disabled={isUpdating}
+                  className="h-8 px-2"
+                >
+                  {t('ui.incidentThread.btnCancel')}
+                </Button>
+              </div>
+            );
+          }
+          return (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setGrantingId(u.authUserId)}
+              disabled={isUpdating}
+              className="h-8"
+            >
+              <KeyRound className="h-3.5 w-3.5 mr-1.5" />
+              {isUpdating ? '...' : `Dar acceso a ${appName}`}
+            </Button>
+          );
+        }
 
         return (
           <div className="flex items-center gap-2">
             {isEditing ? (
               <Select
-                defaultValue={u.role}
+                defaultValue={u.role!}
                 onValueChange={(value) => handleChangeRole(u.id, value)}
               >
                 <SelectTrigger className="w-[140px] h-8">
