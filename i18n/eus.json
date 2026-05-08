@@ -415,6 +415,11 @@
       "toastAccessGrantError": "Errorea {app}-rako sarbidea ematean",
       "toastPermissionsSaved": "Baimenak gorde dira",
       "toastPermissionsError": "Errorea baimenak gordetzean",
+      "btnResendInvitation": "Gonbidapena birbidali",
+      "btnResendingInvitation": "Birbidaltzen...",
+      "resendInvitationHint": "Aurreko gonbidapena baliogabetzen du eta erabiltzailearen postara berri bat bidaltzen du.",
+      "toastInvitationResent": "Gonbidapena birbidalita {email}-(e)ra",
+      "toastResendInvitationError": "Errorea gonbidapena birbidaltzean",
       "statusEnum": {
         "active": "Aktiboa",
         "invited": "Gonbidatuta",

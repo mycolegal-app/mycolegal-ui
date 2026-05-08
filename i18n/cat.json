@@ -415,6 +415,11 @@
       "toastAccessGrantError": "Error en donar accés a {app}",
       "toastPermissionsSaved": "Permisos desats",
       "toastPermissionsError": "Error en desar els permisos",
+      "btnResendInvitation": "Reenviar invitació",
+      "btnResendingInvitation": "Reenviant...",
+      "resendInvitationHint": "Invalida la invitació anterior i n'envia una de nova al correu de l'usuari.",
+      "toastInvitationResent": "Invitació reenviada a {email}",
+      "toastResendInvitationError": "Error en reenviar la invitació",
       "statusEnum": {
         "active": "Actiu",
         "invited": "Convidat",

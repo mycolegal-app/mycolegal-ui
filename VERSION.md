@@ -5,6 +5,51 @@
 
 ---
 
+## 1.45.1 — Modal: reenvío de invitación + escala a 11+ apps + factory sin prisma (2026-05-08)
+
+Type: **patch**
+
+Acompaña a `mycolegal-auth@2.4.9` (relax del guard en `/resend-invitation`).
+
+**Modal `UserPermissionsModal`**
+
+- Botón **"Reenviar invitación"** condicional al inicio del modal
+  cuando `user.authStatus === 'invited'`. Tooltip explica que invalida
+  la invitación anterior y manda una nueva. Llama a
+  `POST {apiBase}/permissions/{authUserId}/resend-invitation`.
+- Layout escalable: `max-w-4xl`, `max-h-[90vh] flex flex-col`, grid de
+  apps `xl:grid-cols-4` (4 cols en pantalla grande, 3/2/1 al bajar) con
+  `overflow-y-auto` si crecen. Validado mentalmente con 11 apps —
+  3 filas en xl, sin descuadre.
+
+**Shared route factory `usuarios-routes.ts`**
+
+- `prisma` pasa a opcional (`AdminPrisma | null | undefined`). Apps
+  sin DB local (mycolegal-admin) lo dejan `undefined` y todas las
+  ramas que tocan `userRole.findMany/upsert/update/delete` se gatean
+  con `if (prisma)`. La fallback "auth caído → leer local" se
+  cortocircuita con `AUTH_ERROR` cuando no hay DB local.
+- `resolveOrgId({ auth, params })` opcional para que mycolegal-admin
+  saque el orgId del segmento `[id]` de la URL en lugar del JWT
+  (`_system`).
+- Nuevo factory **`createUsuariosByIdResendInvitationRoute`** —
+  `POST /permissions/[authUserId]/resend-invitation`.
+
+**Refactor menor**
+
+- PATCH `/api/admin/usuarios/[id]` devuelve 501 cuando no hay prisma
+  (mycolegal-admin no necesita PATCH; los cambios de rol/active van
+  por la PUT cross-app del modal).
+- DELETE soporta `prisma` ausente: usa `body.authUserId || params.id`
+  como `resolvedAuthUserId` y se salta la limpieza local.
+
+**i18n**
+
+- Nuevas claves `btnResendInvitation`, `btnResendingInvitation`,
+  `resendInvitationHint`, `toastInvitationResent`,
+  `toastResendInvitationError` en cast/cat/eus/gal.
+
+
 ## 1.45.0 — Panel compacto + modal cross-app + i18n completo en `usersAdmin` (2026-05-08)
 
 Type: **minor**

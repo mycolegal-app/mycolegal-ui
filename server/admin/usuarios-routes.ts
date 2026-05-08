@@ -40,6 +40,19 @@ function resolveProtectedRole(deps: UsuariosRoutesDeps): string | null {
   return deps.protectedRole === undefined ? resolveOrgAdminRole(deps) : deps.protectedRole;
 }
 
+/**
+ * Resolve the target orgId for the current request. Default: `auth.orgId`
+ * from the JWT. Apps that browse foreign orgs (mycolegal-admin) override
+ * `resolveOrgId` in their deps and pull it from URL params.
+ */
+function getTargetOrgId(
+  deps: UsuariosRoutesDeps,
+  auth: AdminAuth,
+  params: Record<string, string>,
+): string {
+  return deps.resolveOrgId ? deps.resolveOrgId({ auth, params }) : auth.orgId;
+}
+
 // --------------------------------------------------------------------------
 // /api/admin/usuarios — GET (list) + POST (assign role)
 // --------------------------------------------------------------------------
@@ -57,18 +70,29 @@ export function createUsuariosRoutes(deps: UsuariosRoutesDeps) {
     audit,
   } = deps;
 
-  const GET = withPermission('admin:users')(async (_req: NextRequest, { auth }: AdminCtx) => {
+  const GET = withPermission('admin:users')(async (_req: NextRequest, ctx: AdminCtx) => {
     try {
+      const { auth } = ctx;
+      const params = await ctx.params;
+      const orgId = getTargetOrgId(deps, auth, params);
       const cookieStore = await cookies();
       const token = cookieStore.get(jwtCookieName)?.value;
       if (!token) return errorResponse('UNAUTHORIZED', 'No token', 401);
 
-      const syncRes = await fetchFromAuth(`/orgs/${auth.orgId}/sync/${appSlug}`, token);
+      const syncRes = await fetchFromAuth(`/orgs/${orgId}/sync/${appSlug}`, token);
 
       if (syncRes.status >= 400) {
         console.warn(`[admin/usuarios] auth sync failed (${appSlug}), fallback to local`);
+        if (!prisma) {
+          // No local DB to fall back to (e.g. mycolegal-admin) — surface
+          // the auth error as-is so the UI can show a clear failure
+          // instead of returning an empty list silently.
+          const msg =
+            syncRes.data?.error?.message || syncRes.data?.message || 'Sync failed';
+          return errorResponse('AUTH_ERROR', msg, syncRes.status);
+        }
         const localUsers = await prisma.userRole.findMany({
-          where: { orgId: auth.orgId },
+          where: { orgId },
           orderBy: { displayName: 'asc' },
         });
         return successResponse(
@@ -84,7 +108,9 @@ export function createUsuariosRoutes(deps: UsuariosRoutesDeps) {
       const syncData = syncRes.data?.data || syncRes.data;
       const authUsers: AuthUser[] = syncData?.users || [];
 
-      const localUsers = await prisma.userRole.findMany({ where: { orgId: auth.orgId } });
+      const localUsers = prisma
+        ? await prisma.userRole.findMany({ where: { orgId } })
+        : [];
       const localByAuthId = new Map<string, any>(localUsers.map((u: any) => [u.authUserId, u]));
 
       const result: any[] = [];
@@ -94,7 +120,7 @@ export function createUsuariosRoutes(deps: UsuariosRoutesDeps) {
         // A local UserRole alone (orphan) does NOT count as access.
         const hasAppAccess = !!au.appPermission;
         if (local) {
-          if (local.displayName !== au.displayName || local.email !== au.email) {
+          if (prisma && (local.displayName !== au.displayName || local.email !== au.email)) {
             await prisma.userRole
               .update({
                 where: { id: local.id },
@@ -142,8 +168,11 @@ export function createUsuariosRoutes(deps: UsuariosRoutesDeps) {
     }
   });
 
-  const POST = withPermission('admin:users')(async (req: NextRequest, { auth }: AdminCtx) => {
+  const POST = withPermission('admin:users')(async (req: NextRequest, ctx: AdminCtx) => {
     try {
+      const { auth } = ctx;
+      const params = await ctx.params;
+      const orgId = getTargetOrgId(deps, auth, params);
       const body = (await req.json()) as {
         authUserId?: string;
         role?: string;
@@ -171,17 +200,19 @@ export function createUsuariosRoutes(deps: UsuariosRoutesDeps) {
       const finalRole =
         body.authRole === 'org_admin' ? resolveOrgAdminRole(deps) : role;
 
-      const userRole = await prisma.userRole.upsert({
-        where: { authUserId_orgId: { authUserId, orgId: auth.orgId } },
-        create: { authUserId, orgId: auth.orgId, role: finalRole, displayName, email, active: true },
-        update: { role: finalRole, displayName, email },
-      });
+      const userRole = prisma
+        ? await prisma.userRole.upsert({
+            where: { authUserId_orgId: { authUserId, orgId } },
+            create: { authUserId, orgId, role: finalRole, displayName, email, active: true },
+            update: { role: finalRole, displayName, email },
+          })
+        : { id: authUserId, authUserId, orgId, role: finalRole, displayName, email, active: true };
 
       const cookieStore = await cookies();
       const token = cookieStore.get(jwtCookieName)?.value;
       if (token) {
         await fetchFromAuth(
-          `/orgs/${auth.orgId}/users/${authUserId}/permissions/${appSlug}`,
+          `/orgs/${orgId}/users/${authUserId}/permissions/${appSlug}`,
           token,
           { method: 'PUT', body: { appRoleKey: finalRole } },
         ).catch((err) => console.warn('[admin/usuarios] failed to sync role to auth:', err));
@@ -189,7 +220,7 @@ export function createUsuariosRoutes(deps: UsuariosRoutesDeps) {
 
       if (audit) {
         await audit({
-          orgId: auth.orgId,
+          orgId,
           userId: auth.userRoleId,
           accion: 'ASIGNAR_ROL',
           entidad: 'UserRole',
@@ -229,7 +260,9 @@ export function createUsuariosByIdRoutes(deps: UsuariosRoutesDeps) {
   const PATCH = withPermission('admin:users')(
     async (req: NextRequest, ctx: AdminCtx) => {
       try {
-        const { id } = await ctx.params;
+        const params = await ctx.params;
+        const orgId = getTargetOrgId(deps, ctx.auth, params);
+        const { id } = params;
         const body = (await req.json()) as { role?: string; active?: boolean };
         const { role, active } = body;
 
@@ -241,8 +274,20 @@ export function createUsuariosByIdRoutes(deps: UsuariosRoutesDeps) {
           );
         }
 
+        // Without a local UserRole table the PATCH degenerates: there is
+        // no row to mutate and no protected-role count to enforce. Apps
+        // that want this behaviour (mycolegal-admin) can use the modal
+        // PUT /permissions endpoint instead.
+        if (!prisma) {
+          return errorResponse(
+            'NOT_IMPLEMENTED',
+            'PATCH not supported without a local UserRole table',
+            501,
+          );
+        }
+
         const existing = await prisma.userRole.findUnique({ where: { id } });
-        if (!existing || existing.orgId !== ctx.auth.orgId) {
+        if (!existing || existing.orgId !== orgId) {
           return errorResponse('NOT_FOUND', 'Usuario no encontrado', 404);
         }
 
@@ -253,7 +298,7 @@ export function createUsuariosByIdRoutes(deps: UsuariosRoutesDeps) {
           role !== protectedRole
         ) {
           const count = await prisma.userRole.count({
-            where: { orgId: ctx.auth.orgId, role: protectedRole, active: true },
+            where: { orgId, role: protectedRole, active: true },
           });
           if (count <= 1) {
             return errorResponse(
@@ -275,14 +320,14 @@ export function createUsuariosByIdRoutes(deps: UsuariosRoutesDeps) {
         if (token) {
           if (role !== undefined) {
             await fetchFromAuth(
-              `/orgs/${ctx.auth.orgId}/users/${existing.authUserId}/permissions/${appSlug}`,
+              `/orgs/${orgId}/users/${existing.authUserId}/permissions/${appSlug}`,
               token,
               { method: 'PUT', body: { appRoleKey: role } },
             ).catch((err) => console.warn('[admin/usuarios] sync role failed:', err));
           }
           if (active !== undefined) {
             await fetchFromAuth(
-              `/orgs/${ctx.auth.orgId}/users/${existing.authUserId}`,
+              `/orgs/${orgId}/users/${existing.authUserId}`,
               token,
               { method: 'PATCH', body: { status: active ? 'active' : 'disabled' } },
             ).catch((err) => console.warn('[admin/usuarios] sync status failed:', err));
@@ -291,7 +336,7 @@ export function createUsuariosByIdRoutes(deps: UsuariosRoutesDeps) {
 
         if (audit) {
           await audit({
-            orgId: ctx.auth.orgId,
+            orgId,
             userId: ctx.auth.userRoleId,
             accion: 'MODIFICAR_USUARIO',
             entidad: 'UserRole',
@@ -312,7 +357,9 @@ export function createUsuariosByIdRoutes(deps: UsuariosRoutesDeps) {
   const DELETE = withPermission('admin:users')(
     async (req: NextRequest, ctx: AdminCtx) => {
       try {
-        const { id } = await ctx.params;
+        const params = await ctx.params;
+        const orgId = getTargetOrgId(deps, ctx.auth, params);
+        const { id } = params;
         const body = (await req.json()) as {
           action: 'deactivate_app' | 'destroy';
           authUserId?: string;
@@ -327,16 +374,18 @@ export function createUsuariosByIdRoutes(deps: UsuariosRoutesDeps) {
           );
         }
 
-        const existing = await prisma.userRole.findFirst({
-          where: {
-            orgId: ctx.auth.orgId,
-            OR: [
-              { id },
-              { authUserId: id },
-              ...(bodyAuthUserId ? [{ authUserId: bodyAuthUserId }] : []),
-            ],
-          },
-        });
+        const existing = prisma
+          ? await prisma.userRole.findFirst({
+              where: {
+                orgId,
+                OR: [
+                  { id },
+                  { authUserId: id },
+                  ...(bodyAuthUserId ? [{ authUserId: bodyAuthUserId }] : []),
+                ],
+              },
+            })
+          : null;
         const resolvedAuthUserId = existing?.authUserId || bodyAuthUserId || id;
 
         const cookieStore = await cookies();
@@ -347,7 +396,7 @@ export function createUsuariosByIdRoutes(deps: UsuariosRoutesDeps) {
           // 1) Quitar la permission de ESTA app en auth (fuente de verdad
           //    para hasAppAccess).
           await fetchFromAuth(
-            `/orgs/${ctx.auth.orgId}/users/${resolvedAuthUserId}/permissions/${appSlug}`,
+            `/orgs/${orgId}/users/${resolvedAuthUserId}/permissions/${appSlug}`,
             token,
             { method: 'DELETE' },
           );
@@ -365,7 +414,7 @@ export function createUsuariosByIdRoutes(deps: UsuariosRoutesDeps) {
           let userRoleDeactivated = false;
           try {
             const permsRes = await fetchFromAuth(
-              `/orgs/${ctx.auth.orgId}/users/${resolvedAuthUserId}/permissions`,
+              `/orgs/${orgId}/users/${resolvedAuthUserId}/permissions`,
               token,
             );
             if (permsRes.status === 200) {
@@ -384,7 +433,7 @@ export function createUsuariosByIdRoutes(deps: UsuariosRoutesDeps) {
             remainingApps = -1;
           }
 
-          if (existing && remainingApps === 0) {
+          if (prisma && existing && remainingApps === 0) {
             await prisma.userRole.update({
               where: { id: existing.id },
               data: { active: false },
@@ -394,7 +443,7 @@ export function createUsuariosByIdRoutes(deps: UsuariosRoutesDeps) {
 
           if (audit) {
             await audit({
-              orgId: ctx.auth.orgId,
+              orgId,
               userId: ctx.auth.userRoleId,
               accion: 'DESACTIVAR_USUARIO_APP',
               entidad: 'UserRole',
@@ -417,7 +466,7 @@ export function createUsuariosByIdRoutes(deps: UsuariosRoutesDeps) {
         }
 
         const destroyRes = await fetchFromAuth(
-          `/orgs/${ctx.auth.orgId}/users/${resolvedAuthUserId}/destroy`,
+          `/orgs/${orgId}/users/${resolvedAuthUserId}/destroy`,
           token,
           { method: 'POST' },
         );
@@ -428,12 +477,12 @@ export function createUsuariosByIdRoutes(deps: UsuariosRoutesDeps) {
             'Error al eliminar usuario';
           return errorResponse('AUTH_ERROR', msg, destroyRes.status);
         }
-        if (existing) {
+        if (prisma && existing) {
           await prisma.userRole.delete({ where: { id: existing.id } });
         }
         if (audit) {
           await audit({
-            orgId: ctx.auth.orgId,
+            orgId,
             userId: ctx.auth.userRoleId,
             accion: 'ELIMINAR_USUARIO',
             entidad: 'UserRole',
@@ -469,8 +518,11 @@ export function createUsuariosInviteRoute(deps: UsuariosRoutesDeps) {
     audit,
   } = deps;
 
-  const POST = withPermission('admin:users')(async (req: NextRequest, { auth }: AdminCtx) => {
+  const POST = withPermission('admin:users')(async (req: NextRequest, ctx: AdminCtx) => {
     try {
+      const { auth } = ctx;
+      const params = await ctx.params;
+      const orgId = getTargetOrgId(deps, auth, params);
       const body = (await req.json()) as {
         email?: string;
         displayName?: string;
@@ -498,7 +550,7 @@ export function createUsuariosInviteRoute(deps: UsuariosRoutesDeps) {
       const token = cookieStore.get(jwtCookieName)?.value;
       if (!token) return errorResponse('UNAUTHORIZED', 'No token', 401);
 
-      const inviteRes = await fetchFromAuth(`/orgs/${auth.orgId}/users/invite`, token, {
+      const inviteRes = await fetchFromAuth(`/orgs/${orgId}/users/invite`, token, {
         method: 'POST',
         body: {
           email,
@@ -527,7 +579,7 @@ export function createUsuariosInviteRoute(deps: UsuariosRoutesDeps) {
 
       // Override the default role assigned by auth with the requested one.
       const permRes = await fetchFromAuth(
-        `/orgs/${auth.orgId}/users/${authUserId}/permissions/${appSlug}`,
+        `/orgs/${orgId}/users/${authUserId}/permissions/${appSlug}`,
         token,
         { method: 'PUT', body: { appRoleKey: appRole } },
       );
@@ -535,22 +587,24 @@ export function createUsuariosInviteRoute(deps: UsuariosRoutesDeps) {
         console.warn(`[admin/usuarios] failed to assign app role for ${authUserId}:`, permRes.data);
       }
 
-      const userRole = await prisma.userRole.upsert({
-        where: { authUserId_orgId: { authUserId, orgId: auth.orgId } },
-        create: {
-          authUserId,
-          orgId: auth.orgId,
-          role: appRole,
-          displayName,
-          email,
-          active: true,
-        },
-        update: { role: appRole, displayName, email },
-      });
+      const userRole = prisma
+        ? await prisma.userRole.upsert({
+            where: { authUserId_orgId: { authUserId, orgId } },
+            create: {
+              authUserId,
+              orgId,
+              role: appRole,
+              displayName,
+              email,
+              active: true,
+            },
+            update: { role: appRole, displayName, email },
+          })
+        : { id: authUserId, authUserId, orgId, role: appRole, displayName, email, active: true };
 
       if (audit) {
         await audit({
-          orgId: auth.orgId,
+          orgId,
           userId: auth.userRoleId,
           accion: 'INVITAR_USUARIO',
           entidad: 'UserRole',
@@ -579,13 +633,15 @@ export function createUsuariosInviteRoute(deps: UsuariosRoutesDeps) {
 export function createUsuariosAppsCatalogRoute(deps: UsuariosRoutesDeps) {
   const { withPermission, successResponse, errorResponse, fetchFromAuth, jwtCookieName } = deps;
 
-  const GET = withPermission('admin:users')(async (_req: NextRequest, { auth }: AdminCtx) => {
+  const GET = withPermission('admin:users')(async (_req: NextRequest, ctx: AdminCtx) => {
     try {
+      const params = await ctx.params;
+      const orgId = getTargetOrgId(deps, ctx.auth, params);
       const cookieStore = await cookies();
       const token = cookieStore.get(jwtCookieName)?.value;
       if (!token) return errorResponse('UNAUTHORIZED', 'No token', 401);
 
-      const res = await fetchFromAuth(`/orgs/${auth.orgId}/apps-catalog`, token);
+      const res = await fetchFromAuth(`/orgs/${orgId}/apps-catalog`, token);
       if (res.status >= 400) {
         const msg = res.data?.error?.message || res.data?.message || 'Error al cargar catálogo';
         return errorResponse('AUTH_ERROR', msg, res.status);
@@ -629,7 +685,9 @@ export function createUsuariosByIdPermissionsRoute(deps: UsuariosRoutesDeps) {
   const PUT = withPermission('admin:users')(
     async (req: NextRequest, ctx: AdminCtx<{ authUserId: string }>) => {
       try {
-        const { authUserId } = await ctx.params;
+        const params = await ctx.params;
+        const orgId = getTargetOrgId(deps, ctx.auth, params);
+        const { authUserId } = params;
         const body = (await req.json()) as {
           apps?: Array<{ slug?: string; appRoleKey?: string }>;
           removeApps?: string[];
@@ -649,7 +707,7 @@ export function createUsuariosByIdPermissionsRoute(deps: UsuariosRoutesDeps) {
         // change later promotes/demotes the same user.
         if (authRole === 'org_admin' || authRole === 'user') {
           const r = await fetchFromAuth(
-            `/orgs/${ctx.auth.orgId}/users/${authUserId}`,
+            `/orgs/${orgId}/users/${authUserId}`,
             token,
             { method: 'PATCH', body: { role: authRole } },
           );
@@ -657,7 +715,7 @@ export function createUsuariosByIdPermissionsRoute(deps: UsuariosRoutesDeps) {
             errors.push({ status: r.status, message: r.data?.error?.message || r.data?.message || 'Error al cambiar rol org' });
           } else if (audit) {
             await audit({
-              orgId: ctx.auth.orgId,
+              orgId,
               userId: ctx.auth.userRoleId,
               accion: 'MODIFICAR_ROL_ORG',
               entidad: 'User',
@@ -671,7 +729,7 @@ export function createUsuariosByIdPermissionsRoute(deps: UsuariosRoutesDeps) {
         for (const a of apps) {
           if (!a.slug || !a.appRoleKey) continue;
           const r = await fetchFromAuth(
-            `/orgs/${ctx.auth.orgId}/users/${authUserId}/permissions/${a.slug}`,
+            `/orgs/${orgId}/users/${authUserId}/permissions/${a.slug}`,
             token,
             { method: 'PUT', body: { appRoleKey: a.appRoleKey } },
           );
@@ -679,15 +737,15 @@ export function createUsuariosByIdPermissionsRoute(deps: UsuariosRoutesDeps) {
             errors.push({ slug: a.slug, status: r.status, message: r.data?.error?.message || r.data?.message || 'Error al asignar rol' });
             continue;
           }
-          if (a.slug === appSlug && displayName && email) {
+          if (prisma && a.slug === appSlug && displayName && email) {
             // Sync local UserRole — keeps the per-app DB consistent so the
             // table re-renders without waiting for the next provision pass.
             await prisma.userRole
               .upsert({
-                where: { authUserId_orgId: { authUserId, orgId: ctx.auth.orgId } },
+                where: { authUserId_orgId: { authUserId, orgId } },
                 create: {
                   authUserId,
-                  orgId: ctx.auth.orgId,
+                  orgId,
                   role: a.appRoleKey,
                   displayName,
                   email,
@@ -695,11 +753,11 @@ export function createUsuariosByIdPermissionsRoute(deps: UsuariosRoutesDeps) {
                 },
                 update: { role: a.appRoleKey, displayName, email, active: true },
               })
-              .catch((err) => console.warn('[admin/usuarios/permissions] local upsert failed:', err));
+              .catch((err: unknown) => console.warn('[admin/usuarios/permissions] local upsert failed:', err));
           }
           if (audit) {
             await audit({
-              orgId: ctx.auth.orgId,
+              orgId,
               userId: ctx.auth.userRoleId,
               accion: 'ASIGNAR_ROL',
               entidad: 'UserAppPermission',
@@ -713,7 +771,7 @@ export function createUsuariosByIdPermissionsRoute(deps: UsuariosRoutesDeps) {
         for (const slug of removeApps) {
           if (!slug) continue;
           const r = await fetchFromAuth(
-            `/orgs/${ctx.auth.orgId}/users/${authUserId}/permissions/${slug}`,
+            `/orgs/${orgId}/users/${authUserId}/permissions/${slug}`,
             token,
             { method: 'DELETE' },
           );
@@ -721,17 +779,17 @@ export function createUsuariosByIdPermissionsRoute(deps: UsuariosRoutesDeps) {
             errors.push({ slug, status: r.status, message: r.data?.error?.message || r.data?.message || 'Error al revocar acceso' });
             continue;
           }
-          if (slug === appSlug) {
+          if (prisma && slug === appSlug) {
             await prisma.userRole
               .updateMany({
-                where: { authUserId, orgId: ctx.auth.orgId },
+                where: { authUserId, orgId },
                 data: { active: false },
               })
               .catch((err: unknown) => console.warn('[admin/usuarios/permissions] local deactivate failed:', err));
           }
           if (audit) {
             await audit({
-              orgId: ctx.auth.orgId,
+              orgId,
               userId: ctx.auth.userRoleId,
               accion: 'DESACTIVAR_USUARIO_APP',
               entidad: 'UserAppPermission',
@@ -758,4 +816,51 @@ export function createUsuariosByIdPermissionsRoute(deps: UsuariosRoutesDeps) {
   );
 
   return { PUT };
+}
+
+// --------------------------------------------------------------------------
+// /api/admin/usuarios/[authUserId]/resend-invitation — POST
+//
+// Used by the modal when the target user is still in `status='invited'`:
+// invalidates every existing activation token and mints a fresh one,
+// then resends the activation email. Auth-side guard (relaxed in
+// mycolegal-auth@2.4.9) lets org_admin / admin:users do this — no longer
+// superadmin-only.
+// --------------------------------------------------------------------------
+
+export function createUsuariosByIdResendInvitationRoute(deps: UsuariosRoutesDeps) {
+  const { withPermission, successResponse, errorResponse, fetchFromAuth, jwtCookieName } = deps;
+
+  const POST = withPermission('admin:users')(
+    async (_req: NextRequest, ctx: AdminCtx<{ authUserId: string }>) => {
+      try {
+        const params = await ctx.params;
+        const orgId = getTargetOrgId(deps, ctx.auth, params);
+        const { authUserId } = params;
+
+        const cookieStore = await cookies();
+        const token = cookieStore.get(jwtCookieName)?.value;
+        if (!token) return errorResponse('UNAUTHORIZED', 'No token', 401);
+
+        const res = await fetchFromAuth(
+          `/orgs/${orgId}/users/${authUserId}/resend-invitation`,
+          token,
+          { method: 'POST' },
+        );
+        if (res.status >= 400) {
+          const msg =
+            res.data?.error?.message ||
+            res.data?.message ||
+            'Error al reenviar invitación';
+          return errorResponse('AUTH_ERROR', msg, res.status);
+        }
+        return successResponse(res.data?.data || res.data || { resent: true });
+      } catch (error) {
+        console.error('[admin/usuarios/resend-invitation] POST error:', error);
+        return errorResponse('INTERNAL_ERROR', 'Error al reenviar invitación', 500);
+      }
+    },
+  );
+
+  return { POST };
 }

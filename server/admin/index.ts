@@ -20,4 +20,5 @@ export {
   createUsuariosInviteRoute,
   createUsuariosAppsCatalogRoute,
   createUsuariosByIdPermissionsRoute,
+  createUsuariosByIdResendInvitationRoute,
 } from './usuarios-routes';

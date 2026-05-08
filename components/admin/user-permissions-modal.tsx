@@ -13,7 +13,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, MailPlus } from 'lucide-react';
 
 import { Button } from '../ui/button';
 import {
@@ -87,6 +87,7 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
   const [permissions, setPermissions] = useState<Map<string, string>>(initialPermissions);
   const [orgAdmin, setOrgAdmin] = useState(initialOrgAdmin);
   const [saving, setSaving] = useState(false);
+  const [resending, setResending] = useState(false);
 
   // Reset state every time the modal opens for a different user.
   useEffect(() => {
@@ -178,15 +179,72 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
     }
   }
 
+  async function handleResendInvitation() {
+    if (!user) return;
+    setResending(true);
+    try {
+      const res = await fetch(`${apiBase}/permissions/${user.authUserId}/resend-invitation`, {
+        method: 'POST',
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast({
+          title: err.error?.message || t('ui.usersAdmin.toastResendInvitationError'),
+          variant: 'destructive',
+        });
+        return;
+      }
+      toast({
+        title: t('ui.usersAdmin.toastInvitationResent', { email: user.email }),
+        variant: 'success',
+      });
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: t('ui.usersAdmin.toastResendInvitationError'),
+        variant: 'destructive',
+      });
+    } finally {
+      setResending(false);
+    }
+  }
+
   if (!user) return null;
+
+  const showResendInvitation = user.authStatus === 'invited';
 
   return (
     <Dialog open={open} onOpenChange={(v) => (!v && !saving ? onClose() : null)}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{t('ui.usersAdmin.modalTitle', { name: user.displayName })}</DialogTitle>
           <DialogDescription>{t('ui.usersAdmin.modalSubtitle')}</DialogDescription>
         </DialogHeader>
+
+        {showResendInvitation && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30 p-3 flex items-center justify-between gap-4">
+            <div className="space-y-0.5 min-w-0">
+              <div className="text-sm font-medium">
+                {t('ui.usersAdmin.statusEnum.invited')}
+              </div>
+              <div className="text-xs text-muted-foreground truncate">
+                {t('ui.usersAdmin.resendInvitationHint')}
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleResendInvitation}
+              disabled={resending || saving}
+              className="shrink-0"
+            >
+              <MailPlus className="h-3.5 w-3.5 mr-1.5" />
+              {resending
+                ? t('ui.usersAdmin.btnResendingInvitation')
+                : t('ui.usersAdmin.btnResendInvitation')}
+            </Button>
+          </div>
+        )}
 
         {showOrgRole && (
           <div className="rounded-lg border p-3 flex items-center justify-between gap-4">
@@ -213,7 +271,7 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
           </div>
         )}
 
-        <div className="space-y-2">
+        <div className="space-y-2 min-h-0 flex-1 flex flex-col">
           <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
             {t('ui.usersAdmin.modalAppsHeader')}
           </h4>
@@ -228,7 +286,7 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
               {t('ui.usersAdmin.modalNoApps')}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 overflow-y-auto pr-1 -mr-1">
               {apps.map((app) => {
                 const access = permissions.has(app.slug);
                 const role = permissions.get(app.slug) ?? defaultRoleFor(app.slug);

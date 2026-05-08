@@ -86,12 +86,24 @@ export interface UsuariosRoutesDeps {
    * Default: same as `orgAdminRole`. Pass `null` to disable the check.
    */
   protectedRole?: string | null;
-  prisma: AdminPrisma;
+  /**
+   * Local UserRole table for app-side caching/reconciliation.
+   * Apps without their own DB (mycolegal-admin) pass `undefined` and the
+   * factory skips local upserts/lookups.
+   */
+  prisma?: AdminPrisma | null;
   withPermission: WithPermissionFn;
   successResponse: SuccessFn;
   errorResponse: ErrorFn;
   fetchFromAuth: FetchFromAuthFn;
   jwtCookieName: string;
+  /**
+   * Per-request override for the target orgId. Default: use `auth.orgId`
+   * from the JWT. Admin tools that browse other orgs (mycolegal-admin's
+   * `/organizations/[id]/...`) pass a function that pulls the id from URL
+   * params, so the factory still scopes queries correctly.
+   */
+  resolveOrgId?: (ctx: { auth: AdminAuth; params: Record<string, string> }) => string;
   /** Optional audit log hook (legifirma uses it; notaria currently doesn't). */
   audit?: AuditFn;
 }

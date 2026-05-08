@@ -415,6 +415,11 @@
       "toastAccessGrantError": "Error al dar acceso a {app}",
       "toastPermissionsSaved": "Permisos guardados",
       "toastPermissionsError": "Error al guardar permisos",
+      "btnResendInvitation": "Reenviar invitación",
+      "btnResendingInvitation": "Reenviando...",
+      "resendInvitationHint": "Invalida la invitación anterior y envía una nueva al email del usuario.",
+      "toastInvitationResent": "Invitación reenviada a {email}",
+      "toastResendInvitationError": "Error al reenviar la invitación",
       "statusEnum": {
         "active": "Activo",
         "invited": "Invitado",
