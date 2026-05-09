@@ -63,6 +63,8 @@ export { SearchableSelect } from './components/shared/searchable-select';
 export type { SearchableOption } from './components/shared/searchable-select';
 export { ClientPicker } from './components/shared/client-picker';
 export type { ClientOption } from './components/shared/client-picker';
+export { ActPicker } from './components/shared/act-picker';
+export type { ActOption } from './components/shared/act-picker';
 export { IdleTimeout } from './components/layout/idle-timeout';
 
 // Utilities

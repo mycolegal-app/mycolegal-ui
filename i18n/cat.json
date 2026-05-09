@@ -312,6 +312,12 @@
       "createNew": "+ Crear nou client",
       "createInline": "Alta"
     },
+    "actPicker": {
+      "placeholder": "Cercar acte jurídic per codi, nom o categoria...",
+      "searching": "Cercant…",
+      "noResults": "No s'han trobat resultats",
+      "clearAria": "Treure la selecció"
+    },
     "solicitantePicker": {
       "placeholder": "Filtrar per sol·licitant (nom o NIF)…",
       "noResults": "Cap sol·licitant coincideix",

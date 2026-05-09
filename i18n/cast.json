@@ -312,6 +312,12 @@
       "createNew": "+ Crear nuevo cliente",
       "createInline": "Alta"
     },
+    "actPicker": {
+      "placeholder": "Buscar acto jurídico por código, nombre o categoría...",
+      "searching": "Buscando…",
+      "noResults": "No se encontraron resultados",
+      "clearAria": "Quitar selección"
+    },
     "solicitantePicker": {
       "placeholder": "Filtrar por solicitante (nombre o NIF)…",
       "noResults": "Ningún solicitante coincide",

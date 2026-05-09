@@ -5,6 +5,38 @@
 
 ---
 
+## 1.51.0 — `ActPicker`: selector compartido de acto jurídico con búsqueda server-side (2026-05-09)
+
+Type: **minor**
+
+Nuevo componente shared `ActPicker` paralelo a `ClientPicker` para
+catálogos de actos jurídicos. Reemplaza el `SearchableSelect` cliente
+en notaria/pre-expedientes, donde el cap interno de 50 elementos
+client-side dejaba inalcanzables los actos posteriores ("solo primera
+página" reportado por el usuario).
+
+**`ActPicker`** (`components/shared/act-picker.tsx`)
+
+- Lista al abrir (`pageSize=20` por defecto, sin minLength) y filtra al
+  escribir con debounce 300ms — la búsqueda corre server-side contra
+  `?search=…&pageSize=…`.
+- Lookup individual al recibir `value` desde fuera vía `GET {apiBase}/{id}`.
+- Display compacto: `codigo` (mono, gris) — `nombre` (negrita) —
+  `categoria` (gris pequeño).
+- `apiBase` configurable. Default `/api/catalogs/actos-juridicos`
+  (notaria); apps con otro path (archivo: `/api/actos-juridicos`) lo
+  pasan como override y deberán añadir su propio endpoint `/[id]`
+  cuando migren.
+- **Sin `onCreateNew`** — el catálogo de actos lo gestiona consultor;
+  los usuarios sólo escogen entre los existentes.
+
+**i18n**
+
+- Nueva sección `ui.actPicker` con `placeholder`, `searching`,
+  `noResults`, `clearAria` en cast/cat/eus/gal.
+
+---
+
 ## 1.45.2 — Recuperar "crear con contraseña inicial" en el invite dialog (2026-05-08)
 
 Type: **patch**

@@ -312,6 +312,12 @@
       "createNew": "+ Sortu bezero berria",
       "createInline": "Alta"
     },
+    "actPicker": {
+      "placeholder": "Bilatu egintza juridikoa kodez, izenez edo kategoriaz...",
+      "searching": "Bilatzen…",
+      "noResults": "Ez da emaitzarik aurkitu",
+      "clearAria": "Aukeraketa kendu"
+    },
     "solicitantePicker": {
       "placeholder": "Iragazi eskatzailearen arabera (izena edo NIFa)…",
       "noResults": "Ez dator bat eskatzailerik",
