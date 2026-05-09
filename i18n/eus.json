@@ -312,6 +312,12 @@
       "createNew": "+ Sortu bezero berria",
       "createInline": "Alta"
     },
+    "solicitantePicker": {
+      "placeholder": "Iragazi eskatzailearen arabera (izena edo NIFa)…",
+      "noResults": "Ez dator bat eskatzailerik",
+      "empty": "Ez dago eskatzailerik uneko zerrendan",
+      "clearAria": "Eskatzailearen iragazkia kendu"
+    },
     "dataTable": {
       "searchPlaceholder": "Bilatu...",
       "showing": "Erakusten {start}-{end} ({total}-tik)",

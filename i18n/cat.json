@@ -312,6 +312,12 @@
       "createNew": "+ Crear nou client",
       "createInline": "Alta"
     },
+    "solicitantePicker": {
+      "placeholder": "Filtrar per sol·licitant (nom o NIF)…",
+      "noResults": "Cap sol·licitant coincideix",
+      "empty": "No hi ha sol·licitants a la llista actual",
+      "clearAria": "Treure el filtre de sol·licitant"
+    },
     "dataTable": {
       "searchPlaceholder": "Cercar...",
       "showing": "Mostrant {start}-{end} de {total}",

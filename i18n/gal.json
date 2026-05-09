@@ -312,6 +312,12 @@
       "createNew": "+ Crear novo cliente",
       "createInline": "Alta"
     },
+    "solicitantePicker": {
+      "placeholder": "Filtrar por solicitante (nome ou NIF)…",
+      "noResults": "Ningún solicitante coincide",
+      "empty": "Non hai solicitantes na lista actual",
+      "clearAria": "Quitar filtro de solicitante"
+    },
     "dataTable": {
       "searchPlaceholder": "Buscar...",
       "showing": "Mostrando {start}-{end} de {total}",
