@@ -113,12 +113,16 @@ export function createUsuariosRoutes(deps: UsuariosRoutesDeps) {
         : [];
       const localByAuthId = new Map<string, any>(localUsers.map((u: any) => [u.authUserId, u]));
 
+      // mycolegal-admin (appSlug='admin') no es una app de usuario: todos los
+      // miembros de la org son visibles y el "rol" mostrado es el rol org-level
+      // (org_admin/user) — nadie tiene UserAppPermission[admin], pero eso no
+      // debe pintarse como "No Access". Para apps de usuario (notaria, etc.)
+      // hasAppAccess sigue derivándose de UserAppPermission.
+      const isAdminApp = appSlug === 'admin';
       const result: any[] = [];
       for (const au of authUsers) {
         const local = localByAuthId.get(au.id);
-        // Source of truth for "is in this app" is auth's UserAppPermission.
-        // A local UserRole alone (orphan) does NOT count as access.
-        const hasAppAccess = !!au.appPermission;
+        const hasAppAccess = isAdminApp ? true : !!au.appPermission;
         if (local) {
           if (prisma && (local.displayName !== au.displayName || local.email !== au.email)) {
             await prisma.userRole
@@ -133,8 +137,8 @@ export function createUsuariosRoutes(deps: UsuariosRoutesDeps) {
             authUserId: au.id,
             displayName: au.displayName,
             email: au.email,
-            role: hasAppAccess ? local.role : null,
-            active: hasAppAccess ? local.active : false,
+            role: isAdminApp ? au.role : (hasAppAccess ? local.role : null),
+            active: isAdminApp ? au.status === 'active' : (hasAppAccess ? local.active : false),
             lastLoginAt: local.lastLoginAt,
             avatarUrl: local.avatarUrl,
             authStatus: au.status,
@@ -148,10 +152,12 @@ export function createUsuariosRoutes(deps: UsuariosRoutesDeps) {
             authUserId: au.id,
             displayName: au.displayName,
             email: au.email,
-            role: hasAppAccess
-              ? au.appPermission!.appRoleKey?.toUpperCase() || validRoles[1] || validRoles[0]
-              : null,
-            active: false,
+            role: isAdminApp
+              ? au.role
+              : (hasAppAccess
+                ? au.appPermission!.appRoleKey?.toUpperCase() || validRoles[1] || validRoles[0]
+                : null),
+            active: isAdminApp ? au.status === 'active' : false,
             lastLoginAt: null,
             avatarUrl: null,
             authStatus: au.status,
@@ -692,10 +698,11 @@ export function createUsuariosByIdPermissionsRoute(deps: UsuariosRoutesDeps) {
           apps?: Array<{ slug?: string; appRoleKey?: string }>;
           removeApps?: string[];
           authRole?: 'org_admin' | 'user' | null;
+          authStatus?: 'active' | 'suspended' | 'disabled';
           displayName?: string;
           email?: string;
         };
-        const { apps = [], removeApps = [], authRole, displayName, email } = body;
+        const { apps = [], removeApps = [], authRole, authStatus, displayName, email } = body;
 
         const cookieStore = await cookies();
         const token = cookieStore.get(jwtCookieName)?.value;
@@ -721,6 +728,28 @@ export function createUsuariosByIdPermissionsRoute(deps: UsuariosRoutesDeps) {
               entidad: 'User',
               entidadId: authUserId,
               valorNuevo: { role: authRole },
+            }).catch(() => {});
+          }
+        }
+
+        // Auth status (suspend / reactivate / disable). Mismo PATCH que role
+        // — auth permite suspended | active | disabled vía updateUserSchema.
+        if (authStatus === 'active' || authStatus === 'suspended' || authStatus === 'disabled') {
+          const r = await fetchFromAuth(
+            `/orgs/${orgId}/users/${authUserId}`,
+            token,
+            { method: 'PATCH', body: { status: authStatus } },
+          );
+          if (r.status >= 400) {
+            errors.push({ status: r.status, message: r.data?.error?.message || r.data?.message || 'Error al cambiar estado del usuario' });
+          } else if (audit) {
+            await audit({
+              orgId,
+              userId: ctx.auth.userRoleId,
+              accion: authStatus === 'suspended' ? 'SUSPENDER_USUARIO' : authStatus === 'active' ? 'REACTIVAR_USUARIO' : 'DESHABILITAR_USUARIO',
+              entidad: 'User',
+              entidadId: authUserId,
+              valorNuevo: { status: authStatus },
             }).catch(() => {});
           }
         }

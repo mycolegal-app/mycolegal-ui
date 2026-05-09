@@ -440,7 +440,20 @@
         "suspended": "Suspendido",
         "disabled": "Inactivo",
         "denied": "Denegado"
-      }
+      },
+      "btnPromoteToAdmin": "Promocionar a administrador",
+      "btnDemoteToUser": "Convertir en usuario",
+      "btnSuspend": "Suspender al usuario",
+      "btnReactivate": "Reactivar al usuario",
+      "btnDeleteUser": "Eliminar al usuario",
+      "confirmSuspendTitle": "Suspender usuario",
+      "confirmSuspendMsg": "El usuario no podrá acceder hasta que lo reactives. ¿Continuar?",
+      "toastUserPromoted": "Usuario promocionado a administrador",
+      "toastUserDemoted": "Usuario convertido en usuario estándar",
+      "toastUserSuspended": "Usuario suspendido",
+      "toastUserReactivated": "Usuario reactivado",
+      "toastAuthChangeError": "Error al cambiar el estado del usuario",
+      "actionsHeader": "Acciones"
     }
   }
 }

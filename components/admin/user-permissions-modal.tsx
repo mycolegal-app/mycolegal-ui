@@ -3,9 +3,10 @@
 /**
  * Cross-app permissions modal.
  *
- * Renders one same-size card per active app of the org plus an org-level
- * role toggle on top. The user picks which apps the target user can
- * access and the role per app; on save, the diff against the initial
+ * Renders one same-size card per active app of the org plus a row of
+ * direct-action buttons on top (resend invitation, promote/demote,
+ * suspend/reactivate, delete). The user picks which apps the target user
+ * can access and the role per app; on save, the diff against the initial
  * state is sent to `${apiBase}/permissions/{authUserId}` (PUT).
  *
  * Catalog (apps + roles) is fetched once from `${apiBase}/apps-catalog`
@@ -13,7 +14,15 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { Loader2, MailPlus } from 'lucide-react';
+import {
+  Loader2,
+  MailPlus,
+  ShieldCheck,
+  User,
+  Ban,
+  RotateCcw,
+  Trash2,
+} from 'lucide-react';
 
 import { Button } from '../ui/button';
 import {
@@ -38,6 +47,7 @@ import type { UserRow } from './users-admin-panel';
 export interface AppCatalogEntry {
   slug: string;
   name: string;
+  logoSvg?: string | null;
   roles: Array<{ key: string; label: string; isDefault: boolean; permissions: string[] }>;
 }
 
@@ -49,12 +59,15 @@ export interface UserPermissionsModalProps {
   apiBase: string;
   /** Slug of the app the panel is mounted in — used to seed initial permissions. */
   currentAppSlug: string;
-  /** Show the org-level role toggle (org_admin vs user). */
+  /** Show the org-level role action button (org_admin vs user). */
   showOrgRole?: boolean;
   /** Slug whose access cannot be removed (e.g., the app you're administering from). */
   protectedAppSlug?: string;
   onClose: () => void;
   onSaved: () => void;
+  /** Called when the user clicks "Eliminar al usuario" — delegates the
+   *  destructive flow (and its confirmation dialog) to the parent panel. */
+  onDeleteClick?: (user: UserRow) => void;
 }
 
 export function UserPermissionsModal(props: UserPermissionsModalProps) {
@@ -69,6 +82,7 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
     protectedAppSlug,
     onClose,
     onSaved,
+    onDeleteClick,
   } = props;
   const { t } = useI18n();
 
@@ -82,20 +96,18 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
     return map;
   }, [user, currentAppSlug]);
 
-  const initialOrgAdmin = user?.authRole === 'org_admin';
-
   const [permissions, setPermissions] = useState<Map<string, string>>(initialPermissions);
-  const [orgAdmin, setOrgAdmin] = useState(initialOrgAdmin);
   const [saving, setSaving] = useState(false);
   const [resending, setResending] = useState(false);
+  const [authBusy, setAuthBusy] = useState<null | 'role' | 'status'>(null);
+  const [confirmSuspend, setConfirmSuspend] = useState(false);
 
   // Reset state every time the modal opens for a different user.
   useEffect(() => {
     if (open) {
       setPermissions(new Map(initialPermissions));
-      setOrgAdmin(initialOrgAdmin);
     }
-  }, [open, initialPermissions, initialOrgAdmin]);
+  }, [open, initialPermissions]);
 
   function defaultRoleFor(slug: string): string {
     const app = apps.find((a) => a.slug === slug);
@@ -138,20 +150,17 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
       if (!permissions.has(slug)) removeApps.push(slug);
     }
 
+    if (grants.length === 0 && removeApps.length === 0) {
+      onClose();
+      return;
+    }
+
     const body: Record<string, unknown> = {
       apps: grants,
       removeApps,
       displayName: user.displayName,
       email: user.email,
     };
-    if (showOrgRole && orgAdmin !== initialOrgAdmin) {
-      body.authRole = orgAdmin ? 'org_admin' : 'user';
-    }
-
-    if (grants.length === 0 && removeApps.length === 0 && body.authRole === undefined) {
-      onClose();
-      return;
-    }
 
     setSaving(true);
     try {
@@ -209,145 +218,261 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
     }
   }
 
+  async function patchAuthField(
+    body: { authRole?: 'org_admin' | 'user'; authStatus?: 'active' | 'suspended' | 'disabled' },
+    successKey: string,
+  ) {
+    if (!user) return;
+    setAuthBusy(body.authRole ? 'role' : 'status');
+    try {
+      const res = await fetch(`${apiBase}/permissions/${user.authUserId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...body, displayName: user.displayName, email: user.email }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast({
+          title: err.error?.message || t('ui.usersAdmin.toastAuthChangeError'),
+          variant: 'destructive',
+        });
+        return;
+      }
+      toast({ title: t(successKey), variant: 'success' });
+      onSaved();
+    } catch (error) {
+      console.error(error);
+      toast({ title: t('ui.usersAdmin.toastAuthChangeError'), variant: 'destructive' });
+    } finally {
+      setAuthBusy(null);
+    }
+  }
+
   if (!user) return null;
 
-  const showResendInvitation = user.authStatus === 'invited';
+  const isInvited = user.authStatus === 'invited';
+  const isOrgAdmin = user.authRole === 'org_admin';
+  const isSuspended = user.authStatus === 'suspended';
+  const isSuperadmin = user.authRole === 'superadmin';
+  const anyBusy = saving || resending || authBusy !== null;
+
+  async function togglePromote() {
+    await patchAuthField(
+      { authRole: isOrgAdmin ? 'user' : 'org_admin' },
+      isOrgAdmin ? 'ui.usersAdmin.toastUserDemoted' : 'ui.usersAdmin.toastUserPromoted',
+    );
+  }
+
+  async function toggleSuspend() {
+    if (!isSuspended) {
+      // Suspending is reversible but worth confirming.
+      setConfirmSuspend(true);
+      return;
+    }
+    await patchAuthField(
+      { authStatus: 'active' },
+      'ui.usersAdmin.toastUserReactivated',
+    );
+  }
+
+  async function confirmSuspendNow() {
+    setConfirmSuspend(false);
+    await patchAuthField(
+      { authStatus: 'suspended' },
+      'ui.usersAdmin.toastUserSuspended',
+    );
+  }
+
+  function handleDelete() {
+    if (!user || !onDeleteClick) return;
+    onDeleteClick(user);
+  }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => (!v && !saving ? onClose() : null)}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>{t('ui.usersAdmin.modalTitle', { name: user.displayName })}</DialogTitle>
-          <DialogDescription>{t('ui.usersAdmin.modalSubtitle')}</DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={(v) => (!v && !anyBusy ? onClose() : null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>{t('ui.usersAdmin.modalTitle', { name: user.displayName })}</DialogTitle>
+            <DialogDescription>{t('ui.usersAdmin.modalSubtitle')}</DialogDescription>
+          </DialogHeader>
 
-        {showResendInvitation && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30 p-3 flex items-center justify-between gap-4">
-            <div className="space-y-0.5 min-w-0">
-              <div className="text-sm font-medium">
-                {t('ui.usersAdmin.statusEnum.invited')}
-              </div>
-              <div className="text-xs text-muted-foreground truncate">
-                {t('ui.usersAdmin.resendInvitationHint')}
-              </div>
-            </div>
+          {/* Action toolbar — equal-width buttons in a 4-column grid. Each
+              button wraps its own state + permission semantics; disabled
+              when the action is not applicable to the current user. */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={handleResendInvitation}
-              disabled={resending || saving}
-              className="shrink-0"
+              disabled={!isInvited || anyBusy}
+              title={!isInvited ? t('ui.usersAdmin.statusEnum.invited') : undefined}
+              className="h-9 justify-center"
             >
               <MailPlus className="h-3.5 w-3.5 mr-1.5" />
-              {resending
-                ? t('ui.usersAdmin.btnResendingInvitation')
-                : t('ui.usersAdmin.btnResendInvitation')}
+              <span className="truncate">
+                {resending
+                  ? t('ui.usersAdmin.btnResendingInvitation')
+                  : t('ui.usersAdmin.btnResendInvitation')}
+              </span>
+            </Button>
+
+            {showOrgRole && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={togglePromote}
+                disabled={isSuperadmin || anyBusy}
+                className="h-9 justify-center"
+              >
+                {isOrgAdmin ? (
+                  <User className="h-3.5 w-3.5 mr-1.5" />
+                ) : (
+                  <ShieldCheck className="h-3.5 w-3.5 mr-1.5" />
+                )}
+                <span className="truncate">
+                  {isOrgAdmin
+                    ? t('ui.usersAdmin.btnDemoteToUser')
+                    : t('ui.usersAdmin.btnPromoteToAdmin')}
+                </span>
+              </Button>
+            )}
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleSuspend}
+              disabled={isSuperadmin || anyBusy}
+              className="h-9 justify-center"
+            >
+              {isSuspended ? (
+                <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+              ) : (
+                <Ban className="h-3.5 w-3.5 mr-1.5" />
+              )}
+              <span className="truncate">
+                {isSuspended
+                  ? t('ui.usersAdmin.btnReactivate')
+                  : t('ui.usersAdmin.btnSuspend')}
+              </span>
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDelete}
+              disabled={isSuperadmin || anyBusy || !onDeleteClick}
+              className="h-9 justify-center text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+              <span className="truncate">{t('ui.usersAdmin.btnDeleteUser')}</span>
             </Button>
           </div>
-        )}
 
-        {showOrgRole && (
-          <div className="rounded-lg border p-3 flex items-center justify-between gap-4">
-            <div className="space-y-0.5">
-              <div className="text-sm font-medium">{t('ui.usersAdmin.modalOrgRole')}</div>
-              <div className="text-xs text-muted-foreground">
-                {t('ui.usersAdmin.modalOrgRoleHint')}
+          <div className="space-y-2 min-h-0 flex-1 flex flex-col">
+            <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+              {t('ui.usersAdmin.modalAppsHeader')}
+            </h4>
+
+            {loadingCatalog ? (
+              <div className="flex items-center justify-center py-10 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                {t('ui.usersAdmin.modalLoadingCatalog')}
               </div>
-            </div>
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <span className="text-xs text-muted-foreground">
-                {orgAdmin
-                  ? t('ui.usersAdmin.orgRoleAdmin')
-                  : t('ui.usersAdmin.orgRoleUser')}
-              </span>
-              <input
-                type="checkbox"
-                checked={orgAdmin}
-                onChange={(e) => setOrgAdmin(e.target.checked)}
-                disabled={saving}
-                className="h-4 w-4 rounded border-input text-primary focus:ring-2 focus:ring-ring"
-              />
-            </label>
-          </div>
-        )}
-
-        <div className="space-y-2 min-h-0 flex-1 flex flex-col">
-          <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-            {t('ui.usersAdmin.modalAppsHeader')}
-          </h4>
-
-          {loadingCatalog ? (
-            <div className="flex items-center justify-center py-10 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              {t('ui.usersAdmin.modalLoadingCatalog')}
-            </div>
-          ) : apps.length === 0 ? (
-            <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-              {t('ui.usersAdmin.modalNoApps')}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 overflow-y-auto pr-1 -mr-1">
-              {apps.map((app) => {
-                const access = permissions.has(app.slug);
-                const role = permissions.get(app.slug) ?? defaultRoleFor(app.slug);
-                const isProtected = app.slug === protectedAppSlug;
-                return (
-                  <div
-                    key={app.slug}
-                    className="rounded-lg border p-3 flex flex-col gap-2 min-h-[120px]"
-                  >
-                    <label className="flex items-center justify-between gap-2 cursor-pointer">
-                      <div className="font-medium text-sm truncate" title={app.name}>
-                        {app.name}
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={access}
-                        onChange={(e) => setAccess(app.slug, e.target.checked)}
-                        disabled={saving || isProtected}
-                        aria-label={t('ui.usersAdmin.modalCardAccess')}
-                        className="h-4 w-4 rounded border-input text-primary focus:ring-2 focus:ring-ring"
-                      />
-                    </label>
-                    <div className="text-xs text-muted-foreground">
-                      {access
-                        ? t('ui.usersAdmin.modalCardRoleLabel')
-                        : t('ui.usersAdmin.statusNoAccess')}
+            ) : apps.length === 0 ? (
+              <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+                {t('ui.usersAdmin.modalNoApps')}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 overflow-y-auto pr-1 -mr-1">
+                {apps.map((app) => {
+                  const access = permissions.has(app.slug);
+                  const role = permissions.get(app.slug) ?? defaultRoleFor(app.slug);
+                  const isProtected = app.slug === protectedAppSlug;
+                  return (
+                    <div
+                      key={app.slug}
+                      className="rounded-lg border p-2.5 flex flex-col gap-1.5"
+                    >
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <div className="h-7 w-7 shrink-0 rounded-md border border-mc-neutral-200 bg-mc-neutral-50 flex items-center justify-center overflow-hidden">
+                          {app.logoSvg ? (
+                            <div
+                              className="h-5 w-5 flex items-center justify-center [&_svg]:h-full [&_svg]:w-full"
+                              dangerouslySetInnerHTML={{ __html: app.logoSvg }}
+                            />
+                          ) : (
+                            <span className="text-[11px] font-semibold text-muted-foreground">
+                              {app.name.charAt(0).toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+                        <div className="font-medium text-sm truncate flex-1" title={app.name}>
+                          {app.name}
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={access}
+                          onChange={(e) => setAccess(app.slug, e.target.checked)}
+                          disabled={anyBusy || isProtected}
+                          aria-label={t('ui.usersAdmin.modalCardAccess')}
+                          className="h-4 w-4 rounded border-input text-primary focus:ring-2 focus:ring-ring shrink-0"
+                        />
+                      </label>
+                      {access && (
+                        <Select
+                          value={role}
+                          onValueChange={(v) => setRole(app.slug, v)}
+                          disabled={anyBusy || app.roles.length === 0}
+                        >
+                          <SelectTrigger className="h-7 text-xs px-2 [&>span]:truncate">
+                            <SelectValue placeholder={t('ui.usersAdmin.pickRole')} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {app.roles.map((r) => (
+                              <SelectItem key={r.key} value={r.key} className="text-xs">
+                                {r.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                     </div>
-                    {access && (
-                      <Select
-                        value={role}
-                        onValueChange={(v) => setRole(app.slug, v)}
-                        disabled={saving || app.roles.length === 0}
-                      >
-                        <SelectTrigger className="h-8">
-                          <SelectValue placeholder={t('ui.usersAdmin.pickRole')} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {app.roles.map((r) => (
-                            <SelectItem key={r.key} value={r.key}>
-                              {r.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={saving}>
-            {t('ui.usersAdmin.btnCancel')}
-          </Button>
-          <Button onClick={handleSave} disabled={saving || loadingCatalog}>
-            {saving ? t('ui.usersAdmin.btnSaving') : t('ui.usersAdmin.btnSave')}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <DialogFooter>
+            <Button variant="outline" onClick={onClose} disabled={anyBusy}>
+              {t('ui.usersAdmin.btnCancel')}
+            </Button>
+            <Button onClick={handleSave} disabled={anyBusy || loadingCatalog}>
+              {saving ? t('ui.usersAdmin.btnSaving') : t('ui.usersAdmin.btnSave')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Suspend confirm dialog — kept inline so the action button can fire
+          with one extra click without leaving the modal context. */}
+      <Dialog open={confirmSuspend} onOpenChange={(v) => !v && setConfirmSuspend(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('ui.usersAdmin.confirmSuspendTitle')}</DialogTitle>
+            <DialogDescription>{t('ui.usersAdmin.confirmSuspendMsg')}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmSuspend(false)}>
+              {t('ui.usersAdmin.btnCancel')}
+            </Button>
+            <Button variant="destructive" onClick={confirmSuspendNow} disabled={authBusy !== null}>
+              {t('ui.usersAdmin.btnSuspend')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

@@ -440,7 +440,20 @@
         "suspended": "Etenda",
         "disabled": "Inaktiboa",
         "denied": "Ukatuta"
-      }
+      },
+      "btnPromoteToAdmin": "Administratzaile gisa sustatu",
+      "btnDemoteToUser": "Erabiltzaile bihurtu",
+      "btnSuspend": "Erabiltzailea eseki",
+      "btnReactivate": "Erabiltzailea berraktibatu",
+      "btnDeleteUser": "Erabiltzailea ezabatu",
+      "confirmSuspendTitle": "Erabiltzailea eseki",
+      "confirmSuspendMsg": "Erabiltzaileak ezin izango du sartu berraktibatu arte. Jarraitu?",
+      "toastUserPromoted": "Erabiltzailea administratzaile gisa sustatu da",
+      "toastUserDemoted": "Erabiltzailea estandar bihurtu da",
+      "toastUserSuspended": "Erabiltzailea esekita",
+      "toastUserReactivated": "Erabiltzailea berraktibatuta",
+      "toastAuthChangeError": "Errorea erabiltzailearen egoera aldatzean",
+      "actionsHeader": "Ekintzak"
     }
   }
 }

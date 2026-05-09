@@ -443,6 +443,13 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
         onSaved={() => {
           fetchUsers();
         }}
+        onDeleteClick={(u) => {
+          // Cierra el modal de permisos y abre el confirm de borrado
+          // que ya gestiona el panel — un único punto para el flujo
+          // destructivo (deactivate_app vs destroy según otherApps).
+          setEditUser(null);
+          setDeleteUser(u);
+        }}
       />
 
       <Dialog

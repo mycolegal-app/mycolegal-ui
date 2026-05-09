@@ -440,7 +440,20 @@
         "suspended": "Suspès",
         "disabled": "Inactiu",
         "denied": "Denegat"
-      }
+      },
+      "btnPromoteToAdmin": "Promocionar a administrador",
+      "btnDemoteToUser": "Convertir en usuari",
+      "btnSuspend": "Suspendre l'usuari",
+      "btnReactivate": "Reactivar l'usuari",
+      "btnDeleteUser": "Eliminar l'usuari",
+      "confirmSuspendTitle": "Suspendre usuari",
+      "confirmSuspendMsg": "L'usuari no podrà accedir fins que el reactivis. Continuar?",
+      "toastUserPromoted": "Usuari promocionat a administrador",
+      "toastUserDemoted": "Usuari convertit en usuari estàndard",
+      "toastUserSuspended": "Usuari suspès",
+      "toastUserReactivated": "Usuari reactivat",
+      "toastAuthChangeError": "Error en canviar l'estat de l'usuari",
+      "actionsHeader": "Accions"
     }
   }
 }
