@@ -6,6 +6,10 @@ import { PageHeaderProvider, usePageHeader } from "./page-header-context";
 import { type AppInfo } from "./app-switcher";
 import { IdleTimeout } from "./idle-timeout";
 import { AppInfoButton } from "../shared/app-info-button";
+import {
+  DefaultHelpButton,
+  DefaultSearchButton,
+} from "../shared/header-default-buttons";
 import { useAuthFetchGuard } from "../../hooks/use-auth-fetch-guard";
 import { useI18n } from "../i18n/i18n-context";
 
@@ -102,8 +106,8 @@ function AppShellInner({
               ref={registerActionsSlot}
               className="flex items-center gap-2 print:hidden empty:hidden"
             />
-            {commandPalette}
-            {helpButton}
+            {commandPalette ?? <DefaultSearchButton />}
+            {helpButton ?? <DefaultHelpButton />}
             <AppInfoButton appName={appName} appLogoUrl={appLogoUrl} />
             {/* Org info */}
             {org?.name && <OrgBadge org={org} />}

@@ -342,6 +342,12 @@
     "appShell": {
       "openMobileMenu": "Alboko menua ireki"
     },
+    "header": {
+      "helpAria": "Laguntza",
+      "helpTitle": "Eskuliburua ireki",
+      "searchAria": "Bilatu",
+      "searchUnavailable": "Bilaketa ez dago erabilgarri aplikazio honetan"
+    },
     "sidebar": {
       "goHome": "Hasierara joan",
       "admin": "Administrazioa",

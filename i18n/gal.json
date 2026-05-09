@@ -342,6 +342,12 @@
     "appShell": {
       "openMobileMenu": "Abrir menú lateral"
     },
+    "header": {
+      "helpAria": "Axuda",
+      "helpTitle": "Abrir manual",
+      "searchAria": "Buscar",
+      "searchUnavailable": "Busca non dispoñible nesta aplicación"
+    },
     "sidebar": {
       "goHome": "Ir ao inicio",
       "admin": "Administración",

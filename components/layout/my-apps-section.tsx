@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronRight, LayoutGrid, Loader2 } from "lucide-react";
 import type { AppInfo } from "./app-switcher";
 import { SidebarFlyout } from "./sidebar-flyout";
@@ -91,7 +92,12 @@ function AppLogo({ app }: { app: AppInfo }) {
 
 function AppNavigatingOverlay() {
   const { t } = useI18n();
-  return (
+  if (typeof document === "undefined") return null;
+  // Portaleamos a body porque el <aside> del sidebar tiene `transform`
+  // (translate-x-0 en lg, -translate-x-full en mobile), lo que crea un
+  // containing block para position:fixed y "atrapa" el overlay dentro
+  // de los 220px del sidebar.
+  return createPortal(
     <div
       role="status"
       aria-busy="true"
@@ -102,6 +108,7 @@ function AppNavigatingOverlay() {
         <Loader2 className="h-7 w-7 animate-spin text-cyan-600" />
         <p className="text-sm font-medium text-gray-700">{t("ui.myApps.loadingApp")}</p>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

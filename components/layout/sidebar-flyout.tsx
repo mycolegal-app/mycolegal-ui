@@ -39,6 +39,7 @@ export function SidebarFlyout({
 }: SidebarFlyoutProps) {
   const [open, setOpen] = useState(false);
   const [top, setTop] = useState(0);
+  const [maxHeight, setMaxHeight] = useState<number>(0);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
 
@@ -46,7 +47,21 @@ export function SidebarFlyout({
     if (!open) return;
     function reposition() {
       const rect = triggerRef.current?.getBoundingClientRect();
-      if (rect) setTop(rect.top);
+      if (!rect) return;
+      const vh = window.innerHeight;
+      const margin = 8;
+      // Si abajo no cabe lo suficiente, anclamos el panel a `vh - margin`
+      // y lo "alineamos" hacia arriba para no salirnos del viewport.
+      const available = vh - rect.top - margin;
+      const minDesired = 200;
+      let nextTop = rect.top;
+      let nextMax = available;
+      if (available < minDesired) {
+        nextMax = Math.min(vh - 2 * margin, Math.max(minDesired, available));
+        nextTop = Math.max(margin, vh - nextMax - margin);
+      }
+      setTop(nextTop);
+      setMaxHeight(Math.max(120, nextMax));
     }
     reposition();
     window.addEventListener("resize", reposition);
@@ -99,6 +114,7 @@ export function SidebarFlyout({
             ref={panelRef}
             top={top}
             sidebarWidth={sidebarWidth}
+            maxHeight={maxHeight}
             onAutoClose={() => setOpen(false)}
           >
             {children}
@@ -112,12 +128,13 @@ export function SidebarFlyout({
 interface FlyoutPanelProps {
   top: number;
   sidebarWidth: number;
+  maxHeight: number;
   onAutoClose: () => void;
   children: ReactNode;
 }
 
 const FlyoutPanel = forwardRef<HTMLDivElement, FlyoutPanelProps>(function FlyoutPanel(
-  { top, sidebarWidth, onAutoClose, children },
+  { top, sidebarWidth, maxHeight, onAutoClose, children },
   ref,
 ) {
   return (
@@ -128,8 +145,12 @@ const FlyoutPanel = forwardRef<HTMLDivElement, FlyoutPanelProps>(function Flyout
         const target = e.target as HTMLElement;
         if (target.closest("a, button")) onAutoClose();
       }}
-      style={{ top: Math.max(8, top), left: sidebarWidth + 6 }}
-      className="fixed z-[60] min-w-[220px] max-w-[280px] rounded-lg border border-white/10 bg-[#0f1b2d] p-1.5 shadow-2xl"
+      style={{
+        top: Math.max(8, top),
+        left: sidebarWidth + 6,
+        maxHeight: maxHeight ? `${maxHeight}px` : undefined,
+      }}
+      className="fixed z-[60] flex min-w-[220px] max-w-[280px] flex-col overflow-y-auto rounded-lg border border-white/10 bg-[#0f1b2d] p-1.5 shadow-2xl"
     >
       {children}
     </div>

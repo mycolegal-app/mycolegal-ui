@@ -2,7 +2,7 @@
 
 import { useState, useEffect, type ReactNode, type ComponentType } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { BookOpen, LogOut, Settings } from "lucide-react";
+import { BookOpen, LogOut, Settings, Sliders } from "lucide-react";
 import { NavLink as Link } from "../shared/nav-link";
 import { NotificationsBell } from "../shared/notifications-bell";
 import { UserAccountDialog } from "../shared/user-account-dialog";
@@ -176,7 +176,10 @@ export function AppSidebar({
           className="flex items-center gap-3 px-5 py-5 transition-opacity hover:opacity-80"
         >
           {brandLogoNode()}
-          <span className="text-lg font-semibold text-white">
+          <span
+            className="min-w-0 flex-1 truncate text-base font-semibold leading-tight text-white"
+            title={`${brandPrefix}${brandHighlight}`}
+          >
             {brandPrefix}
             <span className={a.highlightTextClass}>{brandHighlight}</span>
           </span>
@@ -205,15 +208,12 @@ export function AppSidebar({
           })}
 
           {extraNav}
-
-          <div className="my-3 border-t border-white/10" />
-
-          <MyAppsSection apps={apps} currentSlug={currentSlug} />
         </nav>
 
         {/* System block: Admin + Configuración (only rendered if at least one
-            entry is visible). Mirrors the user's rule that Admin/Configuración
-            must sit below the product nav, separated by a divider. */}
+            entry is visible). Sits below the product nav, separated by a
+            divider. Configuración uses a distinct icon (Sliders) to set it
+            apart visually from Admin (Settings/gear). */}
         {hasSystemBlock && (
           <div className="space-y-0.5 border-t border-white/10 px-3 pb-1 pt-3">
             {showAdminResolved && (
@@ -236,12 +236,17 @@ export function AppSidebar({
                   isActive(settingsHref) ? ITEM_ACTIVE : ITEM_INACTIVE,
                 )}
               >
-                <Settings className="h-4 w-4 shrink-0" />
+                <Sliders className="h-4 w-4 shrink-0" />
                 {t("ui.sidebar.settings")}
               </Link>
             )}
           </div>
         )}
+
+        {/* Mis aplicaciones — siempre justo encima del Manual. */}
+        <div className="space-y-0.5 border-t border-white/10 px-3 pb-1 pt-3">
+          <MyAppsSection apps={apps} currentSlug={currentSlug} />
+        </div>
 
         {/* Manual — always above the user block, separated. */}
         <div className="space-y-0.5 border-t border-white/10 px-3 pb-3 pt-3">
