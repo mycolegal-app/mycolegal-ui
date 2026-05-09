@@ -1031,3 +1031,179 @@ export function createUsuariosByIdResendInvitationRoute(deps: UsuariosRoutesDeps
 
   return { POST };
 }
+
+// --------------------------------------------------------------------------
+// /api/admin/usuarios/[authUserId]/app/[appSlug] — GET/PUT/DELETE
+//
+// Fine-grained per-app permissions: lets the cross-app modal's "(i) Sliders"
+// open a sub-dialog that customizes role + individual permissions + data
+// scopes for one user × one app. Same auth endpoints the admin Permisos tab
+// uses, exposed under each consumer's apiBase so the shared dialog can run
+// in any host app.
+// --------------------------------------------------------------------------
+
+export function createUsuariosByIdAppPermRoute(deps: UsuariosRoutesDeps) {
+  const {
+    withPermission,
+    successResponse,
+    errorResponse,
+    fetchFromAuth,
+    jwtCookieName,
+    audit,
+  } = deps;
+
+  const GET = withPermission('admin:users')(
+    async (_req: NextRequest, ctx: AdminCtx<{ authUserId: string; appSlug: string }>) => {
+      try {
+        const params = await ctx.params;
+        const orgId = getTargetOrgId(deps, ctx.auth, params);
+        const { authUserId, appSlug } = params;
+
+        const cookieStore = await cookies();
+        const token = cookieStore.get(jwtCookieName)?.value;
+        if (!token) return errorResponse('UNAUTHORIZED', 'No token', 401);
+
+        const res = await fetchFromAuth(
+          `/orgs/${orgId}/users/${authUserId}/permissions/${appSlug}`,
+          token,
+        );
+        if (res.status === 404) {
+          // No UserAppPermission row yet — surface as null so the dialog can
+          // start from a clean slate (default role suggested by the catalog).
+          return successResponse(null);
+        }
+        if (res.status >= 400) {
+          const msg = res.data?.error?.message || res.data?.message || 'Error al cargar permisos';
+          return errorResponse('AUTH_ERROR', msg, res.status);
+        }
+        return successResponse(res.data?.data ?? res.data ?? null);
+      } catch (error) {
+        console.error('[admin/usuarios/app-perm] GET error:', error);
+        return errorResponse('INTERNAL_ERROR', 'Error al cargar permisos', 500);
+      }
+    },
+  );
+
+  const PUT = withPermission('admin:users')(
+    async (req: NextRequest, ctx: AdminCtx<{ authUserId: string; appSlug: string }>) => {
+      try {
+        const params = await ctx.params;
+        const orgId = getTargetOrgId(deps, ctx.auth, params);
+        const { authUserId, appSlug } = params;
+        const body = (await req.json()) as {
+          appRoleKey?: string | null;
+          permissions?: string[];
+          scopes?: Array<{ resource: string; attribute: string; operator: 'IN' | 'EQ' | 'NOT_IN'; values: string[] }>;
+        };
+
+        const cookieStore = await cookies();
+        const token = cookieStore.get(jwtCookieName)?.value;
+        if (!token) return errorResponse('UNAUTHORIZED', 'No token', 401);
+
+        const res = await fetchFromAuth(
+          `/orgs/${orgId}/users/${authUserId}/permissions/${appSlug}`,
+          token,
+          { method: 'PUT', body },
+        );
+        if (res.status >= 400) {
+          const msg = res.data?.error?.message || res.data?.message || 'Error al guardar permisos';
+          return errorResponse('AUTH_ERROR', msg, res.status);
+        }
+        if (audit) {
+          await audit({
+            orgId,
+            userId: ctx.auth.userRoleId,
+            accion: 'AJUSTAR_PERMISOS_APP',
+            entidad: 'UserAppPermission',
+            entidadId: `${authUserId}:${appSlug}`,
+            valorNuevo: body,
+          }).catch(() => {});
+        }
+        return successResponse(res.data?.data ?? res.data);
+      } catch (error) {
+        console.error('[admin/usuarios/app-perm] PUT error:', error);
+        return errorResponse('INTERNAL_ERROR', 'Error al guardar permisos', 500);
+      }
+    },
+  );
+
+  const DELETE = withPermission('admin:users')(
+    async (_req: NextRequest, ctx: AdminCtx<{ authUserId: string; appSlug: string }>) => {
+      try {
+        const params = await ctx.params;
+        const orgId = getTargetOrgId(deps, ctx.auth, params);
+        const { authUserId, appSlug } = params;
+
+        const cookieStore = await cookies();
+        const token = cookieStore.get(jwtCookieName)?.value;
+        if (!token) return errorResponse('UNAUTHORIZED', 'No token', 401);
+
+        const res = await fetchFromAuth(
+          `/orgs/${orgId}/users/${authUserId}/permissions/${appSlug}`,
+          token,
+          { method: 'DELETE' },
+        );
+        if (res.status >= 400) {
+          const msg = res.data?.error?.message || res.data?.message || 'Error al eliminar permisos';
+          return errorResponse('AUTH_ERROR', msg, res.status);
+        }
+        if (audit) {
+          await audit({
+            orgId,
+            userId: ctx.auth.userRoleId,
+            accion: 'REVOCAR_PERMISOS_APP',
+            entidad: 'UserAppPermission',
+            entidadId: `${authUserId}:${appSlug}`,
+          }).catch(() => {});
+        }
+        return successResponse({ removed: true });
+      } catch (error) {
+        console.error('[admin/usuarios/app-perm] DELETE error:', error);
+        return errorResponse('INTERNAL_ERROR', 'Error al eliminar permisos', 500);
+      }
+    },
+  );
+
+  return { GET, PUT, DELETE };
+}
+
+// --------------------------------------------------------------------------
+// /api/admin/usuarios/apps-catalog/[appSlug]/permissions — GET
+//
+// Permission catalog (declared individual permissions) for a given app, so
+// the AppPermissionsDialog can render checkboxes grouped by `group`.
+// Pure passthrough to auth's /apps/:slug/permissions.
+// --------------------------------------------------------------------------
+
+export function createUsuariosAppPermsCatalogRoute(deps: UsuariosRoutesDeps) {
+  const { withPermission, successResponse, errorResponse, fetchFromAuth, jwtCookieName } = deps;
+
+  const GET = withPermission('admin:users')(
+    async (_req: NextRequest, ctx: AdminCtx<{ appSlug: string }>) => {
+      try {
+        const params = await ctx.params;
+        const { appSlug } = params;
+        // resolveOrgId might require it, but this is org-agnostic data.
+        // We still call resolveOrgId to keep the auth gate consistent.
+        getTargetOrgId(deps, ctx.auth, params);
+
+        const cookieStore = await cookies();
+        const token = cookieStore.get(jwtCookieName)?.value;
+        if (!token) return errorResponse('UNAUTHORIZED', 'No token', 401);
+
+        const res = await fetchFromAuth(`/apps/${appSlug}/permissions`, token);
+        if (res.status >= 400) {
+          const msg = res.data?.error?.message || res.data?.message || 'Error al cargar catálogo';
+          return errorResponse('AUTH_ERROR', msg, res.status);
+        }
+        const perms = res.data?.data?.permissions ?? res.data?.permissions ?? res.data ?? [];
+        return successResponse({ permissions: perms });
+      } catch (error) {
+        console.error('[admin/usuarios/apps-catalog/permissions] GET error:', error);
+        return errorResponse('INTERNAL_ERROR', 'Error al cargar catálogo', 500);
+      }
+    },
+  );
+
+  return { GET };
+}

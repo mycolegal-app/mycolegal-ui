@@ -11,6 +11,11 @@
  *
  * Catalog (apps + roles) is fetched once from `${apiBase}/apps-catalog`
  * — passed in as a prop so the parent panel can cache it across rows.
+ *
+ * Each app card has a Sliders icon that opens the AppPermissionsDialog
+ * for fine-grained per-app permission tuning (role + individual perms +
+ * data-row scopes). The icon stays visible only when the user has access
+ * to the app (i.e. checkbox is on).
  */
 
 import { useEffect, useMemo, useState } from 'react';
@@ -22,9 +27,11 @@ import {
   Ban,
   RotateCcw,
   Trash2,
+  SlidersHorizontal,
 } from 'lucide-react';
 
 import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -43,6 +50,7 @@ import {
 import { useI18n } from '../i18n/i18n-context';
 import { toast } from '../../hooks/use-toast';
 import type { UserRow } from './users-admin-panel';
+import { AppPermissionsDialog } from './app-permissions-dialog';
 
 export interface AppCatalogEntry {
   slug: string;
@@ -68,7 +76,23 @@ export interface UserPermissionsModalProps {
   /** Called when the user clicks "Eliminar al usuario" — delegates the
    *  destructive flow (and its confirmation dialog) to the parent panel. */
   onDeleteClick?: (user: UserRow) => void;
+  /** When true, expose the (i) Sliders icon per app card to open the
+   *  AppPermissionsDialog. Defaults to true. */
+  allowFineGrainedPerms?: boolean;
 }
+
+// Action button color tints — one shared palette so the toolbar reads as a
+// single grouped section while still distinguishing each action.
+const ACTION_BTN_BASE =
+  'h-auto py-3 px-2 flex flex-col items-center justify-center gap-1.5 text-center whitespace-normal leading-tight';
+const ACTION_TINT = {
+  info: 'border-blue-300 text-blue-700 hover:bg-blue-50 hover:text-blue-800 dark:border-blue-900/60 dark:text-blue-300 dark:hover:bg-blue-950/40',
+  promote:
+    'border-violet-300 text-violet-700 hover:bg-violet-50 hover:text-violet-800 dark:border-violet-900/60 dark:text-violet-300 dark:hover:bg-violet-950/40',
+  warn: 'border-amber-300 text-amber-700 hover:bg-amber-50 hover:text-amber-800 dark:border-amber-900/60 dark:text-amber-300 dark:hover:bg-amber-950/40',
+  destructive:
+    'border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive',
+};
 
 export function UserPermissionsModal(props: UserPermissionsModalProps) {
   const {
@@ -83,6 +107,7 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
     onClose,
     onSaved,
     onDeleteClick,
+    allowFineGrainedPerms = true,
   } = props;
   const { t } = useI18n();
 
@@ -101,8 +126,8 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
   const [resending, setResending] = useState(false);
   const [authBusy, setAuthBusy] = useState<null | 'role' | 'status'>(null);
   const [confirmSuspend, setConfirmSuspend] = useState(false);
+  const [permsDialogApp, setPermsDialogApp] = useState<AppCatalogEntry | null>(null);
 
-  // Reset state every time the modal opens for a different user.
   useEffect(() => {
     if (open) {
       setPermissions(new Map(initialPermissions));
@@ -265,7 +290,6 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
 
   async function toggleSuspend() {
     if (!isSuspended) {
-      // Suspending is reversible but worth confirming.
       setConfirmSuspend(true);
       return;
     }
@@ -293,80 +317,95 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
       <Dialog open={open} onOpenChange={(v) => (!v && !anyBusy ? onClose() : null)}>
         <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>{t('ui.usersAdmin.modalTitle', { name: user.displayName })}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2 flex-wrap">
+              <span>{t('ui.usersAdmin.modalTitle', { name: user.displayName })}</span>
+              {showOrgRole && !isSuperadmin && (
+                <Badge
+                  variant={isOrgAdmin ? 'default' : 'secondary'}
+                  className={
+                    isOrgAdmin
+                      ? 'bg-violet-100 text-violet-800 hover:bg-violet-100 dark:bg-violet-950/40 dark:text-violet-200'
+                      : ''
+                  }
+                >
+                  {isOrgAdmin
+                    ? t('ui.usersAdmin.badgeOrgAdmin')
+                    : t('ui.usersAdmin.badgeOrgUser')}
+                </Badge>
+              )}
+              {isSuperadmin && (
+                <Badge className="bg-amber-100 text-amber-900 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-200">
+                  superadmin
+                </Badge>
+              )}
+            </DialogTitle>
             <DialogDescription>{t('ui.usersAdmin.modalSubtitle')}</DialogDescription>
           </DialogHeader>
 
-          {/* Action toolbar — equal-width buttons in a 4-column grid. Each
-              button wraps its own state + permission semantics; disabled
-              when the action is not applicable to the current user. */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleResendInvitation}
-              disabled={!isInvited || anyBusy}
-              title={!isInvited ? t('ui.usersAdmin.statusEnum.invited') : undefined}
-              className="h-9 justify-center"
-            >
-              <MailPlus className="h-3.5 w-3.5 mr-1.5" />
-              <span className="truncate">
-                {resending
-                  ? t('ui.usersAdmin.btnResendingInvitation')
-                  : t('ui.usersAdmin.btnResendInvitation')}
-              </span>
-            </Button>
-
-            {showOrgRole && (
+          {/* Action toolbar — visually separated panel with vertical, equal-sized
+              buttons and semantic tints. Labels wrap so longer translations
+              ("Administratzaile gisa sustatu", "Promocionar a administrador")
+              don't get truncated. */}
+          <div className="rounded-lg border bg-muted/40 p-3">
+            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+              {t('ui.usersAdmin.actionsPanelLabel')}
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <Button
                 variant="outline"
-                size="sm"
-                onClick={togglePromote}
-                disabled={isSuperadmin || anyBusy}
-                className="h-9 justify-center"
+                onClick={handleResendInvitation}
+                disabled={!isInvited || anyBusy}
+                title={!isInvited ? t('ui.usersAdmin.statusEnum.invited') : undefined}
+                className={`${ACTION_BTN_BASE} ${ACTION_TINT.info}`}
               >
-                {isOrgAdmin ? (
-                  <User className="h-3.5 w-3.5 mr-1.5" />
-                ) : (
-                  <ShieldCheck className="h-3.5 w-3.5 mr-1.5" />
-                )}
-                <span className="truncate">
-                  {isOrgAdmin
-                    ? t('ui.usersAdmin.btnDemoteToUser')
-                    : t('ui.usersAdmin.btnPromoteToAdmin')}
+                <MailPlus className="h-4 w-4" />
+                <span className="text-xs">
+                  {resending
+                    ? t('ui.usersAdmin.btnResendingInvitation')
+                    : t('ui.usersAdmin.btnResendInvitation')}
                 </span>
               </Button>
-            )}
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={toggleSuspend}
-              disabled={isSuperadmin || anyBusy}
-              className="h-9 justify-center"
-            >
-              {isSuspended ? (
-                <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
-              ) : (
-                <Ban className="h-3.5 w-3.5 mr-1.5" />
+              {showOrgRole && (
+                <Button
+                  variant="outline"
+                  onClick={togglePromote}
+                  disabled={isSuperadmin || anyBusy}
+                  className={`${ACTION_BTN_BASE} ${ACTION_TINT.promote}`}
+                >
+                  {isOrgAdmin ? <User className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
+                  <span className="text-xs">
+                    {isOrgAdmin
+                      ? t('ui.usersAdmin.btnDemoteToUser')
+                      : t('ui.usersAdmin.btnPromoteToAdmin')}
+                  </span>
+                </Button>
               )}
-              <span className="truncate">
-                {isSuspended
-                  ? t('ui.usersAdmin.btnReactivate')
-                  : t('ui.usersAdmin.btnSuspend')}
-              </span>
-            </Button>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleDelete}
-              disabled={isSuperadmin || anyBusy || !onDeleteClick}
-              className="h-9 justify-center text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
-            >
-              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-              <span className="truncate">{t('ui.usersAdmin.btnDeleteUser')}</span>
-            </Button>
+              <Button
+                variant="outline"
+                onClick={toggleSuspend}
+                disabled={isSuperadmin || anyBusy}
+                className={`${ACTION_BTN_BASE} ${ACTION_TINT.warn}`}
+              >
+                {isSuspended ? <RotateCcw className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
+                <span className="text-xs">
+                  {isSuspended
+                    ? t('ui.usersAdmin.btnReactivate')
+                    : t('ui.usersAdmin.btnSuspend')}
+                </span>
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={handleDelete}
+                disabled={isSuperadmin || anyBusy || !onDeleteClick}
+                className={`${ACTION_BTN_BASE} ${ACTION_TINT.destructive}`}
+              >
+                <Trash2 className="h-4 w-4" />
+                <span className="text-xs">{t('ui.usersAdmin.btnDeleteUser')}</span>
+              </Button>
+            </div>
           </div>
 
           <div className="space-y-2 min-h-0 flex-1 flex flex-col">
@@ -420,22 +459,38 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
                         />
                       </label>
                       {access && (
-                        <Select
-                          value={role}
-                          onValueChange={(v) => setRole(app.slug, v)}
-                          disabled={anyBusy || app.roles.length === 0}
-                        >
-                          <SelectTrigger className="h-7 text-xs px-2 [&>span]:truncate">
-                            <SelectValue placeholder={t('ui.usersAdmin.pickRole')} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {app.roles.map((r) => (
-                              <SelectItem key={r.key} value={r.key} className="text-xs">
-                                {r.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="flex items-center gap-1.5">
+                          <Select
+                            value={role}
+                            onValueChange={(v) => setRole(app.slug, v)}
+                            disabled={anyBusy || app.roles.length === 0}
+                          >
+                            <SelectTrigger className="h-7 text-xs px-2 [&>span]:truncate flex-1">
+                              <SelectValue placeholder={t('ui.usersAdmin.pickRole')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {app.roles.map((r) => (
+                                <SelectItem key={r.key} value={r.key} className="text-xs">
+                                  {r.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {allowFineGrainedPerms && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setPermsDialogApp(app)}
+                              disabled={anyBusy}
+                              title={t('ui.usersAdmin.btnCustomizePermsTip')}
+                              aria-label={t('ui.usersAdmin.btnCustomizePerms')}
+                              className="h-7 w-7 p-0 shrink-0 text-muted-foreground hover:text-foreground"
+                            >
+                              <SlidersHorizontal className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </div>
                       )}
                     </div>
                   );
@@ -473,6 +528,17 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Per-app fine-grained permissions sub-dialog — opened via the (i)
+          Sliders icon on each app card. */}
+      <AppPermissionsDialog
+        open={!!permsDialogApp}
+        user={user}
+        app={permsDialogApp}
+        apiBase={apiBase}
+        onClose={() => setPermsDialogApp(null)}
+        onSaved={() => onSaved()}
+      />
     </>
   );
 }

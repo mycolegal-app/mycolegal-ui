@@ -453,7 +453,32 @@
       "toastUserSuspended": "Usuari suspès",
       "toastUserReactivated": "Usuari reactivat",
       "toastAuthChangeError": "Error en canviar l'estat de l'usuari",
-      "actionsHeader": "Accions"
+      "actionsHeader": "Accions",
+      "badgeOrgAdmin": "Administrador de l'organització",
+      "badgeOrgUser": "Usuari",
+      "actionsPanelLabel": "Accions",
+      "btnCustomizePerms": "Personalitzar permisos",
+      "btnCustomizePermsTip": "Permisos fins per a aquest usuari en aquesta app",
+      "permsDialogTitle": "Permisos de {name} a {app}",
+      "permsDialogSubtitle": "Ajusta el rol i els permisos individuals de l'usuari en aquesta app.",
+      "permsDialogRole": "Rol predefinit",
+      "permsDialogRoleNone": "— Sense rol (personalitzat) —",
+      "permsDialogIndividual": "Permisos individuals",
+      "permsDialogScopes": "Restriccions de dades",
+      "permsDialogScopesEmpty": "Sense restriccions — l'usuari veu totes les dades de l'app dins la seva organització.",
+      "permsDialogScopeAdd": "+ Afegir restricció",
+      "permsDialogScopeRemove": "Eliminar",
+      "permsDialogScopeResource": "Recurs",
+      "permsDialogScopeAttribute": "Atribut",
+      "permsDialogScopeOperator": "Operador",
+      "permsDialogScopeValues": "Valors",
+      "permsDialogScopesHint": "Cada restricció limita el que l'usuari pot llegir/escriure en aquesta app.",
+      "permsDialogNoCatalog": "Aquesta app encara no ha declarat permisos ni rols.",
+      "permsDialogLoading": "Carregant permisos…",
+      "permsDialogSave": "Desar permisos",
+      "permsDialogSaving": "Desant…",
+      "toastPermsSaved": "Permisos actualitzats",
+      "toastPermsError": "Error en desar els permisos"
     }
   }
 }

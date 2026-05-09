@@ -453,7 +453,32 @@
       "toastUserSuspended": "Erabiltzailea esekita",
       "toastUserReactivated": "Erabiltzailea berraktibatuta",
       "toastAuthChangeError": "Errorea erabiltzailearen egoera aldatzean",
-      "actionsHeader": "Ekintzak"
+      "actionsHeader": "Ekintzak",
+      "badgeOrgAdmin": "Erakundeko administratzailea",
+      "badgeOrgUser": "Erabiltzailea",
+      "actionsPanelLabel": "Ekintzak",
+      "btnCustomizePerms": "Baimenak pertsonalizatu",
+      "btnCustomizePermsTip": "Erabiltzaile honentzat baimen finak app honetan",
+      "permsDialogTitle": "{name}-en baimenak {app}-en",
+      "permsDialogSubtitle": "Egokitu erabiltzailearen rola eta banakako baimenak app honetan.",
+      "permsDialogRole": "Aurredefinitutako rola",
+      "permsDialogRoleNone": "— Rolik gabe (pertsonalizatua) —",
+      "permsDialogIndividual": "Banakako baimenak",
+      "permsDialogScopes": "Datuen mugak",
+      "permsDialogScopesEmpty": "Mugarik ez — erabiltzaileak app-ko datu guztiak ikusten ditu.",
+      "permsDialogScopeAdd": "+ Muga gehitu",
+      "permsDialogScopeRemove": "Ezabatu",
+      "permsDialogScopeResource": "Baliabidea",
+      "permsDialogScopeAttribute": "Atributua",
+      "permsDialogScopeOperator": "Operadorea",
+      "permsDialogScopeValues": "Balioak",
+      "permsDialogScopesHint": "Muga bakoitzak erabiltzaileak app honetan irakur/idatz dezakeena mugatzen du.",
+      "permsDialogNoCatalog": "App honek ez ditu baimenik edo rolik adierazi oraindik.",
+      "permsDialogLoading": "Baimenak kargatzen…",
+      "permsDialogSave": "Baimenak gorde",
+      "permsDialogSaving": "Gordetzen…",
+      "toastPermsSaved": "Baimenak eguneratu dira",
+      "toastPermsError": "Errorea baimenak gordetzean"
     }
   }
 }

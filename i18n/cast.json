@@ -453,7 +453,32 @@
       "toastUserSuspended": "Usuario suspendido",
       "toastUserReactivated": "Usuario reactivado",
       "toastAuthChangeError": "Error al cambiar el estado del usuario",
-      "actionsHeader": "Acciones"
+      "actionsHeader": "Acciones",
+      "badgeOrgAdmin": "Administrador de la organización",
+      "badgeOrgUser": "Usuario",
+      "actionsPanelLabel": "Acciones",
+      "btnCustomizePerms": "Personalizar permisos",
+      "btnCustomizePermsTip": "Permisos finos para este usuario en esta app",
+      "permsDialogTitle": "Permisos de {name} en {app}",
+      "permsDialogSubtitle": "Ajusta el rol y los permisos individuales del usuario en esta app.",
+      "permsDialogRole": "Rol predefinido",
+      "permsDialogRoleNone": "— Sin rol (personalizado) —",
+      "permsDialogIndividual": "Permisos individuales",
+      "permsDialogScopes": "Restricciones de datos",
+      "permsDialogScopesEmpty": "Sin restricciones — el usuario ve todos los datos de la app dentro de su organización.",
+      "permsDialogScopeAdd": "+ Añadir restricción",
+      "permsDialogScopeRemove": "Eliminar",
+      "permsDialogScopeResource": "Recurso",
+      "permsDialogScopeAttribute": "Atributo",
+      "permsDialogScopeOperator": "Operador",
+      "permsDialogScopeValues": "Valores",
+      "permsDialogScopesHint": "Cada restricción limita lo que el usuario puede leer/escribir en esta app.",
+      "permsDialogNoCatalog": "Esta app no ha declarado permisos ni roles aún.",
+      "permsDialogLoading": "Cargando permisos…",
+      "permsDialogSave": "Guardar permisos",
+      "permsDialogSaving": "Guardando…",
+      "toastPermsSaved": "Permisos actualizados",
+      "toastPermsError": "Error al guardar permisos"
     }
   }
 }
