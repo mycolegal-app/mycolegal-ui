@@ -120,8 +120,12 @@ export function AppPermissionsDialog({
         };
         if (currentRes.ok) {
           const d = await currentRes.json();
-          const payload = d.data ?? d;
-          if (payload) {
+          // El factory devuelve { data: null } cuando el usuario aún no tiene
+          // UserAppPermission para esta app. `??` no sirve aquí porque null
+          // es nullish — usar `'data' in d` para distinguir "sin envoltorio"
+          // de "envoltorio con null intencionado".
+          const payload = d && typeof d === 'object' && 'data' in d ? d.data : d;
+          if (payload && typeof payload === 'object') {
             current = {
               appRoleKey: payload.appRoleKey ?? null,
               permissions: payload.permissions ?? [],
@@ -151,9 +155,14 @@ export function AppPermissionsDialog({
     };
   }, [open, user, app, apiBase]);
 
+  // Radix Select doesn't allow empty-string item values (reserved for
+  // "no selection"). We use a sentinel for the "no role / custom" entry
+  // and translate to/from null at the boundary.
+  const ROLE_NONE = '__none__';
+
   function setRole(roleKey: string) {
     if (!app) return;
-    if (roleKey === '') {
+    if (roleKey === ROLE_NONE) {
       setState((s) => ({ ...s, appRoleKey: null }));
       return;
     }
@@ -267,7 +276,7 @@ export function AppPermissionsDialog({
                   {t('ui.usersAdmin.permsDialogRole')}
                 </label>
                 <Select
-                  value={state.appRoleKey ?? ''}
+                  value={state.appRoleKey ?? ROLE_NONE}
                   onValueChange={setRole}
                   disabled={saving}
                 >
@@ -275,7 +284,7 @@ export function AppPermissionsDialog({
                     <SelectValue placeholder={t('ui.usersAdmin.permsDialogRoleNone')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">
+                    <SelectItem value={ROLE_NONE}>
                       {t('ui.usersAdmin.permsDialogRoleNone')}
                     </SelectItem>
                     {app.roles.map((r) => (

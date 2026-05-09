@@ -1196,7 +1196,16 @@ export function createUsuariosAppPermsCatalogRoute(deps: UsuariosRoutesDeps) {
           const msg = res.data?.error?.message || res.data?.message || 'Error al cargar catálogo';
           return errorResponse('AUTH_ERROR', msg, res.status);
         }
-        const perms = res.data?.data?.permissions ?? res.data?.permissions ?? res.data ?? [];
+        // Auth devuelve `{ data: AppPermission[] }` directo. fetchFromAuth ya
+        // parsea JSON, así que res.data === { data: [...] }. Desempaquetamos
+        // un nivel y normalizamos al shape `{ permissions: [...] }` que el
+        // AppPermissionsDialog espera.
+        const inner = (res.data as any)?.data;
+        const perms = Array.isArray(inner)
+          ? inner
+          : Array.isArray(res.data)
+            ? (res.data as any)
+            : [];
         return successResponse({ permissions: perms });
       } catch (error) {
         console.error('[admin/usuarios/apps-catalog/permissions] GET error:', error);
