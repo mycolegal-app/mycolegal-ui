@@ -342,6 +342,14 @@
     "appShell": {
       "openMobileMenu": "Alboko menua ireki"
     },
+    "sidebar": {
+      "goHome": "Hasierara joan",
+      "admin": "Administrazioa",
+      "settings": "Konfigurazioa",
+      "manual": "Eskuliburua",
+      "signOut": "Saioa itxi",
+      "openAccount": "Nire kontua ireki"
+    },
     "idleTimeout": {
       "title": "Saioa iraungitzear",
       "errTitle": "Ezin izan da saioa berritu",

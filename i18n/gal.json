@@ -342,6 +342,14 @@
     "appShell": {
       "openMobileMenu": "Abrir menú lateral"
     },
+    "sidebar": {
+      "goHome": "Ir ao inicio",
+      "admin": "Administración",
+      "settings": "Configuración",
+      "manual": "Manual",
+      "signOut": "Pechar sesión",
+      "openAccount": "Abrir a miña conta"
+    },
     "idleTimeout": {
       "title": "Sesión a piques de expirar",
       "errTitle": "Non se puido renovar a sesión",

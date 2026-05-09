@@ -8,3 +8,5 @@ export type { AppInfo } from "./app-switcher";
 export { MyAppsSection } from "./my-apps-section";
 export { SidebarFlyout } from "./sidebar-flyout";
 export { IdleTimeout } from "./idle-timeout";
+export { AppSidebar } from "./app-sidebar";
+export type { AppSidebarProps, AppSidebarNavItem } from "./app-sidebar";

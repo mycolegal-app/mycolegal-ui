@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <radialGradient id="bg-can" cx="0.32" cy="0.22" r="1">
+      <stop offset="0" stop-color="#FCEAB0"></stop>
+      <stop offset="0.45" stop-color="#DDA85A"></stop>
+      <stop offset="1" stop-color="#6E4914"></stop>
+    </radialGradient>
+    <linearGradient id="rim-can" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFE9B3" stop-opacity="0.85"></stop>
+      <stop offset="0.5" stop-color="#9A6A1F" stop-opacity="0.5"></stop>
+      <stop offset="1" stop-color="#FFE9B3" stop-opacity="0.7"></stop>
+    </linearGradient>
+    <linearGradient id="ink-can" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3B2308"></stop>
+      <stop offset="0.5" stop-color="#1a0e02"></stop>
+      <stop offset="1" stop-color="#0a0500"></stop>
+    </linearGradient>
+
+    <symbol id="can-icon" viewBox="0 0 64 64">
+      <g fill-rule="evenodd">
+        <path d="M 16 10 Q 14 10 14 12 V 52 Q 14 54 16 54 L 48 54 Q 50 54 50 52 V 22 L 38 10 Z"></path>
+        <path fill="#FCEAB0" d="M 38 10 L 38 22 L 50 22 Z"></path>
+        <path fill="none" stroke="#8A5E18" stroke-width="0.9" stroke-linecap="round" d="M 38 10 L 50 22"></path>
+        <path fill="#DDA85A" opacity="0.45" d="M 38 14 L 38 22 L 46 22 Z"></path>
+        <g fill="none" stroke="#FCEAB0" stroke-linecap="round">
+          <circle cx="32" cy="40" r="9" stroke-width="2.6" stroke="#B07A28"></circle>
+          <line x1="28" y1="36" x2="36" y2="44" stroke-width="2.6"></line>
+          <line x1="36" y1="36" x2="28" y2="44" stroke-width="2.6"></line>
+        </g>
+      </g>
+    </symbol>
+  </defs>
+
+  <rect width="64" height="64" rx="14" fill="url(#bg-can)"></rect>
+  <rect x="0.6" y="0.6" width="62.8" height="62.8" rx="13.4" fill="none" stroke="url(#rim-can)" stroke-width="0.9"></rect>
+  <rect x="2.4" y="2.4" width="59.2" height="59.2" rx="11.6" fill="none" stroke="#FFEED0" stroke-width="0.5" stroke-opacity="0.45"></rect>
+
+  <g opacity="0.7"><use href="#can-icon" width="64" height="64" fill="#FFEFC0" transform="translate(0.5,0.9)"></use></g>
+  <use href="#can-icon" width="64" height="64" fill="url(#ink-can)"></use>
+</svg>

@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <radialGradient id="bg-cons" cx="0.32" cy="0.22" r="1">
+      <stop offset="0" stop-color="#FCEAB0"></stop>
+      <stop offset="0.45" stop-color="#DDA85A"></stop>
+      <stop offset="1" stop-color="#6E4914"></stop>
+    </radialGradient>
+    <linearGradient id="rim-cons" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFE9B3" stop-opacity="0.85"></stop>
+      <stop offset="0.5" stop-color="#9A6A1F" stop-opacity="0.5"></stop>
+      <stop offset="1" stop-color="#FFE9B3" stop-opacity="0.7"></stop>
+    </linearGradient>
+    <linearGradient id="ink-cons" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3B2308"></stop>
+      <stop offset="0.5" stop-color="#1a0e02"></stop>
+      <stop offset="1" stop-color="#0a0500"></stop>
+    </linearGradient>
+
+    <symbol id="cons-icon" viewBox="0 0 64 64">
+      <g fill-rule="evenodd">
+        
+        <path d="&#xA;          M 8 14&#xA;          Q 16 12 22 13&#xA;          Q 28 14 32 17&#xA;          Q 36 14 42 13&#xA;          Q 48 12 56 14&#xA;          L 56 50&#xA;          Q 48 48 42 49&#xA;          Q 36 50 32 53&#xA;          Q 28 50 22 49&#xA;          Q 16 48 8 50&#xA;          Z&#xA;        "></path>
+        
+        <path d="&#xA;          M 18 13.2&#xA;          L 18 32&#xA;          L 22 28.5&#xA;          L 26 32&#xA;          L 26 13.6&#xA;          Z&#xA;        " fill="#FCEAB0"></path>
+        
+        <path fill-rule="evenodd" d="&#xA;          M 38 22&#xA;          Q 36 22 36 24&#xA;          V 36&#xA;          Q 36 38 38 38&#xA;          H 41&#xA;          L 41 41.5&#xA;          L 44.5 38&#xA;          H 50&#xA;          Q 52 38 52 36&#xA;          V 24&#xA;          Q 52 22 50 22&#xA;          Z&#xA;          M 38.5 24.5&#xA;          H 49.5&#xA;          Q 50 24.5 50 25&#xA;          V 35&#xA;          Q 50 35.5 49.5 35.5&#xA;          H 43.6&#xA;          L 41.6 37.5&#xA;          L 41.6 35.5&#xA;          H 38.5&#xA;          Q 38 35.5 38 35&#xA;          V 25&#xA;          Q 38 24.5 38.5 24.5&#xA;          Z&#xA;        " fill="#FCEAB0"></path>
+        
+        <circle cx="44" cy="27.4" r="0.9" fill="#FCEAB0"></circle>
+        <rect x="43.2" y="29.4" width="1.6" height="5.4" fill="#FCEAB0"></rect>
+      </g>
+    </symbol>
+  </defs>
+
+  <rect width="64" height="64" rx="14" fill="url(#bg-cons)"></rect>
+  <rect x="0.6" y="0.6" width="62.8" height="62.8" rx="13.4" fill="none" stroke="url(#rim-cons)" stroke-width="0.9"></rect>
+  <rect x="2.4" y="2.4" width="59.2" height="59.2" rx="11.6" fill="none" stroke="#FFEED0" stroke-width="0.5" stroke-opacity="0.45"></rect>
+
+  <g opacity="0.7" transform="translate(32 32) scale(0.78) translate(-32 -32)"><use href="#cons-icon" width="64" height="64" fill="#FFEFC0" transform="translate(0.5,0.9)"></use></g>
+  <g transform="translate(32 32) scale(0.78) translate(-32 -32)"><use href="#cons-icon" width="64" height="64" fill="url(#ink-cons)"></use></g>
+</svg>

@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <radialGradient id="bg-act" cx="0.32" cy="0.22" r="1">
+      <stop offset="0" stop-color="#FCEAB0"></stop>
+      <stop offset="0.45" stop-color="#DDA85A"></stop>
+      <stop offset="1" stop-color="#6E4914"></stop>
+    </radialGradient>
+    <linearGradient id="rim-act" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFE9B3" stop-opacity="0.85"></stop>
+      <stop offset="0.5" stop-color="#9A6A1F" stop-opacity="0.5"></stop>
+      <stop offset="1" stop-color="#FFE9B3" stop-opacity="0.7"></stop>
+    </linearGradient>
+    <linearGradient id="ink-act" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3B2308"></stop>
+      <stop offset="0.5" stop-color="#1a0e02"></stop>
+      <stop offset="1" stop-color="#0a0500"></stop>
+    </linearGradient>
+
+    <symbol id="act-icon" viewBox="0 0 64 64">
+      <g fill-rule="evenodd">
+        
+        <path d="&#xA;          M 13 11&#xA;          Q 11 11 11 13&#xA;          Q 11 15 13 15&#xA;          L 13 15&#xA;          L 13 11&#xA;          Z&#xA;        "></path>
+
+        
+        <rect x="11" y="10" width="42" height="8" rx="2"></rect>
+        
+        <rect x="17.5" y="11.4" width="29" height="5.2" fill="#FCEAB0"></rect>
+
+        
+        <path fill="#FCEAB0" d="&#xA;          M 18 18&#xA;          L 46 18&#xA;          L 46 19.6&#xA;          Q 47 20 47 20.8&#xA;          Q 47 21.6 46 22&#xA;          L 46 42&#xA;          Q 47 42.4 47 43.2&#xA;          Q 47 44 46 44.4&#xA;          L 46 46&#xA;          L 18 46&#xA;          L 18 44.4&#xA;          Q 17 44 17 43.2&#xA;          Q 17 42.4 18 42&#xA;          L 18 22&#xA;          Q 17 21.6 17 20.8&#xA;          Q 17 20 18 19.6&#xA;          Z&#xA;        "></path>
+
+        
+        <rect x="11" y="46" width="42" height="8" rx="2"></rect>
+        
+        <rect x="17.5" y="47.4" width="29" height="5.2" fill="#FCEAB0"></rect>
+
+        
+        
+        <circle cx="32" cy="32" r="12.5"></circle>
+        <circle cx="32" cy="32" r="10.4" fill="none" stroke="#FCEAB0" stroke-width="0.7" stroke-dasharray="1 1.2"></circle>
+        <text x="32" y="36.6" text-anchor="middle" font-family="Georgia, serif" font-size="15.5" font-weight="700" fill="#FCEAB0" stroke="none">A</text>
+        <path d="M 27.6 41.6 L 24.4 50 L 27.2 48.8 L 28.8 50.4 L 30.4 41.6 Z"></path>
+        <path d="M 36.4 41.6 L 39.6 50 L 36.8 48.8 L 35.2 50.4 L 33.6 41.6 Z"></path>
+      </g>
+    </symbol>
+  </defs>
+
+  <rect width="64" height="64" rx="14" fill="url(#bg-act)"></rect>
+  <rect x="0.6" y="0.6" width="62.8" height="62.8" rx="13.4" fill="none" stroke="url(#rim-act)" stroke-width="0.9"></rect>
+  <rect x="2.4" y="2.4" width="59.2" height="59.2" rx="11.6" fill="none" stroke="#FFEED0" stroke-width="0.5" stroke-opacity="0.45"></rect>
+
+  <g opacity="0.7"><use href="#act-icon" width="64" height="64" fill="#FFEFC0" transform="translate(0.5,0.9)"></use></g>
+  <use href="#act-icon" width="64" height="64" fill="url(#ink-act)"></use>
+</svg>

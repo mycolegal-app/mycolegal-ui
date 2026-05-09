@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <radialGradient id="bg-tri" cx="0.32" cy="0.22" r="1">
+      <stop offset="0" stop-color="#FCEAB0"></stop>
+      <stop offset="0.45" stop-color="#DDA85A"></stop>
+      <stop offset="1" stop-color="#6E4914"></stop>
+    </radialGradient>
+    <linearGradient id="rim-tri" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFE9B3" stop-opacity="0.85"></stop>
+      <stop offset="0.5" stop-color="#9A6A1F" stop-opacity="0.5"></stop>
+      <stop offset="1" stop-color="#FFE9B3" stop-opacity="0.7"></stop>
+    </linearGradient>
+    <linearGradient id="ink-tri" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3B2308"></stop>
+      <stop offset="0.5" stop-color="#1a0e02"></stop>
+      <stop offset="1" stop-color="#0a0500"></stop>
+    </linearGradient>
+
+    <symbol id="tri-icon" viewBox="0 0 64 64">
+      <g fill-rule="evenodd">
+        
+        <path d="&#xA;          M 18 12&#xA;          L 46 12&#xA;          Q 47 12 47 13&#xA;          L 47 32&#xA;          Q 47 42 39 48&#xA;          Q 34 51.5 32 52.5&#xA;          Q 30 51.5 25 48&#xA;          Q 17 42 17 32&#xA;          L 17 13&#xA;          Q 17 12 18 12&#xA;          Z&#xA;        "></path>
+        
+        <g fill="#FCEAB0">
+          <rect x="20" y="15.5" width="24" height="1.4"></rect>
+        </g>
+        
+        <g fill="#FCEAB0">
+          
+          <path d="&#xA;            M 39.5 21&#xA;            L 41.8 22.2&#xA;            L 25.5 44&#xA;            L 23.2 42.8&#xA;            Z&#xA;          "></path>
+          
+          <path d="&#xA;            M 26 20&#xA;            Q 22 20 22 24.5&#xA;            Q 22 29 26 29&#xA;            Q 30 29 30 24.5&#xA;            Q 30 20 26 20&#xA;            Z&#xA;            M 26 22.4&#xA;            Q 27.6 22.4 27.6 24.5&#xA;            Q 27.6 26.6 26 26.6&#xA;            Q 24.4 26.6 24.4 24.5&#xA;            Q 24.4 22.4 26 22.4&#xA;            Z&#xA;          "></path>
+          
+          <path d="&#xA;            M 38 35&#xA;            Q 34 35 34 39.5&#xA;            Q 34 44 38 44&#xA;            Q 42 44 42 39.5&#xA;            Q 42 35 38 35&#xA;            Z&#xA;            M 38 37.4&#xA;            Q 39.6 37.4 39.6 39.5&#xA;            Q 39.6 41.6 38 41.6&#xA;            Q 36.4 41.6 36.4 39.5&#xA;            Q 36.4 37.4 38 37.4&#xA;            Z&#xA;          "></path>
+        </g>
+      </g>
+    </symbol>
+  </defs>
+
+  <rect width="64" height="64" rx="14" fill="url(#bg-tri)"></rect>
+  <rect x="0.6" y="0.6" width="62.8" height="62.8" rx="13.4" fill="none" stroke="url(#rim-tri)" stroke-width="0.9"></rect>
+  <rect x="2.4" y="2.4" width="59.2" height="59.2" rx="11.6" fill="none" stroke="#FFEED0" stroke-width="0.5" stroke-opacity="0.45"></rect>
+
+  <g opacity="0.7"><use href="#tri-icon" width="64" height="64" fill="#FFEFC0" transform="translate(0.5,0.9)"></use></g>
+  <use href="#tri-icon" width="64" height="64" fill="url(#ink-tri)"></use>
+</svg>

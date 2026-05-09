@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <radialGradient id="bg-arc" cx="0.32" cy="0.22" r="1">
+      <stop offset="0" stop-color="#FCEAB0"></stop>
+      <stop offset="0.45" stop-color="#DDA85A"></stop>
+      <stop offset="1" stop-color="#6E4914"></stop>
+    </radialGradient>
+    <linearGradient id="rim-arc" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFE9B3" stop-opacity="0.85"></stop>
+      <stop offset="0.5" stop-color="#9A6A1F" stop-opacity="0.5"></stop>
+      <stop offset="1" stop-color="#FFE9B3" stop-opacity="0.7"></stop>
+    </linearGradient>
+    <linearGradient id="ink-arc" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3B2308"></stop>
+      <stop offset="0.5" stop-color="#1a0e02"></stop>
+      <stop offset="1" stop-color="#0a0500"></stop>
+    </linearGradient>
+
+    <symbol id="arc-icon" viewBox="0 0 64 64">
+      <g fill-rule="evenodd" transform="translate(32 32) scale(0.78) translate(-32 -32)">
+        
+        <path d="M 14 10 Q 12 10 12 12 V 52 Q 12 54 14 54 H 50 Q 52 54 52 52 V 12 Q 52 10 50 10 Z"></path>
+
+        
+        <path fill="none" stroke="#FCEAB0" stroke-width="1.4" stroke-linejoin="round" d="M 14 10 Q 12 10 12 12 V 52 Q 12 54 14 54 H 50 Q 52 54 52 52 V 12 Q 52 10 50 10 Z"></path>
+
+        
+        <rect x="14" y="24" width="36" height="1.2" fill="#FCEAB0"></rect>
+        <rect x="14" y="37.5" width="36" height="1.2" fill="#FCEAB0"></rect>
+
+        
+        <rect x="28" y="17.5" width="8" height="2.4" rx="1.2" fill="#FCEAB0"></rect>
+        <rect x="18" y="14.6" width="6" height="4.4" rx="0.6" fill="none" stroke="#FCEAB0" stroke-width="0.6"></rect>
+        <line x1="19" y1="16.8" x2="23" y2="16.8" stroke="#FCEAB0" stroke-width="0.7"></line>
+
+        
+        <rect x="28" y="31" width="8" height="2.4" rx="1.2" fill="#FCEAB0"></rect>
+        <rect x="18" y="28.1" width="6" height="4.4" rx="0.6" fill="none" stroke="#FCEAB0" stroke-width="0.6"></rect>
+        <line x1="19" y1="30.3" x2="23" y2="30.3" stroke="#FCEAB0" stroke-width="0.7"></line>
+
+        
+        <rect x="28" y="44.5" width="8" height="2.4" rx="1.2" fill="#FCEAB0"></rect>
+        <rect x="18" y="41.6" width="6" height="4.4" rx="0.6" fill="none" stroke="#FCEAB0" stroke-width="0.6"></rect>
+        <line x1="19" y1="43.8" x2="23" y2="43.8" stroke="#FCEAB0" stroke-width="0.7"></line>
+      </g>
+    </symbol>
+  </defs>
+
+  <rect width="64" height="64" rx="14" fill="url(#bg-arc)"></rect>
+  <rect x="0.6" y="0.6" width="62.8" height="62.8" rx="13.4" fill="none" stroke="url(#rim-arc)" stroke-width="0.9"></rect>
+  <rect x="2.4" y="2.4" width="59.2" height="59.2" rx="11.6" fill="none" stroke="#FFEED0" stroke-width="0.5" stroke-opacity="0.45"></rect>
+
+  <g opacity="0.7"><use href="#arc-icon" width="64" height="64" fill="#FFEFC0" transform="translate(0.5,0.9)"></use></g>
+  <use href="#arc-icon" width="64" height="64" fill="url(#ink-arc)"></use>
+</svg>
