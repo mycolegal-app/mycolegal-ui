@@ -309,7 +309,8 @@
       "searching": "Bilatzen…",
       "noResults": "Ez da emaitzarik aurkitu",
       "clearAria": "Aukeraketa kendu",
-      "createNew": "+ Sortu bezero berria"
+      "createNew": "+ Sortu bezero berria",
+      "createInline": "Alta"
     },
     "dataTable": {
       "searchPlaceholder": "Bilatu...",

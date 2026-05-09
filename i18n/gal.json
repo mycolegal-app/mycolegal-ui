@@ -309,7 +309,8 @@
       "searching": "Buscando…",
       "noResults": "Non se atoparon resultados",
       "clearAria": "Quitar selección",
-      "createNew": "+ Crear novo cliente"
+      "createNew": "+ Crear novo cliente",
+      "createInline": "Alta"
     },
     "dataTable": {
       "searchPlaceholder": "Buscar...",

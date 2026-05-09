@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { UserPlus } from "lucide-react";
 import { useI18n } from "../i18n/i18n-context";
 
 export interface ClientOption {
@@ -64,6 +65,7 @@ export function ClientPicker({
   const [options, setOptions] = useState<ClientOption[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [searchedEmpty, setSearchedEmpty] = useState(false);
   const [selectedLabel, setSelectedLabel] = useState("");
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -96,8 +98,10 @@ export function ClientPicker({
   useEffect(() => {
     if (query.length < 2) {
       setOptions([]);
+      setSearchedEmpty(false);
       return;
     }
+    setSearchedEmpty(false);
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
@@ -105,9 +109,12 @@ export function ClientPicker({
           `${apiBase}?search=${encodeURIComponent(query)}&pageSize=10`,
         );
         const json = await res.json();
-        if (json.data) setOptions(json.data);
+        const items: ClientOption[] = json.data ?? [];
+        setOptions(items);
+        setSearchedEmpty(items.length === 0);
       } catch {
         setOptions([]);
+        setSearchedEmpty(true);
       } finally {
         setLoading(false);
       }
@@ -132,7 +139,10 @@ export function ClientPicker({
     onChange("");
     setSelectedLabel("");
     setQuery("");
+    setSearchedEmpty(false);
   }
+
+  const showCreateBtn = Boolean(onCreateNew) && !value && searchedEmpty && !loading;
 
   return (
     <div ref={wrapperRef} className="relative">
@@ -154,17 +164,33 @@ export function ClientPicker({
           </button>
         </div>
       ) : (
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setOpen(true);
-          }}
-          onFocus={() => query.length >= 2 && setOpen(true)}
-          placeholder={resolvedPlaceholder}
-          className="w-full rounded-md border px-3 py-2 text-sm"
-        />
+        <div className="flex items-stretch gap-2">
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setOpen(true);
+            }}
+            onFocus={() => query.length >= 2 && setOpen(true)}
+            placeholder={resolvedPlaceholder}
+            className="flex-1 rounded-md border px-3 py-2 text-sm"
+          />
+          {showCreateBtn && (
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onCreateNew?.();
+              }}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-cyan-200 bg-cyan-50 px-3 py-2 text-sm font-medium text-cyan-700 hover:bg-cyan-100"
+              title={t("ui.clientPicker.createNew")}
+            >
+              <UserPlus className="h-4 w-4" />
+              {t("ui.clientPicker.createInline")}
+            </button>
+          )}
+        </div>
       )}
       {open && (query.length >= 2 || options.length > 0) && (
         <div className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border bg-white shadow-lg">

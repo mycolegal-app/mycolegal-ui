@@ -309,7 +309,8 @@
       "searching": "Cercant…",
       "noResults": "No s'han trobat resultats",
       "clearAria": "Treure la selecció",
-      "createNew": "+ Crear nou client"
+      "createNew": "+ Crear nou client",
+      "createInline": "Alta"
     },
     "dataTable": {
       "searchPlaceholder": "Cercar...",
