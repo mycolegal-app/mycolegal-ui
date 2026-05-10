@@ -38,6 +38,8 @@ interface ActPickerProps {
   apiBase?: string;
   /** Tamaño de página al abrir o filtrar. Default 50. */
   pageSize?: number;
+  /** data-testid aplicado al input para tests e2e. */
+  testId?: string;
 }
 
 /**
@@ -60,6 +62,7 @@ export function ActPicker({
   required,
   apiBase = "/api/catalogs/actos-juridicos",
   pageSize = 50,
+  testId,
 }: ActPickerProps) {
   const { t } = useI18n();
   const resolvedPlaceholder = placeholder ?? t("ui.actPicker.placeholder");
@@ -120,8 +123,18 @@ export function ActPicker({
       try {
         const res = await fetch(buildUrl(1));
         const json = await res.json();
-        setOptions(json.data ?? []);
-        setTotal(json.meta?.total ?? json.data?.length ?? 0);
+        const data: ActOption[] = json.data ?? [];
+        setOptions(data);
+        setTotal(json.meta?.total ?? data.length);
+        // Auto-pick por código exacto: si la query coincide letra-a-letra
+        // con un `codigo`, seleccionamos automáticamente. Replica el
+        // comportamiento del antiguo SearchableSelect, útil para flujos
+        // donde el usuario pega un código completo (e2e, scripts).
+        const v = query.trim().toLowerCase();
+        if (v) {
+          const exact = data.find((o) => (o.codigo ?? "").toLowerCase() === v);
+          if (exact) handleSelect(exact);
+        }
       } catch {
         setOptions([]);
         setTotal(0);
@@ -206,6 +219,7 @@ export function ActPicker({
           onFocus={() => setOpen(true)}
           placeholder={resolvedPlaceholder}
           className="w-full rounded-md border px-3 py-2 text-sm"
+          data-testid={testId}
         />
       )}
       {open && !value && (
