@@ -39,6 +39,12 @@ export { EmailConfigForm, deriveProvider } from './components/shared/email-confi
 export type { EmailConfigValues, EmailProvider, EmailConfigFormProps } from './components/shared/email-config-form';
 export { EmailTemplatesManager } from './components/shared/email-templates-manager';
 export type { EmailTemplateEntry, EmailTemplatesManagerProps } from './components/shared/email-templates-manager';
+export { DocumentProducer } from './components/shared/document-producer';
+export type {
+  DocumentProducerProps,
+  DocumentProducerResolution,
+  DocumentFieldSpec,
+} from './components/shared/document-producer';
 export { IncidentReporter } from './components/shared/incident-reporter';
 export { UserAccountDialog } from './components/shared/user-account-dialog';
 export { SpainCCAAMap } from './components/shared/spain-ccaa-map';

@@ -5,6 +5,29 @@
 
 ---
 
+## 1.53.0 — `DocumentProducer`: helper compartido para producción de documentos (auto/manual) (2026-05-10)
+
+Type: **minor**
+
+Componente compartido para cualquier app que produce documentos: actas,
+cancelaciones, consultor. Maneja los dos caminos:
+
+- **Auto**: invoca al engine de la app (local RTF o DocFilling Python si
+  está contratado) y adjunta el resultado al expediente.
+- **Manual**: ficha con (a) instrucciones paso a paso, (b) descarga de la
+  plantilla en blanco vía signed URL, (c) tabla "datos a usar" con
+  botón 📋 copiar por celda, (d) input de subida del documento producido.
+
+El modo se decide en runtime por el endpoint `resolve` que la app
+inyecta como prop (la app envuelve `GET auth /document-templates/.../resolve`
+con su propio GCS para signed URLs). Si el modo es `auto+manual` se
+muestra tabs para que el oficial elija.
+
+API expuesta:
+- `<DocumentProducer />` con props `resolve, values, uploadEndpoint, generateEndpoint?, onProduced?`.
+- Tipos `DocumentProducerProps`, `DocumentProducerResolution`, `DocumentFieldSpec` exportados desde el index.
+
+
 ## 1.51.1 — `ActPicker`: scroll infinito + orden alfabético (2026-05-09)
 
 Type: **patch**
