@@ -65,6 +65,7 @@ export { ClientPicker } from './components/shared/client-picker';
 export type { ClientOption } from './components/shared/client-picker';
 export { ActPicker } from './components/shared/act-picker';
 export type { ActOption } from './components/shared/act-picker';
+export { ActSearchBox } from './components/shared/act-search-box';
 export { IdleTimeout } from './components/layout/idle-timeout';
 
 // Utilities

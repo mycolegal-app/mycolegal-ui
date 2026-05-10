@@ -14,28 +14,39 @@ interface ActPickerProps {
   /** ID del acto jurídico seleccionado. Cadena vacía = ninguno. */
   value: string;
   onChange: (actId: string) => void;
+  /**
+   * Notifica también el objeto completo del acto seleccionado en el
+   * mismo evento de cambio. Útil cuando el caller quiere mostrar
+   * codigo/nombre/categoria sin re-fetchear (p.ej. multi-select
+   * acumulativo donde el padre lleva su propia lista visualizada).
+   */
+  onPick?: (act: ActOption) => void;
   placeholder?: string;
   label?: string;
   required?: boolean;
   /**
    * Endpoint base. Default `/api/catalogs/actos-juridicos` (notaria).
    * Forma esperada del backend:
-   *   GET {apiBase}?search=<q>&pageSize=<n>  → { data: ActOption[] }
-   *   GET {apiBase}/{id}                      → { data: ActOption }
+   *   GET {apiBase}?search=<q>&page=<n>&pageSize=<m>&sortBy=<f>&sortOrder=<o>
+   *     → { data: ActOption[], meta: { page, pageSize, total, totalPages } }
+   *   GET {apiBase}/{id}
+   *     → { data: ActOption }
    * Apps con un path distinto (archivo: `/api/actos-juridicos`) lo pasan
-   * como override.
+   * como override y deben ofrecer el mismo contrato (search + page +
+   * meta.total para que el infinite-scroll sepa cuándo parar).
    */
   apiBase?: string;
-  /** Tamaño de página al abrir o filtrar. Default 20. */
+  /** Tamaño de página al abrir o filtrar. Default 50. */
   pageSize?: number;
 }
 
 /**
  * Selector de acto jurídico con búsqueda asíncrona server-side. A
  * diferencia del ClientPicker, lista al abrir (sin requerir caracteres
- * mínimos) y filtra al escribir con debounce 300ms. Pensado para
- * catálogos grandes donde el `SearchableSelect` cortaba a las 50 primeras
- * coincidencias y dejaba el resto inalcanzables.
+ * mínimos) y carga más resultados al hacer scroll hasta el fondo del
+ * dropdown — pensado para catálogos grandes (400+ actos en notaria) donde
+ * el `SearchableSelect` cortaba a las 50 primeras coincidencias y dejaba
+ * el resto inalcanzables.
  *
  * Sin acción "crear nuevo" — el catálogo de actos lo gestiona consultor
  * y los usuarios sólo escogen entre los existentes.
@@ -43,11 +54,12 @@ interface ActPickerProps {
 export function ActPicker({
   value,
   onChange,
+  onPick,
   placeholder,
   label,
   required,
   apiBase = "/api/catalogs/actos-juridicos",
-  pageSize = 20,
+  pageSize = 50,
 }: ActPickerProps) {
   const { t } = useI18n();
   const resolvedPlaceholder = placeholder ?? t("ui.actPicker.placeholder");
@@ -55,6 +67,9 @@ export function ActPicker({
   const [options, setOptions] = useState<ActOption[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [selectedAct, setSelectedAct] = useState<ActOption | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -80,29 +95,70 @@ export function ActPicker({
     if (!value && selectedAct) setSelectedAct(null);
   }, [value, selectedAct, apiBase]);
 
+  function buildUrl(targetPage: number): string {
+    const sep = apiBase.includes("?") ? "&" : "?";
+    const params = new URLSearchParams();
+    if (query) params.set("search", query);
+    params.set("page", String(targetPage));
+    params.set("pageSize", String(pageSize));
+    // Sin search, ordenar alfabéticamente para que el dropdown sea
+    // navegable; con search el orden por relevancia (el del server) es
+    // suficiente. El endpoint genérico de notaria default a `createdAt
+    // desc` que no tiene sentido para un catálogo.
+    params.set("sortBy", "nombre");
+    params.set("sortOrder", "asc");
+    return `${apiBase}${sep}${params.toString()}`;
+  }
+
+  // Fetch primera página al abrir o cambiar query.
   useEffect(() => {
     if (!open) return;
     const debounce = query.length > 0 ? 300 : 0;
     const timer = setTimeout(async () => {
       setLoading(true);
+      setPage(1);
       try {
-        const url = query
-          ? `${apiBase}?search=${encodeURIComponent(query)}&pageSize=${pageSize}`
-          : `${apiBase}?pageSize=${pageSize}`;
-        const res = await fetch(url);
+        const res = await fetch(buildUrl(1));
         const json = await res.json();
         setOptions(json.data ?? []);
+        setTotal(json.meta?.total ?? json.data?.length ?? 0);
       } catch {
         setOptions([]);
+        setTotal(0);
       } finally {
         setLoading(false);
       }
     }, debounce);
     return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, open, apiBase, pageSize]);
+
+  async function loadMore() {
+    if (loading || loadingMore || options.length >= total) return;
+    setLoadingMore(true);
+    const nextPage = page + 1;
+    try {
+      const res = await fetch(buildUrl(nextPage));
+      const json = await res.json();
+      setOptions((prev) => [...prev, ...(json.data ?? [])]);
+      setPage(nextPage);
+    } catch {
+      // sin acumular — el usuario puede reintentar haciendo scroll otra vez
+    } finally {
+      setLoadingMore(false);
+    }
+  }
+
+  function handleScroll(e: React.UIEvent<HTMLDivElement>) {
+    const el = e.currentTarget;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 24) {
+      loadMore();
+    }
+  }
 
   function handleSelect(act: ActOption) {
     onChange(act.id);
+    onPick?.(act);
     setSelectedAct(act);
     setQuery("");
     setOpen(false);
@@ -153,7 +209,10 @@ export function ActPicker({
         />
       )}
       {open && !value && (
-        <div className="absolute z-50 mt-1 max-h-72 w-full overflow-auto rounded-md border bg-white shadow-lg">
+        <div
+          onScroll={handleScroll}
+          className="absolute z-50 mt-1 max-h-72 w-full overflow-auto rounded-md border bg-white shadow-lg"
+        >
           {loading && (
             <div className="px-3 py-2 text-sm text-gray-500">{t("ui.actPicker.searching")}</div>
           )}
@@ -176,6 +235,16 @@ export function ActPicker({
               )}
             </button>
           ))}
+          {loadingMore && (
+            <div className="px-3 py-2 text-center text-xs text-gray-400">
+              {t("ui.actPicker.loadingMore")}
+            </div>
+          )}
+          {!loading && !loadingMore && total > 0 && options.length < total && (
+            <div className="px-3 py-1 text-center text-xs text-gray-400">
+              {t("ui.actPicker.scrollHint")} ({options.length}/{total})
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -316,7 +316,9 @@
       "placeholder": "Cercar acte jurídic per codi, nom o categoria...",
       "searching": "Cercant…",
       "noResults": "No s'han trobat resultats",
-      "clearAria": "Treure la selecció"
+      "clearAria": "Treure la selecció",
+      "loadingMore": "Carregant més…",
+      "scrollHint": "Desplaça't per veure'n més"
     },
     "solicitantePicker": {
       "placeholder": "Filtrar per sol·licitant (nom o NIF)…",

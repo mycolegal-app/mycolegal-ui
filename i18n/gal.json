@@ -316,7 +316,9 @@
       "placeholder": "Buscar acto xurídico por código, nome ou categoría...",
       "searching": "Buscando…",
       "noResults": "Non se atoparon resultados",
-      "clearAria": "Quitar selección"
+      "clearAria": "Quitar selección",
+      "loadingMore": "Cargando máis…",
+      "scrollHint": "Desprázate para ver máis"
     },
     "solicitantePicker": {
       "placeholder": "Filtrar por solicitante (nome ou NIF)…",

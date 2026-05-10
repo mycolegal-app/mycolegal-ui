@@ -316,7 +316,9 @@
       "placeholder": "Bilatu egintza juridikoa kodez, izenez edo kategoriaz...",
       "searching": "Bilatzen…",
       "noResults": "Ez da emaitzarik aurkitu",
-      "clearAria": "Aukeraketa kendu"
+      "clearAria": "Aukeraketa kendu",
+      "loadingMore": "Gehiago kargatzen…",
+      "scrollHint": "Korritu gehiago ikusteko"
     },
     "solicitantePicker": {
       "placeholder": "Iragazi eskatzailearen arabera (izena edo NIFa)…",

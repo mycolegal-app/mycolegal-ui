@@ -5,6 +5,33 @@
 
 ---
 
+## 1.51.1 — `ActPicker`: scroll infinito + orden alfabético (2026-05-09)
+
+Type: **patch**
+
+Mejoras de usabilidad sobre la 1.51.0. La 1.51.0 abría con sólo 20
+items y no había forma de ver el resto sin escribir, lo que en notaria
+(catálogo de 400+ actos) parecía "primera página" como antes.
+
+**Cambios**
+
+- Scroll infinito en el dropdown: al llegar al fondo carga la siguiente
+  página y la concatena. Usa `meta.total` del endpoint para parar.
+- `pageSize` default subido de 20 a 50 (cabe en el alto del dropdown
+  sin scroll inmediato).
+- Forzado `?sortBy=nombre&sortOrder=asc` para que la lista al abrir
+  sea navegable. El default genérico `createdAt desc` del endpoint de
+  notaria no aplica a un catálogo.
+- Indicador `n/total` + hint "desplázate para ver más" cuando hay más
+  páginas pendientes.
+
+**i18n**
+
+- Nuevas keys `ui.actPicker.loadingMore` y `ui.actPicker.scrollHint` en
+  cast/cat/eus/gal.
+
+---
+
 ## 1.51.0 — `ActPicker`: selector compartido de acto jurídico con búsqueda server-side (2026-05-09)
 
 Type: **minor**
