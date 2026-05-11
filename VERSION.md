@@ -5,6 +5,24 @@
 
 ---
 
+## 1.54.0 — `AppSidebar`: título único en blanco desde `apps.json` (2026-05-11)
+
+Type: **minor (breaking)**
+
+`AppSidebar` reemplaza las props `brandPrefix` + `brandHighlight` por una
+sola prop `title: string`. El título se renderiza íntegro en blanco, sin
+palabra resaltada en color de acento. El acento sigue aplicándose al
+icono de marca y al avatar de usuario vía la prop `accent`.
+
+Cada consumidor debe pasar `title="..."` exactamente como aparece en
+`mycolegal-platform/apps.json`. Se eliminó también el campo
+`highlightTextClass` del tipo `AppSidebarAccent`.
+
+Apps actualizadas: actas, archivo, cancelaciones, consultor, docfilling,
+facturae, legifirma, moratorias, notaria, peticiones, tributos.
+
+---
+
 ## 1.53.0 — `DocumentProducer`: helper compartido para producción de documentos (auto/manual) (2026-05-10)
 
 Type: **minor**

@@ -346,10 +346,6 @@
       "manual": "Manual",
       "faq": "FAQ"
     },
-    "appSwitcher": {
-      "title": "Cambiar aplicación",
-      "appsHeading": "Aplicacións"
-    },
     "myApps": {
       "label": "As miñas aplicacións",
       "loadingApp": "Cargando aplicación…",

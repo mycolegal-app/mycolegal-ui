@@ -346,10 +346,6 @@
       "manual": "Eskuliburua",
       "faq": "FAQ"
     },
-    "appSwitcher": {
-      "title": "Aplikazioa aldatu",
-      "appsHeading": "Aplikazioak"
-    },
     "myApps": {
       "label": "Nire aplikazioak",
       "loadingApp": "Aplikazioa kargatzen…",

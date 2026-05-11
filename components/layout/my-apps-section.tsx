@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronRight, LayoutGrid, Loader2 } from "lucide-react";
-import type { AppInfo } from "./app-switcher";
+import type { AppInfo } from "./app-info";
 import { SidebarFlyout } from "./sidebar-flyout";
 import { useI18n } from "../i18n/i18n-context";
 

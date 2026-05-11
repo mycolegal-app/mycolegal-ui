@@ -7,7 +7,7 @@ import { NavLink as Link } from "../shared/nav-link";
 import { NotificationsBell } from "../shared/notifications-bell";
 import { UserAccountDialog } from "../shared/user-account-dialog";
 import { MyAppsSection } from "./my-apps-section";
-import type { AppInfo } from "./app-switcher";
+import type { AppInfo } from "./app-info";
 import { useIsOrgAdmin } from "../../hooks/use-is-org-admin";
 import { useI18n } from "../i18n/i18n-context";
 import { cn } from "../../lib/utils";
@@ -30,8 +30,6 @@ type BrandLogo =
   | { type: "icon"; node: ReactNode };
 
 interface AppSidebarAccent {
-  /** Tailwind class applied to the highlighted brand word (e.g. "Notaria"). */
-  highlightTextClass?: string;
   /** Background of the brand icon container (icon mode only). */
   iconBgClass?: string;
   /** Foreground of the brand icon (icon mode only). */
@@ -51,10 +49,8 @@ interface AppSidebarUser {
 export interface AppSidebarProps {
   /** App slug — passed to NotificationsBell, MyAppsSection, UserAccountDialog. */
   appSlug: string;
-  /** Brand prefix word (default: "Myco"). */
-  brandPrefix?: string;
-  /** Brand highlight word (e.g. "Notaria") — rendered in the accent color. */
-  brandHighlight: string;
+  /** Brand title — rendered verbatim in white. Must match `title` in apps.json. */
+  title: string;
   /** Brand logo — image or inline icon node. */
   brandLogo: BrandLogo;
   /** Brand link target (default: "/"). */
@@ -84,7 +80,6 @@ export interface AppSidebarProps {
 }
 
 const DEFAULT_ACCENT: Required<AppSidebarAccent> = {
-  highlightTextClass: "text-mc-primary-400",
   iconBgClass: "bg-mc-primary-500/20",
   iconTextClass: "text-mc-primary-400",
   avatarBgClass: "bg-mc-primary-500/20",
@@ -98,8 +93,7 @@ const ITEM_INACTIVE = "text-gray-400 hover:bg-white/5 hover:text-white";
 
 export function AppSidebar({
   appSlug,
-  brandPrefix = "Myco",
-  brandHighlight,
+  title,
   brandLogo,
   brandHref = "/",
   accent,
@@ -178,10 +172,9 @@ export function AppSidebar({
           {brandLogoNode()}
           <span
             className="min-w-0 flex-1 truncate text-base font-semibold leading-tight text-white"
-            title={`${brandPrefix}${brandHighlight}`}
+            title={title}
           >
-            {brandPrefix}
-            <span className={a.highlightTextClass}>{brandHighlight}</span>
+            {title}
           </span>
         </Link>
 

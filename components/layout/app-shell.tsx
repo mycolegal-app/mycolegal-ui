@@ -3,7 +3,7 @@
 import { useState, useEffect, type ReactNode } from "react";
 import { Menu } from "lucide-react";
 import { PageHeaderProvider, usePageHeader } from "./page-header-context";
-import { type AppInfo } from "./app-switcher";
+import { type AppInfo } from "./app-info";
 import { IdleTimeout } from "./idle-timeout";
 import { AppInfoButton } from "../shared/app-info-button";
 import {

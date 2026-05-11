@@ -346,10 +346,6 @@
       "manual": "Manual",
       "faq": "FAQ"
     },
-    "appSwitcher": {
-      "title": "Canviar aplicació",
-      "appsHeading": "Aplicacions"
-    },
     "myApps": {
       "label": "Les meves aplicacions",
       "loadingApp": "Carregant aplicació…",
