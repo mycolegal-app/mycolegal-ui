@@ -21,11 +21,16 @@ interface SidebarFlyoutProps {
   sidebarWidth?: number;
   /** Optional aria-label for the trigger. */
   ariaLabel?: string;
+  /** Controlled open state. If provided, `onOpenChange` should also be set. */
+  open?: boolean;
+  /** Controlled open-change callback. Required when `open` is provided. */
+  onOpenChange?: (open: boolean) => void;
 }
 
 /**
  * Sidebar collapsible block that opens as a flyout panel to the right of the
- * sidebar, instead of expanding inline. Avoids forcing the sidebar to scroll.
+ * sidebar, instead of expanding inline. The panel is positioned so it fits
+ * entirely in the viewport — sliding upward when needed — instead of scrolling.
  *
  * Click outside, Escape, or click on a child item closes the panel. The panel
  * is rendered via a portal to escape the sidebar's `overflow-y-auto` container.
@@ -36,32 +41,52 @@ export function SidebarFlyout({
   children,
   sidebarWidth = 220,
   ariaLabel,
+  open: openProp,
+  onOpenChange,
 }: SidebarFlyoutProps) {
-  const [open, setOpen] = useState(false);
+  const isControlled = openProp !== undefined;
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = isControlled ? !!openProp : internalOpen;
+  const setOpen = (next: boolean) => {
+    if (isControlled) onOpenChange?.(next);
+    else setInternalOpen(next);
+  };
+
   const [top, setTop] = useState(0);
-  const [maxHeight, setMaxHeight] = useState<number>(0);
+  const [maxHeight, setMaxHeight] = useState<number | null>(null);
+  const [positioned, setPositioned] = useState(false);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
 
   useLayoutEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setPositioned(false);
+      return;
+    }
     function reposition() {
-      const rect = triggerRef.current?.getBoundingClientRect();
-      if (!rect) return;
+      const triggerEl = triggerRef.current;
+      const panel = panelRef.current;
+      if (!triggerEl || !panel) return;
+      const rect = triggerEl.getBoundingClientRect();
       const vh = window.innerHeight;
       const margin = 8;
-      // Si abajo no cabe lo suficiente, anclamos el panel a `vh - margin`
-      // y lo "alineamos" hacia arriba para no salirnos del viewport.
-      const available = vh - rect.top - margin;
-      const minDesired = 200;
+      // Medimos altura natural del contenido. scrollHeight ignora cualquier
+      // max-height aplicada previamente, así que es estable entre repos.
+      const naturalHeight = panel.scrollHeight;
+      const maxAllowed = vh - 2 * margin;
+      const finalHeight = Math.min(naturalHeight, maxAllowed);
+      // Por defecto alineamos con el trigger. Si así nos saldríamos por abajo,
+      // desplazamos el panel hacia arriba lo suficiente para que quepa entero.
       let nextTop = rect.top;
-      let nextMax = available;
-      if (available < minDesired) {
-        nextMax = Math.min(vh - 2 * margin, Math.max(minDesired, available));
-        nextTop = Math.max(margin, vh - nextMax - margin);
+      if (nextTop + finalHeight > vh - margin) {
+        nextTop = vh - margin - finalHeight;
       }
+      nextTop = Math.max(margin, nextTop);
       setTop(nextTop);
-      setMaxHeight(Math.max(120, nextMax));
+      // Solo restringimos altura (y por tanto activamos scroll) si el
+      // contenido no cabe ni siquiera en el viewport entero.
+      setMaxHeight(naturalHeight > maxAllowed ? maxAllowed : null);
+      setPositioned(true);
     }
     reposition();
     window.addEventListener("resize", reposition);
@@ -70,7 +95,7 @@ export function SidebarFlyout({
       window.removeEventListener("resize", reposition);
       window.removeEventListener("scroll", reposition, true);
     };
-  }, [open]);
+  }, [open, children]);
 
   useEffect(() => {
     if (!open) return;
@@ -96,7 +121,7 @@ export function SidebarFlyout({
       <button
         ref={triggerRef}
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setOpen(!open)}
         aria-expanded={open}
         aria-haspopup="menu"
         aria-label={ariaLabel}
@@ -115,6 +140,7 @@ export function SidebarFlyout({
             top={top}
             sidebarWidth={sidebarWidth}
             maxHeight={maxHeight}
+            positioned={positioned}
             onAutoClose={() => setOpen(false)}
           >
             {children}
@@ -128,15 +154,18 @@ export function SidebarFlyout({
 interface FlyoutPanelProps {
   top: number;
   sidebarWidth: number;
-  maxHeight: number;
+  maxHeight: number | null;
+  positioned: boolean;
   onAutoClose: () => void;
   children: ReactNode;
 }
 
 const FlyoutPanel = forwardRef<HTMLDivElement, FlyoutPanelProps>(function FlyoutPanel(
-  { top, sidebarWidth, maxHeight, onAutoClose, children },
+  { top, sidebarWidth, maxHeight, positioned, onAutoClose, children },
   ref,
 ) {
+  // Mientras no esté posicionado (primer paint tras abrir), renderizamos
+  // invisible para medir scrollHeight sin flash en la esquina superior.
   return (
     <div
       ref={ref}
@@ -149,8 +178,11 @@ const FlyoutPanel = forwardRef<HTMLDivElement, FlyoutPanelProps>(function Flyout
         top: Math.max(8, top),
         left: sidebarWidth + 6,
         maxHeight: maxHeight ? `${maxHeight}px` : undefined,
+        visibility: positioned ? "visible" : "hidden",
       }}
-      className="fixed z-[60] flex min-w-[220px] max-w-[280px] flex-col overflow-y-auto rounded-lg border border-white/10 bg-[#0f1b2d] p-1.5 shadow-2xl"
+      className={`fixed z-[60] flex min-w-[220px] max-w-[280px] flex-col rounded-lg border border-white/10 bg-[#0f1b2d] p-1.5 shadow-2xl ${
+        maxHeight ? "overflow-y-auto" : "overflow-y-visible"
+      }`}
     >
       {children}
     </div>

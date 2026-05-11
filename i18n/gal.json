@@ -352,7 +352,9 @@
     },
     "myApps": {
       "label": "As miñas aplicacións",
-      "loadingApp": "Cargando aplicación…"
+      "loadingApp": "Cargando aplicación…",
+      "shortcutHint": "⌘K · letra",
+      "appShortcutTitle": "Abrir {name} (preme {letter})"
     },
     "appShell": {
       "openMobileMenu": "Abrir menú lateral"

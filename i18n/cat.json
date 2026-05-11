@@ -352,7 +352,9 @@
     },
     "myApps": {
       "label": "Les meves aplicacions",
-      "loadingApp": "Carregant aplicació…"
+      "loadingApp": "Carregant aplicació…",
+      "shortcutHint": "⌘K · lletra",
+      "appShortcutTitle": "Obre {name} (prem {letter})"
     },
     "appShell": {
       "openMobileMenu": "Obrir menú lateral"
