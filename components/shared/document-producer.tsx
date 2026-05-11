@@ -94,7 +94,7 @@ function formatValue(v: unknown, type?: DocumentFieldSpec["type"]): string {
  *     descargar + input para subir el documento producido.
  * El modo se decide en `resolve()` que la app inyecta.
  */
-export function DocumentProducer(props: DocumentProducerProps): JSX.Element {
+export function DocumentProducer(props: DocumentProducerProps) {
   const { resolve, values, uploadEndpoint, generateEndpoint, onProduced, disabled } = props;
   const { toast } = useToast();
   const [resolution, setResolution] = useState<DocumentProducerResolution | null>(null);
