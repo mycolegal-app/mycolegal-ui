@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   type ColumnDef,
   type SortingState,
@@ -18,12 +18,37 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { useI18n } from "../i18n/i18n-context";
 
+export interface RemoteDataSource {
+  /** API endpoint to fetch from. Must return `{ data: T[], meta: { total, page, pageSize, totalPages } }`. */
+  endpoint: string;
+  /** Extra query params (filters like estado, tipo, etc.). DataTable adds `page`, `pageSize`, `search`. */
+  extraParams?: Record<string, string | number | boolean | null | undefined>;
+  /**
+   * Threshold to auto-switch from client-side to server-side mode. Default 200.
+   * If the first fetch reports `total <= threshold`, DataTable loads the full
+   * dataset once and lets TanStack handle paginate/sort/filter in memory.
+   * Otherwise it switches to server-side pagination and pushes `search` to
+   * the API so queries hit the full population.
+   */
+  threshold?: number;
+  /** Bump to force a refetch (e.g. after creating/updating a row). */
+  refreshKey?: string | number;
+  /** Query param name for the search term. Default `search`. */
+  searchParam?: string;
+}
+
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
-  data: TData[];
+  /** Inline dataset. Mutually exclusive with `source` (use one or the other). */
+  data?: TData[];
+  /** Remote dataset with auto client/server mode. See {@link RemoteDataSource}. */
+  source?: RemoteDataSource;
+  /** Legacy: enables column-scoped client-side filtering on the named column. Ignored when `source` is set. */
   searchKey?: string;
   searchPlaceholder?: string;
   searchDataHelp?: string;
+  /** When `source` is used, render a search input that filters the full population. Default true. */
+  searchable?: boolean;
   pageSize?: number;
   pageSizeOptions?: number[];
   rowClassName?: (row: TData) => string;
@@ -46,6 +71,7 @@ interface DataTableProps<TData, TValue> {
    * navigation via `onPaginationChange` and trusts `pageCount` / `totalRows`
    * instead of deriving them from the in-memory `data` slice. Leave false
    * for small, fully-loaded tables where client-side paging is fine.
+   * Ignored when `source` is set (mode is auto-decided).
    */
   manualPagination?: boolean;
   /** Controlled page index (0-based). Only used when `manualPagination`. */
@@ -65,12 +91,130 @@ interface DataTableProps<TData, TValue> {
   paginatorExtras?: ReactNode;
 }
 
+type Mode = "init" | "client" | "server";
+
+interface SourceState<T> {
+  data: T[];
+  total: number;
+  mode: Mode;
+  loading: boolean;
+  pageIndex: number;
+  pageSize: number;
+  searchInput: string;
+  searchDebounced: string;
+}
+
+function useRemoteSource<T>(
+  source: RemoteDataSource | undefined,
+  initialPageSize: number,
+): {
+  enabled: boolean;
+  state: SourceState<T>;
+  setSearchInput: (v: string) => void;
+  setPageIndex: (idx: number) => void;
+  setPageSize: (size: number) => void;
+} {
+  const threshold = source?.threshold ?? 200;
+  const searchParam = source?.searchParam ?? "search";
+  const extraParams = source?.extraParams;
+  const extraParamsKey = useMemo(() => JSON.stringify(extraParams ?? {}), [extraParams]);
+  const refreshKey = source?.refreshKey;
+  const endpoint = source?.endpoint;
+
+  const [data, setData] = useState<T[]>([]);
+  const [total, setTotal] = useState(0);
+  const [mode, setMode] = useState<Mode>("init");
+  const [loading, setLoading] = useState(false);
+  const [pageIndex, setPageIndexState] = useState(0);
+  const [pageSize, setPageSizeState] = useState(initialPageSize);
+  const [searchInput, setSearchInputState] = useState("");
+  const [searchDebounced, setSearchDebounced] = useState("");
+  const reqCounter = useRef(0);
+
+  // Debounce search input → searchDebounced (sent to server in server mode,
+  // used as globalFilter in client mode).
+  useEffect(() => {
+    if (!source) return;
+    const h = setTimeout(() => setSearchDebounced(searchInput.trim()), 300);
+    return () => clearTimeout(h);
+  }, [searchInput, source]);
+
+  // Reset to page 1 when filters change.
+  useEffect(() => {
+    if (!source) return;
+    setPageIndexState(0);
+  }, [extraParamsKey, searchDebounced, source]);
+
+  const fetcher = useCallback(
+    async (params: { page: number; size: number; search: string; isProbe: boolean }) => {
+      if (!endpoint) return;
+      const myReq = ++reqCounter.current;
+      setLoading(true);
+      try {
+        const qs = new URLSearchParams();
+        qs.set("page", String(params.page));
+        qs.set("pageSize", String(params.size));
+        if (params.search) qs.set(searchParam, params.search);
+        if (extraParams) {
+          for (const [k, v] of Object.entries(extraParams)) {
+            if (v === null || v === undefined || v === "") continue;
+            qs.set(k, String(v));
+          }
+        }
+        const res = await fetch(`${endpoint}?${qs.toString()}`);
+        const json = await res.json();
+        if (myReq !== reqCounter.current) return; // stale
+        const rows: T[] = json.data ?? [];
+        const totalRows: number = json.meta?.total ?? rows.length;
+        setData(rows);
+        setTotal(totalRows);
+        if (params.isProbe) {
+          setMode(totalRows <= threshold ? "client" : "server");
+        }
+      } finally {
+        if (reqCounter.current === reqCounter.current) setLoading(false);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [endpoint, extraParamsKey, searchParam, threshold],
+  );
+
+  // Probe fetch on mount / when filters/search/refreshKey change.
+  useEffect(() => {
+    if (!source) return;
+    setMode("init");
+    fetcher({ page: 1, size: threshold, search: searchDebounced, isProbe: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [extraParamsKey, searchDebounced, refreshKey, threshold, source ? source.endpoint : null]);
+
+  // In server mode, refetch when pageIndex or pageSize change.
+  useEffect(() => {
+    if (!source) return;
+    if (mode !== "server") return;
+    fetcher({ page: pageIndex + 1, size: pageSize, search: searchDebounced, isProbe: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageIndex, pageSize, mode]);
+
+  return {
+    enabled: Boolean(source),
+    state: { data, total, mode, loading, pageIndex, pageSize, searchInput, searchDebounced },
+    setSearchInput: setSearchInputState,
+    setPageIndex: setPageIndexState,
+    setPageSize: (size: number) => {
+      setPageSizeState(size);
+      setPageIndexState(0);
+    },
+  };
+}
+
 export function DataTable<TData, TValue>({
   columns,
-  data,
+  data: inlineData,
+  source,
   searchKey,
   searchPlaceholder,
   searchDataHelp,
+  searchable = true,
   pageSize: initialPageSize = 10,
   pageSizeOptions,
   rowClassName,
@@ -78,7 +222,7 @@ export function DataTable<TData, TValue>({
   toolbar,
   scrollable = false,
   scrollBodyMaxHeight = "calc(100vh - 320px)",
-  manualPagination = false,
+  manualPagination: manualPaginationProp = false,
   pageIndex: controlledPageIndex,
   totalRows: controlledTotalRows,
   pageCount: controlledPageCount,
@@ -87,19 +231,45 @@ export function DataTable<TData, TValue>({
 }: DataTableProps<TData, TValue>) {
   const { t } = useI18n();
   const resolvedSearchPlaceholder = searchPlaceholder ?? t("ui.dataTable.searchPlaceholder");
+
+  // Remote source state (no-op when `source` is undefined).
+  const remote = useRemoteSource<TData>(source, initialPageSize);
+
+  // Resolve which data/pagination source the table actually uses.
+  const usingSource = remote.enabled;
+  const data = usingSource ? remote.state.data : inlineData ?? [];
+  const manualPagination = usingSource
+    ? remote.state.mode === "server"
+    : manualPaginationProp;
+  const effectiveControlledPageIndex = usingSource
+    ? remote.state.pageIndex
+    : controlledPageIndex;
+  const effectiveControlledPageCount = usingSource
+    ? Math.max(1, Math.ceil(remote.state.total / Math.max(1, remote.state.pageSize)))
+    : controlledPageCount;
+  const effectiveControlledTotalRows = usingSource ? remote.state.total : controlledTotalRows;
+  const effectiveInitialPageSize = usingSource ? remote.state.pageSize : initialPageSize;
+
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-  const [currentPageSize, setCurrentPageSize] = useState(initialPageSize);
+  const [currentPageSize, setCurrentPageSize] = useState(effectiveInitialPageSize);
   const [colMenuOpen, setColMenuOpen] = useState(false);
 
   // Keep the internal page size in sync when the parent changes it
   // (e.g. a controlled paginator bumping from 20 → 50).
   useEffect(() => {
-    setCurrentPageSize(initialPageSize);
-  }, [initialPageSize]);
+    setCurrentPageSize(effectiveInitialPageSize);
+  }, [effectiveInitialPageSize]);
 
-  const effectivePageIndex = manualPagination ? (controlledPageIndex ?? 0) : undefined;
+  const effectivePageIndex = manualPagination ? (effectiveControlledPageIndex ?? 0) : undefined;
+
+  // In source/client mode, use TanStack globalFilter for search (debounced).
+  // In source/server mode, the server already filtered — pass empty so
+  // TanStack doesn't second-filter the page slice.
+  const globalFilter = usingSource && remote.state.mode === "client"
+    ? remote.state.searchDebounced
+    : "";
 
   const table = useReactTable({
     data,
@@ -114,24 +284,29 @@ export function DataTable<TData, TValue>({
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
+    onGlobalFilterChange: () => {},
     manualPagination,
-    pageCount: manualPagination ? (controlledPageCount ?? -1) : undefined,
+    manualFiltering: usingSource && remote.state.mode === "server",
+    pageCount: manualPagination ? (effectiveControlledPageCount ?? -1) : undefined,
     state: {
       sorting,
       columnFilters,
       columnVisibility,
+      globalFilter,
       ...(manualPagination
         ? { pagination: { pageIndex: effectivePageIndex ?? 0, pageSize: currentPageSize } }
         : {}),
     },
     initialState: manualPagination
       ? undefined
-      : { pagination: { pageSize: initialPageSize } },
+      : { pagination: { pageSize: effectiveInitialPageSize } },
   });
 
   function handlePageSizeChange(newSize: number) {
     setCurrentPageSize(newSize);
-    if (manualPagination) {
+    if (usingSource) {
+      remote.setPageSize(newSize);
+    } else if (manualPagination) {
       onPaginationChange?.(0, newSize);
     } else {
       table.setPageSize(newSize);
@@ -139,7 +314,9 @@ export function DataTable<TData, TValue>({
   }
 
   function handlePageChange(nextIndex: number) {
-    if (manualPagination) {
+    if (usingSource) {
+      remote.setPageIndex(nextIndex);
+    } else if (manualPagination) {
       onPaginationChange?.(nextIndex, currentPageSize);
     } else {
       table.setPageIndex(nextIndex);
@@ -147,17 +324,17 @@ export function DataTable<TData, TValue>({
   }
 
   const pageIndex = manualPagination
-    ? (controlledPageIndex ?? 0)
+    ? (effectiveControlledPageIndex ?? 0)
     : table.getState().pagination.pageIndex;
   const activePSize = manualPagination ? currentPageSize : table.getState().pagination.pageSize;
   // In manual mode we trust the server-reported total; in client mode we
   // use the filtered row count so the "Mostrando X de Y" stays honest when
   // the user searches.
   const totalRows = manualPagination
-    ? (controlledTotalRows ?? 0)
+    ? (effectiveControlledTotalRows ?? 0)
     : table.getFilteredRowModel().rows.length;
   const totalPages = manualPagination
-    ? Math.max(1, controlledPageCount ?? 1)
+    ? Math.max(1, effectiveControlledPageCount ?? 1)
     : table.getPageCount();
   const canPrev = pageIndex > 0;
   const canNext = pageIndex < totalPages - 1;
@@ -174,11 +351,23 @@ export function DataTable<TData, TValue>({
     ? baseSizeOptions
     : [...baseSizeOptions, activePSize].sort((a, b) => a - b);
 
+  // Decide whether to render the search input.
+  const showSearchInput = usingSource ? searchable : Boolean(searchKey);
+
   return (
     <div className="space-y-4">
-      {(searchKey || enableColumnVisibility || toolbar) && (
+      {(showSearchInput || enableColumnVisibility || toolbar) && (
         <div className="flex flex-wrap items-center gap-2">
-          {searchKey && (
+          {showSearchInput && usingSource && (
+            <Input
+              placeholder={resolvedSearchPlaceholder}
+              value={remote.state.searchInput}
+              onChange={(e) => remote.setSearchInput(e.target.value)}
+              className="max-w-sm"
+              {...(searchDataHelp ? { "data-help": searchDataHelp } : {})}
+            />
+          )}
+          {showSearchInput && !usingSource && searchKey && (
             <Input
               placeholder={resolvedSearchPlaceholder}
               value={
@@ -297,7 +486,9 @@ export function DataTable<TData, TValue>({
                   colSpan={columns.length}
                   className="h-24 text-center text-foreground-muted"
                 >
-                  No hay datos para mostrar
+                  {usingSource && remote.state.loading
+                    ? t("ui.dataTable.loading") || "Cargando…"
+                    : "No hay datos para mostrar"}
                 </td>
               </tr>
             )}
