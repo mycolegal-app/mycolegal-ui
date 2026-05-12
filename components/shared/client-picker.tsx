@@ -38,6 +38,12 @@ interface ClientPickerProps {
    * formateador (notaria → `formatNif` con separadores, archivo → raw).
    */
   formatNif?: (nif: string) => string;
+  /**
+   * Variante visual. `md` (default) coincide con el resto de inputs en
+   * formularios; `sm` se usa en toolbars de tablas para que el picker
+   * encaje en la misma fila que el resto de filtros compactos.
+   */
+  size?: "sm" | "md";
 }
 
 /**
@@ -58,7 +64,14 @@ export function ClientPicker({
   required,
   apiBase = "/api/catalogs/clientes",
   formatNif,
+  size = "md",
 }: ClientPickerProps) {
+  const inputSizeCls =
+    size === "sm" ? "h-8 px-2 py-1 text-xs" : "px-3 py-2 text-sm";
+  const tagSizeCls =
+    size === "sm" ? "h-8 px-2 py-1 text-xs" : "px-3 py-2 text-sm";
+  const createBtnSizeCls =
+    size === "sm" ? "h-8 px-2 py-1 text-xs" : "px-3 py-2 text-sm";
   const { t } = useI18n();
   const resolvedPlaceholder = placeholder ?? t("ui.clientPicker.placeholder");
   const [query, setQuery] = useState("");
@@ -152,7 +165,7 @@ export function ClientPicker({
         </label>
       )}
       {value && selectedLabel ? (
-        <div className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+        <div className={`flex items-center justify-between rounded-md border ${tagSizeCls}`}>
           <span>{selectedLabel}</span>
           <button
             type="button"
@@ -174,7 +187,7 @@ export function ClientPicker({
             }}
             onFocus={() => query.length >= 2 && setOpen(true)}
             placeholder={resolvedPlaceholder}
-            className="flex-1 rounded-md border px-3 py-2 text-sm"
+            className={`flex-1 rounded-md border ${inputSizeCls}`}
           />
           {showCreateBtn && (
             <button
@@ -183,10 +196,10 @@ export function ClientPicker({
                 setOpen(false);
                 onCreateNew?.();
               }}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-cyan-200 bg-cyan-50 px-3 py-2 text-sm font-medium text-cyan-700 hover:bg-cyan-100"
+              className={`inline-flex shrink-0 items-center gap-1.5 rounded-md border border-cyan-200 bg-cyan-50 font-medium text-cyan-700 hover:bg-cyan-100 ${createBtnSizeCls}`}
               title={t("ui.clientPicker.createNew")}
             >
-              <UserPlus className="h-4 w-4" />
+              <UserPlus className={size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4"} />
               {t("ui.clientPicker.createInline")}
             </button>
           )}

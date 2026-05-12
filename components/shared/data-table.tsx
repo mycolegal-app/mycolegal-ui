@@ -357,13 +357,13 @@ export function DataTable<TData, TValue>({
   return (
     <div className="space-y-4">
       {(showSearchInput || enableColumnVisibility || toolbar) && (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 text-xs [&_select]:h-8 [&_select]:px-2 [&_select]:py-1 [&_select]:text-xs [&_input[type=text]]:h-8 [&_input[type=text]]:px-2 [&_input[type=text]]:py-1 [&_input[type=text]]:text-xs">
           {showSearchInput && usingSource && (
             <Input
               placeholder={resolvedSearchPlaceholder}
               value={remote.state.searchInput}
               onChange={(e) => remote.setSearchInput(e.target.value)}
-              className="max-w-sm"
+              className="h-8 max-w-[240px] px-2 py-1 text-xs"
               {...(searchDataHelp ? { "data-help": searchDataHelp } : {})}
             />
           )}
@@ -376,7 +376,7 @@ export function DataTable<TData, TValue>({
               onChange={(e) =>
                 table.getColumn(searchKey)?.setFilterValue(e.target.value)
               }
-              className="max-w-sm"
+              className="h-8 max-w-[240px] px-2 py-1 text-xs"
               {...(searchDataHelp ? { "data-help": searchDataHelp } : {})}
             />
           )}
@@ -387,10 +387,10 @@ export function DataTable<TData, TValue>({
                 variant="outline"
                 size="sm"
                 onClick={() => setColMenuOpen(!colMenuOpen)}
-                className="gap-1.5"
+                className="h-8 gap-1 px-2 text-xs"
               >
-                <Columns3 className="h-4 w-4" />
-                Columnas
+                <Columns3 className="h-3.5 w-3.5" />
+                Cols.
               </Button>
               {colMenuOpen && (
                 <div className="absolute right-0 z-20 mt-1 min-w-[180px] rounded-md border bg-white p-2 shadow-lg">
