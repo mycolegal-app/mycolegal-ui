@@ -5,6 +5,37 @@
 
 ---
 
+## 1.58.0 — DataTable con prop `source` (auto cliente/servidor por umbral) (2026-05-12)
+
+Type: **minor**
+
+`DataTable` ahora acepta una `RemoteDataSource` opcional que encapsula
+fetch, paginación y búsqueda; las apps consumidoras no replican esa
+lógica en cada página.
+
+- **API nuevo (backwards-compat)**: en lugar de pasar `data: T[]` +
+  `manualPagination` + `pageIndex/pageCount/totalRows/onPaginationChange`,
+  la página puede pasar `source={{ endpoint, extraParams?, threshold?,
+  refreshKey?, searchParam? }}`. DataTable se encarga del resto.
+- **Modo auto por umbral** (default 200): la primera carga pide
+  `pageSize=threshold` y mira `meta.total`. Si total ≤ umbral, modo
+  client-side (TanStack pagina/ordena/filtra en memoria). Si total >
+  umbral, modo server-side: `manualPagination` + debounce 300ms para
+  `?search=` al backend, refetch en cada cambio de página/tamaño.
+- **Búsqueda siempre sobre toda la población**: el input de búsqueda
+  vive dentro del DataTable (controlado), y en modo server-side empuja
+  el término al backend, no solo al slice cargado.
+- **`refreshKey`** para forzar refetch tras mutaciones.
+- **`extraParams`** se serializan via `JSON.stringify` como dep key →
+  no fetchea con cada render del padre.
+- **Contrato de API esperado**: `{ data: T[], meta: { total, page, pageSize, totalPages } }`.
+  Misma forma que ya usan archivo y notaria.
+
+El API legacy (`data` + `manualPagination` controlado) se mantiene sin
+cambios.
+
+---
+
 ## 1.57.0 — Atajos por app con chip y chord de tres modificadores (2026-05-12)
 
 Type: **minor**
