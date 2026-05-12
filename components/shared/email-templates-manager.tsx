@@ -126,7 +126,7 @@ export function EmailTemplatesManager({
     if (!editor) return;
     if (view !== "visual") return;
     if (editor.getHTML() === bodyHtml) return;
-    editor.commands.setContent(bodyHtml || "<p></p>", { emitUpdate: false });
+    editor.commands.setContent(bodyHtml || "<p></p>", false);
   }, [editor, bodyHtml, view, selectedKey]);
 
   function insertMacro(name: string) {
