@@ -172,7 +172,7 @@ function useRemoteSource<T>(
           setMode(totalRows <= threshold ? "client" : "server");
         }
       } finally {
-        if (reqCounter.current === reqCounter.current) setLoading(false);
+        if (myReq === reqCounter.current) setLoading(false);
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -185,7 +185,7 @@ function useRemoteSource<T>(
     setMode("init");
     fetcher({ page: 1, size: threshold, search: searchDebounced, isProbe: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [extraParamsKey, searchDebounced, refreshKey, threshold, source ? source.endpoint : null]);
+  }, [extraParamsKey, searchDebounced, refreshKey, threshold, endpoint]);
 
   // In server mode, refetch when pageIndex or pageSize change.
   useEffect(() => {
@@ -487,7 +487,7 @@ export function DataTable<TData, TValue>({
                   className="h-24 text-center text-foreground-muted"
                 >
                   {usingSource && remote.state.loading
-                    ? t("ui.dataTable.loading") || "Cargando…"
+                    ? "Cargando…"
                     : "No hay datos para mostrar"}
                 </td>
               </tr>
