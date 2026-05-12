@@ -5,6 +5,29 @@
 
 ---
 
+## 1.57.0 — Atajos por app con chip y chord de tres modificadores (2026-05-12)
+
+Type: **minor**
+
+Rediseño del atajo de teclado en `MyAppsSection`:
+
+- **Antes**: `⌘K` abría el flyout y luego una letra suelta lanzaba la app.
+  Chocaba con el palette de búsqueda que también usa `⌘K`.
+- **Ahora**: combo directo y global por app, sin pasar por el flyout.
+  - Mac: `⌘ + ⌥ + ⇧ + <letra>`
+  - Windows/Linux: `Ctrl + Alt + Shift + <letra>`
+  - Tres modificadores → cero choques con navegador (palette `⌘K`,
+    `⌘⇧T` reabrir pestaña, `⌘R` recargar, etc.) y con el OS.
+- **Cada app muestra un chip** con su combo a la derecha del nombre,
+  en el flyout. Sustituye la letra subrayada como mecanismo de descubrimiento.
+- **I18n**: se elimina `ui.myApps.shortcutHint`; `appShortcutTitle` pasa
+  de `(pulsa {letter})` a `({combo})`.
+- El mapa estable de letras por slug (`STABLE_ACCELS`) se mantiene
+  igual — quien ya tuviera memorizada la letra de una app solo nota
+  el cambio en los modificadores.
+
+---
+
 ## 1.56.0 — `EmailTemplatesManager`: selector + editor WYSIWYG (TipTap) (2026-05-12)
 
 Type: **minor**

@@ -366,8 +366,7 @@
     "myApps": {
       "label": "Les meves aplicacions",
       "loadingApp": "Carregant aplicació…",
-      "shortcutHint": "⌘K · lletra",
-      "appShortcutTitle": "Obre {name} (prem {letter})"
+      "appShortcutTitle": "Obre {name} ({combo})"
     },
     "appShell": {
       "openMobileMenu": "Obrir menú lateral"

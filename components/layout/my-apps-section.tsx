@@ -16,9 +16,9 @@ interface MyAppsSectionProps {
 }
 
 /**
- * Letras aceleradoras estables por slug para las apps conocidas del sistema.
- * Las apps que no estén en este mapa caen al fallback (primera letra
- * alfanumérica libre escaneando el nombre).
+ * Letras aceleradoras estables por slug. Las apps que no estén en este
+ * mapa caen al fallback (primera letra alfanumérica libre escaneando el
+ * nombre). Si añades una app aquí elige una letra que no colisione.
  */
 const STABLE_ACCELS: Record<string, string> = {
   actas: "a",
@@ -36,9 +36,7 @@ const STABLE_ACCELS: Record<string, string> = {
 };
 
 interface AppWithAccel extends AppInfo {
-  /** Index inside `name` of the underlined letter, or null if no accel was assigned. */
-  accelIdx: number | null;
-  /** Lowercase letter that activates this app, or null. */
+  /** Lowercase letter that activates this app, or null if no accel could be assigned. */
   accelChar: string | null;
 }
 
@@ -52,7 +50,7 @@ function assignAccels(apps: AppInfo[]): AppWithAccel[] {
     const stable = STABLE_ACCELS[app.slug.toLowerCase()];
     if (stable && !used.has(stable)) {
       used.add(stable);
-      result[i] = finalizeAccel(app, stable);
+      result[i] = { ...app, accelChar: stable };
     } else {
       needsFallback.push(i);
     }
@@ -70,17 +68,10 @@ function assignAccels(apps: AppInfo[]): AppWithAccel[] {
         break;
       }
     }
-    result[i] = chosen
-      ? finalizeAccel(app, chosen)
-      : { ...app, accelIdx: null, accelChar: null };
+    result[i] = { ...app, accelChar: chosen };
   }
 
   return result;
-}
-
-function finalizeAccel(app: AppInfo, accelChar: string): AppWithAccel {
-  const idx = app.name.toLowerCase().indexOf(accelChar);
-  return { ...app, accelChar, accelIdx: idx >= 0 ? idx : null };
 }
 
 const INPUT_TAGS = new Set(["INPUT", "TEXTAREA", "SELECT"]);
@@ -92,21 +83,36 @@ function isTypingInInput(target: EventTarget | null): boolean {
   return false;
 }
 
+function detectMac(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const src = navigator.platform || navigator.userAgent || "";
+  return /Mac|iPhone|iPad/.test(src);
+}
+
+function formatCombo(letter: string, isMac: boolean): string {
+  const L = letter.toUpperCase();
+  return isMac ? `⌘⌥⇧${L}` : `Ctrl+Alt+Shift+${L}`;
+}
+
 /**
  * "Mis aplicaciones" sidebar block. Opens as a flyout panel to the right of
- * the sidebar (no inline expansion), avoiding sidebar scroll. Selecting an app
- * shows a full-screen overlay (spinner + click capture) while the browser
- * navigates to the target app.
+ * the sidebar; cada app muestra un chip con su atajo de teclado a la derecha.
  *
- * Atajos de teclado:
- *  - Cmd+K (Mac) / Ctrl+K (Win) abre el menú listo para recibir una letra.
- *  - Con el menú abierto, pulsar la letra subrayada de una app la lanza.
+ * Atajo global:
+ *  - Mac:        ⌘ + ⌥ + ⇧ + <letra>
+ *  - Windows:    Ctrl + Alt + Shift + <letra>
+ * Los tres modificadores son intencionales: evitan choques con atajos del
+ * navegador (⌘K palette, ⌘⇧T reabrir pestaña, ⌘R recargar, …) y con el OS.
+ * El listener es global, no requiere abrir el flyout para funcionar.
  */
 export function MyAppsSection({ apps, currentSlug, label }: MyAppsSectionProps) {
   const { t } = useI18n();
   const resolvedLabel = label ?? t("ui.myApps.label");
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [isMac, setIsMac] = useState(false);
+
+  useEffect(() => setIsMac(detectMac()), []);
 
   const otherApps = useMemo(
     () => apps.filter((a) => a.slug !== currentSlug),
@@ -128,39 +134,27 @@ export function MyAppsSection({ apps, currentSlug, label }: MyAppsSectionProps) 
     window.location.href = app.appUrl;
   }
 
-  // Cmd+K / Ctrl+K global: abre el flyout listo para aceptar una letra.
+  // Atajo global con tres modificadores. Mac usa Cmd (metaKey); Windows/Linux
+  // usan Ctrl (ctrlKey). En ambas plataformas exigimos Alt + Shift adicionales
+  // para que el combo sea único y no pise atajos del navegador ni del OS.
   useEffect(() => {
-    if (otherApps.length === 0) return;
+    if (accelMap.size === 0) return;
     function onKey(e: KeyboardEvent) {
-      if (!(e.metaKey || e.ctrlKey)) return;
-      if (e.altKey || e.shiftKey) return;
-      if (e.key.toLowerCase() !== "k") return;
-      if (isTypingInInput(e.target)) return;
-      e.preventDefault();
-      setOpen(true);
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [otherApps.length]);
-
-  // Con el flyout abierto: una letra suelta lanza la app correspondiente.
-  useEffect(() => {
-    if (!open) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (!e.altKey || !e.shiftKey) return;
+      // Exigimos exactamente Cmd ó Ctrl (no ambos, no ninguno).
+      if (e.metaKey === e.ctrlKey) return;
       if (e.key.length !== 1) return;
       if (isTypingInInput(e.target)) return;
       const ch = e.key.toLowerCase();
       const match = accelMap.get(ch);
-      if (match) {
-        e.preventDefault();
-        navigate(match);
-      }
+      if (!match) return;
+      e.preventDefault();
+      navigate(match);
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, accelMap]);
+  }, [accelMap]);
 
   if (otherApps.length === 0) return null;
 
@@ -178,16 +172,14 @@ export function MyAppsSection({ apps, currentSlug, label }: MyAppsSectionProps) 
           </>
         }
       >
-        <div className="flex items-baseline justify-between gap-2 px-2 pb-1 pt-1">
+        <div className="px-2 pb-1 pt-1">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">
             {resolvedLabel}
-          </p>
-          <p className="shrink-0 text-[10px] tracking-wider text-white/30">
-            {t("ui.myApps.shortcutHint")}
           </p>
         </div>
         {accelApps.map((app) => {
           const isNavigating = navigatingTo === app.slug;
+          const combo = app.accelChar ? formatCombo(app.accelChar, isMac) : null;
           return (
             <button
               key={app.slug}
@@ -195,40 +187,26 @@ export function MyAppsSection({ apps, currentSlug, label }: MyAppsSectionProps) 
               onClick={() => navigate(app)}
               disabled={!!navigatingTo}
               title={
-                app.accelChar
-                  ? t("ui.myApps.appShortcutTitle", {
-                      name: app.name,
-                      letter: app.accelChar.toUpperCase(),
-                    })
+                combo
+                  ? t("ui.myApps.appShortcutTitle", { name: app.name, combo })
                   : app.name
               }
               className="flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-sm text-white/80 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
             >
               <AppLogo app={app} />
-              <span className="truncate text-left">
-                <AccelName name={app.name} accelIdx={app.accelIdx} />
-              </span>
-              {isNavigating && (
-                <Loader2 className="ml-auto h-3.5 w-3.5 shrink-0 animate-spin text-cyan-400" />
-              )}
+              <span className="min-w-0 flex-1 truncate text-left">{app.name}</span>
+              {isNavigating ? (
+                <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-cyan-400" />
+              ) : combo ? (
+                <kbd className="shrink-0 rounded border border-white/15 bg-white/5 px-1.5 py-0.5 font-mono text-[10px] font-normal tracking-tight text-white/50">
+                  {combo}
+                </kbd>
+              ) : null}
             </button>
           );
         })}
       </SidebarFlyout>
       {navigatingTo && <AppNavigatingOverlay />}
-    </>
-  );
-}
-
-function AccelName({ name, accelIdx }: { name: string; accelIdx: number | null }) {
-  if (accelIdx === null || accelIdx < 0 || accelIdx >= name.length) {
-    return <>{name}</>;
-  }
-  return (
-    <>
-      {name.slice(0, accelIdx)}
-      <span className="underline decoration-2 underline-offset-2">{name[accelIdx]}</span>
-      {name.slice(accelIdx + 1)}
     </>
   );
 }

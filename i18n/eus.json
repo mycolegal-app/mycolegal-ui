@@ -366,8 +366,7 @@
     "myApps": {
       "label": "Nire aplikazioak",
       "loadingApp": "Aplikazioa kargatzen…",
-      "shortcutHint": "⌘K · letra",
-      "appShortcutTitle": "Ireki {name} ({letter} sakatu)"
+      "appShortcutTitle": "Ireki {name} ({combo})"
     },
     "appShell": {
       "openMobileMenu": "Alboko menua ireki"
