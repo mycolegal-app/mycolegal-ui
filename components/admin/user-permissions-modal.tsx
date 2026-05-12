@@ -141,7 +141,7 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
   const [authBusy, setAuthBusy] = useState<null | 'role' | 'status'>(null);
   const [confirmSuspend, setConfirmSuspend] = useState(false);
   const [permsDialogApp, setPermsDialogApp] = useState<AppCatalogEntry | null>(null);
-  const [activeTab, setActiveTab] = useState<'profile' | 'permissions'>('permissions');
+  const [activeTab, setActiveTab] = useState<'profile' | 'permissions'>('profile');
   const [profile, setProfile] = useState<{
     displayName: string;
     email: string;
@@ -153,7 +153,7 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
   useEffect(() => {
     if (open) {
       setPermissions(new Map(initialPermissions));
-      setActiveTab('permissions');
+      setActiveTab('profile');
       if (user) {
         setProfile({
           displayName: user.displayName ?? '',
@@ -436,7 +436,14 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
         <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 flex-wrap">
-              <span>{t('ui.usersAdmin.modalTitle', { name: user.displayName })}</span>
+              <span>
+                {t(
+                  activeTab === 'profile'
+                    ? 'ui.usersAdmin.modalTitleProfile'
+                    : 'ui.usersAdmin.modalTitle',
+                  { name: user.displayName },
+                )}
+              </span>
               {showOrgRole && !isSuperadmin && (
                 <Badge
                   variant={isOrgAdmin ? 'default' : 'secondary'}
@@ -457,7 +464,13 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
                 </Badge>
               )}
             </DialogTitle>
-            <DialogDescription>{t('ui.usersAdmin.modalSubtitle')}</DialogDescription>
+            <DialogDescription>
+              {t(
+                activeTab === 'profile'
+                  ? 'ui.usersAdmin.modalSubtitleProfile'
+                  : 'ui.usersAdmin.modalSubtitle',
+              )}
+            </DialogDescription>
           </DialogHeader>
 
           {/* Action toolbar — visually separated panel with vertical, equal-sized
@@ -552,7 +565,7 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
           <Tabs
             value={activeTab}
             onValueChange={(v) => setActiveTab(v as 'profile' | 'permissions')}
-            className="min-h-0 flex-1 flex flex-col"
+            className="min-h-[320px] flex-1 flex flex-col"
           >
             <TabsList className="self-start">
               <TabsTrigger value="permissions">
@@ -563,14 +576,15 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="profile" className="flex-1 min-h-0 overflow-y-auto mt-3">
-              <div className="space-y-3 max-w-xl">
-                <div className="space-y-1.5">
-                  <Label htmlFor="user-profile-name">
+            <TabsContent value="profile" className="mt-3 data-[state=inactive]:hidden">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2">
+                <div className="space-y-1">
+                  <Label htmlFor="user-profile-name" className="text-xs">
                     {t('ui.usersAdmin.profileNameLabel')}
                   </Label>
                   <Input
                     id="user-profile-name"
+                    className="h-8 text-sm"
                     value={profile.displayName}
                     onChange={(e) =>
                       setProfile((p) => ({ ...p, displayName: e.target.value }))
@@ -578,13 +592,14 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
                     disabled={anyBusy}
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="user-profile-email">
+                <div className="space-y-1">
+                  <Label htmlFor="user-profile-email" className="text-xs">
                     {t('ui.usersAdmin.profileEmailLabel')}
                   </Label>
                   <Input
                     id="user-profile-email"
                     type="email"
+                    className="h-8 text-sm"
                     value={profile.email}
                     onChange={(e) =>
                       setProfile((p) => ({ ...p, email: e.target.value }))
@@ -592,13 +607,14 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
                     disabled={anyBusy}
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="user-profile-phone">
+                <div className="space-y-1">
+                  <Label htmlFor="user-profile-phone" className="text-xs">
                     {t('ui.usersAdmin.profilePhoneLabel')}
                   </Label>
                   <Input
                     id="user-profile-phone"
                     type="tel"
+                    className="h-8 text-sm"
                     placeholder={t('ui.usersAdmin.profilePhonePlaceholder')}
                     value={profile.phoneNumber}
                     onChange={(e) =>
@@ -607,8 +623,8 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
                     disabled={anyBusy}
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="user-profile-language">
+                <div className="space-y-1">
+                  <Label htmlFor="user-profile-language" className="text-xs">
                     {t('ui.usersAdmin.profileLanguageLabel')}
                   </Label>
                   <Select
@@ -616,7 +632,7 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
                     onValueChange={(v) => setProfile((p) => ({ ...p, language: v }))}
                     disabled={anyBusy}
                   >
-                    <SelectTrigger id="user-profile-language">
+                    <SelectTrigger id="user-profile-language" className="h-8 text-sm">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -627,12 +643,9 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground">
-                    {t('ui.usersAdmin.profileLanguageHint')}
-                  </p>
                 </div>
-                <div className="flex justify-end pt-2">
-                  <Button onClick={handleProfileSave} disabled={anyBusy}>
+                <div className="sm:col-span-2 flex justify-end pt-1">
+                  <Button size="sm" onClick={handleProfileSave} disabled={anyBusy}>
                     {savingProfile
                       ? t('ui.usersAdmin.profileSavingButton')
                       : t('ui.usersAdmin.profileSaveButton')}

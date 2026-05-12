@@ -396,11 +396,11 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
               variant="ghost"
               size="sm"
               onClick={() => setEditUser(u)}
-              className="h-7 px-2 text-xs"
+              className="h-7 w-7 p-0"
               title={t('ui.usersAdmin.btnEdit')}
+              aria-label={t('ui.usersAdmin.btnEdit')}
             >
-              <Pencil className="h-3.5 w-3.5 mr-1" />
-              {t('ui.usersAdmin.btnEdit')}
+              <Pencil className="h-3.5 w-3.5" />
             </Button>
             <Button
               variant="ghost"

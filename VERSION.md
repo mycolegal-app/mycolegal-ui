@@ -5,6 +5,28 @@
 
 ---
 
+## 1.55.1 — Pulido del modal de gestión de usuarios (2026-05-11)
+
+Type: **revision**
+
+Pequeños ajustes al modal de gestión de usuarios introducido en `1.55.0`:
+
+- El botón con icono de lápiz en la fila ya no muestra texto "Editar
+  permisos" — sólo el icono con tooltip. Mejor ratio info/píxel en
+  tablas con muchas columnas.
+- El modal abre por defecto en la pestaña **Perfil** y el título cambia
+  según la pestaña activa: "Perfil de {name}" / "Permisos de {name}".
+  Acompañado de subtítulo coherente.
+- La pestaña Perfil se redibuja en grid de 2 columnas con campos
+  compactos (`h-8`), sin scroll, sin alterar el alto del modal — se
+  fija un `min-h` en el contenedor de Tabs para que cambiar de
+  pestaña no haga "saltar" el modal.
+
+Nuevas claves i18n: `ui.usersAdmin.modalTitleProfile`,
+`ui.usersAdmin.modalSubtitleProfile`.
+
+---
+
 ## 1.55.0 — Panel de usuarios: edición de perfil, restablecer contraseña y papelera redibujada (2026-05-11)
 
 Type: **minor**
