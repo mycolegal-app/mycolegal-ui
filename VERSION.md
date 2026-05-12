@@ -5,6 +5,55 @@
 
 ---
 
+## 1.56.0 — `EmailTemplatesManager`: selector + editor WYSIWYG (TipTap) (2026-05-12)
+
+Type: **minor**
+
+Rediseño completo del componente compartido `EmailTemplatesManager`:
+
+- **Layout split**: selector de plantillas a la izquierda (lista compacta
+  con badge `Personalizada` / `Por defecto`) y editor a la derecha.
+  Colapsa a una columna en móvil.
+- **Editor WYSIWYG con TipTap**: toolbar con negrita / cursiva / strike
+  / H1-H2 / listas / enlace / undo-redo. El editor emite HTML
+  semánticamente limpio. `StarterKit` + `extension-link`.
+- **Toggle Visual / HTML**: para editar el código crudo cuando se
+  necesitan estilos inline u otras tags no cubiertas por la toolbar.
+- **Macros clickeables**: los chips de la lista de "Campos disponibles"
+  ahora son botones que insertan `{{name}}` en la posición del cursor
+  (visual) o al final (modo HTML).
+- **Botón "Insertar logo"** en la toolbar: aparece sólo cuando la
+  plantilla declara la macro `logoUrl` (ej. plantillas de auth).
+  Inserta un snippet `<img src="{{logoUrl}}" alt="{{orgName}}" ...>`
+  centrado con `max-width:200px`. Auth ya sustituye `{{logoUrl}}` por
+  la URL del logo de la org en `renderTemplate`.
+- **Estado dirty**: los botones `Cancelar` y `Guardar cambios` solo se
+  habilitan cuando hay cambios respecto al estado guardado.
+
+Nuevas dependencias: `@tiptap/react`, `@tiptap/starter-kit`,
+`@tiptap/extension-link` (~60 KB minified gzip combinados).
+
+La API del componente NO cambia: las apps que ya lo montan
+(notaria, legifirma, mycolegal-admin) siguen funcionando sin tocar nada.
+
+---
+
+## 1.55.3 — Fix: editar acceso a la app actual desde el panel admin (2026-05-12)
+
+Type: **revision (bug fix)**
+
+Bug en `UserPermissionsModal`: el checkbox de "acceso" de la app actual
+quedaba deshabilitado para **todos** los usuarios editados, no solo
+para el propio admin. Resultado: imposible dar/quitar acceso a la
+app actual desde el modal — había que abrirlo desde otra app.
+
+La prop `protectedAppSlug` (que era el causante) queda como `@deprecated`
+y sin efecto. El backend ya protege contra el caso del "último org_admin
+sin acceso" y, en cualquier otro caso, la acción es reversible desde
+mycolegal-admin u otra app de la misma org.
+
+---
+
 ## 1.55.1 — Pulido del modal de gestión de usuarios (2026-05-11)
 
 Type: **revision**

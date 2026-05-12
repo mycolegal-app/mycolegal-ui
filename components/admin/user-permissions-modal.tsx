@@ -81,7 +81,14 @@ export interface UserPermissionsModalProps {
   currentAppSlug: string;
   /** Show the org-level role action button (org_admin vs user). */
   showOrgRole?: boolean;
-  /** Slug whose access cannot be removed (e.g., the app you're administering from). */
+  /**
+   * @deprecated v1.55.3 — sin efecto. Antes deshabilitaba el checkbox de la
+   * app actual para impedir que el admin se quitara su propio acceso, pero
+   * la restricción se aplicaba a todos los usuarios editados, lo que
+   * impedía dar/quitar acceso a la propia app a cualquier otro miembro. El
+   * backend ya protege contra "último org_admin"; el caso del admin que
+   * se borra a sí mismo se asume.
+   */
   protectedAppSlug?: string;
   onClose: () => void;
   onSaved: () => void;
@@ -669,7 +676,6 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
                 {apps.map((app) => {
                   const access = permissions.has(app.slug);
                   const role = permissions.get(app.slug) ?? defaultRoleFor(app.slug);
-                  const isProtected = app.slug === protectedAppSlug;
                   return (
                     <div
                       key={app.slug}
@@ -695,7 +701,7 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
                           type="checkbox"
                           checked={access}
                           onChange={(e) => setAccess(app.slug, e.target.checked)}
-                          disabled={anyBusy || isProtected}
+                          disabled={anyBusy}
                           aria-label={t('ui.usersAdmin.modalCardAccess')}
                           className="h-4 w-4 rounded border-input text-primary focus:ring-2 focus:ring-ring shrink-0"
                         />
