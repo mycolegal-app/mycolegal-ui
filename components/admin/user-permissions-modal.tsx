@@ -565,7 +565,7 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
           <Tabs
             value={activeTab}
             onValueChange={(v) => setActiveTab(v as 'profile' | 'permissions')}
-            className="min-h-[320px] flex-1 flex flex-col"
+            className="h-[420px] flex flex-col"
           >
             <TabsList className="self-start">
               <TabsTrigger value="permissions">
@@ -643,13 +643,6 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-                <div className="sm:col-span-2 flex justify-end pt-1">
-                  <Button size="sm" onClick={handleProfileSave} disabled={anyBusy}>
-                    {savingProfile
-                      ? t('ui.usersAdmin.profileSavingButton')
-                      : t('ui.usersAdmin.profileSaveButton')}
-                  </Button>
                 </div>
               </div>
             </TabsContent>
@@ -753,11 +746,16 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
             <Button variant="outline" onClick={onClose} disabled={anyBusy}>
               {t('ui.usersAdmin.btnCancel')}
             </Button>
-            {activeTab === 'permissions' && (
-              <Button onClick={handleSave} disabled={anyBusy || loadingCatalog}>
-                {saving ? t('ui.usersAdmin.btnSaving') : t('ui.usersAdmin.btnSave')}
-              </Button>
-            )}
+            <Button
+              onClick={activeTab === 'profile' ? handleProfileSave : handleSave}
+              disabled={
+                anyBusy || (activeTab === 'permissions' && loadingCatalog)
+              }
+            >
+              {(activeTab === 'profile' ? savingProfile : saving)
+                ? t('ui.usersAdmin.btnSaving')
+                : t('ui.usersAdmin.btnSave')}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
