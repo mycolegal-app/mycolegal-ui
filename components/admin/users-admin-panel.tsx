@@ -19,7 +19,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Users, Lock, UserPlus, Trash2, Pencil } from 'lucide-react';
+import { Users, Lock, UserPlus, Trash2, Pencil, Ban, RotateCcw } from 'lucide-react';
 
 import { DataTable } from '../shared/data-table';
 import { LoadingSpinner } from '../shared/loading-spinner';
@@ -46,6 +46,10 @@ export interface UserRow {
   authUserId: string;
   displayName: string;
   email: string;
+  /** Phone number from auth (null/undefined when user hasn't provided one). */
+  phoneNumber?: string | null;
+  /** Preferred language for system emails (CAST/CAT/VAL/GAL/EUS). */
+  language?: string | null;
   /** App-level role for the current app, or null when hasAppAccess=false. */
   role: string | null;
   active: boolean;
@@ -205,13 +209,13 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
     }
   }
 
-  async function handleDelete(user: UserRow, action: 'deactivate_app' | 'destroy') {
+  async function handleDestroy(user: UserRow) {
     setDeletingId(user.id);
     try {
       const res = await fetch(`${apiBase}/${user.id}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, authUserId: user.authUserId }),
+        body: JSON.stringify({ action: 'destroy', authUserId: user.authUserId }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -221,18 +225,49 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
         });
         return;
       }
+      toast({ title: t('ui.usersAdmin.toastDeletedFromOrg'), variant: 'success' });
+      setDeleteUser(null);
+      fetchUsers();
+    } catch (error) {
+      console.error(error);
+      toast({ title: t('ui.usersAdmin.toastDeleteError'), variant: 'destructive' });
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  async function handleSuspendToggle(user: UserRow, nextStatus: 'active' | 'suspended') {
+    setDeletingId(user.id);
+    try {
+      const res = await fetch(`${apiBase}/permissions/${user.authUserId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          authStatus: nextStatus,
+          displayName: user.displayName,
+          email: user.email,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast({
+          title: err.error?.message || t('ui.usersAdmin.toastAuthChangeError'),
+          variant: 'destructive',
+        });
+        return;
+      }
       toast({
         title:
-          action === 'deactivate_app'
-            ? t('ui.usersAdmin.toastDeactivatedFromApp', { app: appName })
-            : t('ui.usersAdmin.toastDeletedFromOrg'),
+          nextStatus === 'suspended'
+            ? t('ui.usersAdmin.toastUserSuspended')
+            : t('ui.usersAdmin.toastUserReactivated'),
         variant: 'success',
       });
       setDeleteUser(null);
       fetchUsers();
     } catch (error) {
       console.error(error);
-      toast({ title: t('ui.usersAdmin.toastDeleteError'), variant: 'destructive' });
+      toast({ title: t('ui.usersAdmin.toastAuthChangeError'), variant: 'destructive' });
     } finally {
       setDeletingId(null);
     }
@@ -454,64 +489,90 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
 
       <Dialog
         open={!!deleteUser}
-        onOpenChange={(open) => !open && setDeleteUser(null)}
+        onOpenChange={(open) => !open && !deletingId && setDeleteUser(null)}
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t('ui.usersAdmin.deleteTitle')}</DialogTitle>
+            <DialogTitle>{t('ui.usersAdmin.trashDialogTitle')}</DialogTitle>
             <DialogDescription>
               {deleteUser?.displayName} ({deleteUser?.email})
             </DialogDescription>
           </DialogHeader>
 
-          {deleteUser?.otherApps && deleteUser.otherApps.length > 0 ? (
-            <>
+          {deleteUser && (
+            <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                {t('ui.usersAdmin.alsoHasAccess')}
+                {t('ui.usersAdmin.trashDialogIntro', { name: deleteUser.displayName })}
               </p>
-              <ul className="list-disc pl-5 text-sm">
-                {deleteUser.otherApps.map((app) => (
-                  <li key={app.slug} className="font-medium">
-                    {app.name}
-                  </li>
-                ))}
-              </ul>
-              <DialogFooter className="flex-col sm:flex-row gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => handleDelete(deleteUser, 'deactivate_app')}
+              {deleteUser.authStatus === 'suspended' ? (
+                <button
+                  type="button"
+                  onClick={() => handleSuspendToggle(deleteUser, 'active')}
                   disabled={!!deletingId}
+                  className="w-full text-left rounded-md border p-3 hover:bg-emerald-50 hover:border-emerald-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {deletingId ? '...' : t('ui.usersAdmin.deactivateInApp', { app: appName })}
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={() => handleDelete(deleteUser, 'destroy')}
-                  disabled={!!deletingId}
+                  <div className="flex items-start gap-2">
+                    <RotateCcw className="h-4 w-4 mt-0.5 text-emerald-600 shrink-0" />
+                    <div>
+                      <div className="text-sm font-semibold">
+                        {t('ui.usersAdmin.trashOptionReactivateTitle')}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        {t('ui.usersAdmin.trashOptionReactivateDesc')}
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleSuspendToggle(deleteUser, 'suspended')}
+                  disabled={!!deletingId || deleteUser.authRole === 'superadmin'}
+                  className="w-full text-left rounded-md border p-3 hover:bg-amber-50 hover:border-amber-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {deletingId ? '...' : t('ui.usersAdmin.deleteFromOrg')}
-                </Button>
-              </DialogFooter>
-            </>
-          ) : (
-            <>
-              <p className="text-sm text-muted-foreground">
-                {t('ui.usersAdmin.deleteWarning')}
-              </p>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setDeleteUser(null)}>
-                  {t('ui.usersAdmin.btnCancel')}
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={() => handleDelete(deleteUser!, 'destroy')}
-                  disabled={!!deletingId}
-                >
-                  {deletingId ? '...' : t('ui.usersAdmin.btnDelete')}
-                </Button>
-              </DialogFooter>
-            </>
+                  <div className="flex items-start gap-2">
+                    <Ban className="h-4 w-4 mt-0.5 text-amber-600 shrink-0" />
+                    <div>
+                      <div className="text-sm font-semibold">
+                        {t('ui.usersAdmin.trashOptionSuspendTitle')}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        {t('ui.usersAdmin.trashOptionSuspendDesc')}
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => handleDestroy(deleteUser)}
+                disabled={!!deletingId || deleteUser.authRole === 'superadmin'}
+                className="w-full text-left rounded-md border border-destructive/40 p-3 hover:bg-destructive/5 hover:border-destructive transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <div className="flex items-start gap-2">
+                  <Trash2 className="h-4 w-4 mt-0.5 text-destructive shrink-0" />
+                  <div>
+                    <div className="text-sm font-semibold text-destructive">
+                      {t('ui.usersAdmin.trashOptionDeleteTitle')}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {t('ui.usersAdmin.trashOptionDeleteDesc')}
+                    </div>
+                  </div>
+                </div>
+              </button>
+            </div>
           )}
+
+          <DialogFooter className="sm:justify-center">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteUser(null)}
+              disabled={!!deletingId}
+            >
+              {t('ui.usersAdmin.btnCancel')}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

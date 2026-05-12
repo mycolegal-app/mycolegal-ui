@@ -21,6 +21,8 @@ export {
   createUsuariosAppsCatalogRoute,
   createUsuariosByIdPermissionsRoute,
   createUsuariosByIdResendInvitationRoute,
+  createUsuariosByIdProfileRoute,
+  createUsuariosByIdSendPasswordResetRoute,
   createUsuariosCreateWithPasswordRoute,
   createUsuariosByIdAppPermRoute,
   createUsuariosAppPermsCatalogRoute,

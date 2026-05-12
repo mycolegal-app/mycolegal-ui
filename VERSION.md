@@ -5,6 +5,37 @@
 
 ---
 
+## 1.55.0 — Panel de usuarios: edición de perfil, restablecer contraseña y papelera redibujada (2026-05-11)
+
+Type: **minor**
+
+Tres mejoras en `UsersAdminPanel` + `UserPermissionsModal`:
+
+1. **Edición de perfil** — el modal ahora tiene dos pestañas (`Permisos` /
+   `Perfil`). La pestaña Perfil permite cambiar `displayName`, `email`,
+   `phoneNumber` e `idioma` del usuario. El email tiene control de
+   unicidad en auth.
+2. **Restablecer contraseña** — botón nuevo en la toolbar de acciones
+   del modal. Disponible para usuarios `active`/`suspended` (no para
+   `invited`, que usan "Reenviar invitación"). Dispara el mismo flujo
+   `/auth/reset-password/request` que la opción de self-service, pero
+   iniciado por el admin.
+3. **Diálogo de la papelera** — la papelera ya no ofrece "Desactivar
+   en {app}" (la revocación por app vive en el modal de Permisos).
+   Ahora presenta opciones claras: **Suspender** (reversible, bloquea
+   login en toda la org), **Reactivar** (si ya estaba suspendido) y
+   **Eliminar definitivamente**. Botón `Cancelar` siempre visible y
+   centrado.
+
+Nuevos exports en `server/admin`:
+- `createUsuariosByIdProfileRoute` — `PATCH /permissions/[authUserId]/profile`
+- `createUsuariosByIdSendPasswordResetRoute` — `POST /permissions/[authUserId]/send-password-reset`
+
+Nuevos campos en `UserRow`: `phoneNumber`, `language` (rellenados por
+el sync de auth, opcionales).
+
+---
+
 ## 1.54.0 — `AppSidebar`: título único en blanco desde `apps.json` (2026-05-11)
 
 Type: **minor (breaking)**

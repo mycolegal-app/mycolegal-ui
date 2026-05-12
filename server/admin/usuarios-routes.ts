@@ -25,6 +25,8 @@ type AuthUser = {
   id: string;
   email: string;
   displayName: string;
+  phoneNumber?: string | null;
+  language?: string | null;
   role: string;
   status: string;
   lastLogin: string | null;
@@ -137,6 +139,8 @@ export function createUsuariosRoutes(deps: UsuariosRoutesDeps) {
             authUserId: au.id,
             displayName: au.displayName,
             email: au.email,
+            phoneNumber: au.phoneNumber ?? null,
+            language: au.language ?? null,
             role: isAdminApp ? au.role : (hasAppAccess ? local.role : null),
             active: isAdminApp ? au.status === 'active' : (hasAppAccess ? local.active : false),
             lastLoginAt: local.lastLoginAt,
@@ -152,6 +156,8 @@ export function createUsuariosRoutes(deps: UsuariosRoutesDeps) {
             authUserId: au.id,
             displayName: au.displayName,
             email: au.email,
+            phoneNumber: au.phoneNumber ?? null,
+            language: au.language ?? null,
             role: isAdminApp
               ? au.role
               : (hasAppAccess
@@ -1215,4 +1221,173 @@ export function createUsuariosAppPermsCatalogRoute(deps: UsuariosRoutesDeps) {
   );
 
   return { GET };
+}
+
+// --------------------------------------------------------------------------
+// /api/admin/usuarios/[authUserId]/profile — PATCH
+//
+// Profile-only update (displayName / email / phoneNumber / language) for the
+// "Editar perfil" tab in the cross-app permissions modal. Forwards to auth's
+// PATCH /orgs/:orgId/users/:userId — auth enforces email uniqueness. Local
+// UserRole (the per-app shadow row) is kept in sync so the panel doesn't
+// have to wait for the next provisioning pass to reflect the new name/email.
+// --------------------------------------------------------------------------
+
+export function createUsuariosByIdProfileRoute(deps: UsuariosRoutesDeps) {
+  const {
+    appSlug,
+    prisma,
+    withPermission,
+    successResponse,
+    errorResponse,
+    fetchFromAuth,
+    jwtCookieName,
+    audit,
+  } = deps;
+
+  const PATCH = withPermission('admin:users')(
+    async (req: NextRequest, ctx: AdminCtx<{ authUserId: string }>) => {
+      try {
+        const params = await ctx.params;
+        const orgId = getTargetOrgId(deps, ctx.auth, params);
+        const { authUserId } = params;
+        const body = (await req.json()) as {
+          displayName?: string;
+          email?: string;
+          phoneNumber?: string | null;
+          language?: string;
+        };
+        const { displayName, email, phoneNumber, language } = body;
+
+        if (
+          displayName === undefined &&
+          email === undefined &&
+          phoneNumber === undefined &&
+          language === undefined
+        ) {
+          return errorResponse('VALIDATION_ERROR', 'No hay cambios para guardar', 422);
+        }
+
+        const cookieStore = await cookies();
+        const token = cookieStore.get(jwtCookieName)?.value;
+        if (!token) return errorResponse('UNAUTHORIZED', 'No token', 401);
+
+        const patchBody: Record<string, unknown> = {};
+        if (displayName !== undefined) patchBody.displayName = displayName;
+        if (email !== undefined) patchBody.email = email;
+        if (phoneNumber !== undefined) patchBody.phoneNumber = phoneNumber;
+        if (language !== undefined) patchBody.language = language;
+
+        const res = await fetchFromAuth(
+          `/orgs/${orgId}/users/${authUserId}`,
+          token,
+          { method: 'PATCH', body: patchBody },
+        );
+        if (res.status >= 400) {
+          const msg =
+            res.data?.error?.message ||
+            res.data?.message ||
+            (typeof res.data?.error === 'string' ? res.data.error : null) ||
+            'Error al actualizar perfil';
+          return errorResponse('AUTH_ERROR', msg, res.status);
+        }
+
+        if (prisma && (displayName !== undefined || email !== undefined)) {
+          await prisma.userRole
+            .updateMany({
+              where: { authUserId, orgId },
+              data: {
+                ...(displayName !== undefined ? { displayName } : {}),
+                ...(email !== undefined ? { email } : {}),
+              },
+            })
+            .catch((err: unknown) =>
+              console.warn('[admin/usuarios/profile] local sync failed:', err),
+            );
+        }
+
+        if (audit) {
+          await audit({
+            orgId,
+            userId: ctx.auth.userRoleId,
+            accion: 'EDITAR_PERFIL_USUARIO',
+            entidad: 'User',
+            entidadId: authUserId,
+            valorNuevo: patchBody,
+          }).catch(() => {});
+        }
+
+        return successResponse(res.data?.data ?? res.data ?? { updated: true });
+      } catch (error) {
+        console.error('[admin/usuarios/profile] PATCH error:', error);
+        return errorResponse('INTERNAL_ERROR', 'Error al actualizar perfil', 500);
+      }
+    },
+  );
+
+  return { PATCH };
+}
+
+// --------------------------------------------------------------------------
+// /api/admin/usuarios/[authUserId]/send-password-reset — POST
+//
+// Admin-driven password reset: pure passthrough to auth. The user receives
+// the same one-time link as the self-service "Olvidé mi contraseña" flow.
+// Distinct from `resend-invitation`, which targets users that never logged
+// in for the first time.
+// --------------------------------------------------------------------------
+
+export function createUsuariosByIdSendPasswordResetRoute(deps: UsuariosRoutesDeps) {
+  const {
+    withPermission,
+    successResponse,
+    errorResponse,
+    fetchFromAuth,
+    jwtCookieName,
+    audit,
+  } = deps;
+
+  const POST = withPermission('admin:users')(
+    async (_req: NextRequest, ctx: AdminCtx<{ authUserId: string }>) => {
+      try {
+        const params = await ctx.params;
+        const orgId = getTargetOrgId(deps, ctx.auth, params);
+        const { authUserId } = params;
+
+        const cookieStore = await cookies();
+        const token = cookieStore.get(jwtCookieName)?.value;
+        if (!token) return errorResponse('UNAUTHORIZED', 'No token', 401);
+
+        const res = await fetchFromAuth(
+          `/orgs/${orgId}/users/${authUserId}/send-password-reset`,
+          token,
+          { method: 'POST' },
+        );
+        if (res.status >= 400) {
+          const msg =
+            res.data?.error?.message ||
+            res.data?.message ||
+            'Error al enviar el email de restablecimiento';
+          return errorResponse('AUTH_ERROR', msg, res.status);
+        }
+
+        if (audit) {
+          await audit({
+            orgId,
+            userId: ctx.auth.userRoleId,
+            accion: 'ENVIAR_RESET_CONTRASENA',
+            entidad: 'User',
+            entidadId: authUserId,
+          }).catch(() => {});
+        }
+
+        return successResponse(res.data?.data || res.data || { sent: true });
+      } catch (error) {
+        console.error('[admin/usuarios/send-password-reset] POST error:', error);
+        return errorResponse('INTERNAL_ERROR', 'Error al enviar el email de restablecimiento', 500);
+      }
+    },
+  );
+
+  return { POST };
 }

@@ -22,6 +22,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Loader2,
   MailPlus,
+  KeyRound,
   ShieldCheck,
   User,
   Ban,
@@ -47,10 +48,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/select';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { useI18n } from '../i18n/i18n-context';
 import { toast } from '../../hooks/use-toast';
 import type { UserRow } from './users-admin-panel';
 import { AppPermissionsDialog } from './app-permissions-dialog';
+
+const LANGUAGE_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: 'CAST', label: 'Castellano' },
+  { value: 'CAT', label: 'Català' },
+  { value: 'VAL', label: 'Valencià' },
+  { value: 'GAL', label: 'Galego' },
+  { value: 'EUS', label: 'Euskara' },
+];
 
 export interface AppCatalogEntry {
   slug: string;
@@ -124,15 +136,34 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
   const [permissions, setPermissions] = useState<Map<string, string>>(initialPermissions);
   const [saving, setSaving] = useState(false);
   const [resending, setResending] = useState(false);
+  const [resettingPassword, setResettingPassword] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
   const [authBusy, setAuthBusy] = useState<null | 'role' | 'status'>(null);
   const [confirmSuspend, setConfirmSuspend] = useState(false);
   const [permsDialogApp, setPermsDialogApp] = useState<AppCatalogEntry | null>(null);
+  const [activeTab, setActiveTab] = useState<'profile' | 'permissions'>('permissions');
+  const [profile, setProfile] = useState<{
+    displayName: string;
+    email: string;
+    phoneNumber: string;
+    language: string;
+  }>({ displayName: '', email: '', phoneNumber: '', language: 'CAST' });
+  const [savingProfile, setSavingProfile] = useState(false);
 
   useEffect(() => {
     if (open) {
       setPermissions(new Map(initialPermissions));
+      setActiveTab('permissions');
+      if (user) {
+        setProfile({
+          displayName: user.displayName ?? '',
+          email: user.email ?? '',
+          phoneNumber: user.phoneNumber ?? '',
+          language: user.language ?? 'CAST',
+        });
+      }
     }
-  }, [open, initialPermissions]);
+  }, [open, initialPermissions, user]);
 
   function defaultRoleFor(slug: string): string {
     const app = apps.find((a) => a.slug === slug);
@@ -243,6 +274,83 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
     }
   }
 
+  async function handleSendPasswordReset() {
+    if (!user) return;
+    setResettingPassword(true);
+    try {
+      const res = await fetch(
+        `${apiBase}/permissions/${user.authUserId}/send-password-reset`,
+        { method: 'POST' },
+      );
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast({
+          title: err.error?.message || t('ui.usersAdmin.toastPasswordResetError'),
+          variant: 'destructive',
+        });
+        return;
+      }
+      toast({
+        title: t('ui.usersAdmin.toastPasswordResetSent', { email: user.email }),
+        variant: 'success',
+      });
+      setConfirmReset(false);
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: t('ui.usersAdmin.toastPasswordResetError'),
+        variant: 'destructive',
+      });
+    } finally {
+      setResettingPassword(false);
+    }
+  }
+
+  async function handleProfileSave() {
+    if (!user) return;
+    const patch: Record<string, unknown> = {};
+    if (profile.displayName.trim() !== (user.displayName ?? '')) {
+      patch.displayName = profile.displayName.trim();
+    }
+    if (profile.email.trim().toLowerCase() !== (user.email ?? '').toLowerCase()) {
+      patch.email = profile.email.trim().toLowerCase();
+    }
+    const trimmedPhone = profile.phoneNumber.trim();
+    if (trimmedPhone !== (user.phoneNumber ?? '')) {
+      patch.phoneNumber = trimmedPhone === '' ? null : trimmedPhone;
+    }
+    if (profile.language !== (user.language ?? 'CAST')) {
+      patch.language = profile.language;
+    }
+    if (Object.keys(patch).length === 0) {
+      toast({ title: t('ui.usersAdmin.profileNoChanges') });
+      return;
+    }
+    setSavingProfile(true);
+    try {
+      const res = await fetch(`${apiBase}/permissions/${user.authUserId}/profile`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast({
+          title: err.error?.message || t('ui.usersAdmin.toastProfileError'),
+          variant: 'destructive',
+        });
+        return;
+      }
+      toast({ title: t('ui.usersAdmin.toastProfileSaved'), variant: 'success' });
+      onSaved();
+    } catch (error) {
+      console.error(error);
+      toast({ title: t('ui.usersAdmin.toastProfileError'), variant: 'destructive' });
+    } finally {
+      setSavingProfile(false);
+    }
+  }
+
   async function patchAuthField(
     body: { authRole?: 'org_admin' | 'user'; authStatus?: 'active' | 'suspended' | 'disabled' },
     successKey: string,
@@ -279,7 +387,8 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
   const isOrgAdmin = user.authRole === 'org_admin';
   const isSuspended = user.authStatus === 'suspended';
   const isSuperadmin = user.authRole === 'superadmin';
-  const anyBusy = saving || resending || authBusy !== null;
+  const anyBusy =
+    saving || resending || resettingPassword || savingProfile || authBusy !== null;
 
   async function togglePromote() {
     await patchAuthField(
@@ -314,7 +423,16 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
 
   return (
     <>
-      <Dialog open={open} onOpenChange={(v) => (!v && !anyBusy ? onClose() : null)}>
+      <Dialog
+        open={open}
+        onOpenChange={(v) => {
+          if (!v && !anyBusy) {
+            setConfirmReset(false);
+            setConfirmSuspend(false);
+            onClose();
+          }
+        }}
+      >
         <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 flex-wrap">
@@ -350,12 +468,16 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
             <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
               {t('ui.usersAdmin.actionsPanelLabel')}
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
               <Button
                 variant="outline"
                 onClick={handleResendInvitation}
                 disabled={!isInvited || anyBusy}
-                title={!isInvited ? t('ui.usersAdmin.statusEnum.invited') : undefined}
+                title={
+                  !isInvited
+                    ? t('ui.usersAdmin.resendInvitationDisabledHint')
+                    : undefined
+                }
                 className={`${ACTION_BTN_BASE} ${ACTION_TINT.info}`}
               >
                 <MailPlus className="h-4 w-4" />
@@ -363,6 +485,25 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
                   {resending
                     ? t('ui.usersAdmin.btnResendingInvitation')
                     : t('ui.usersAdmin.btnResendInvitation')}
+                </span>
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={() => setConfirmReset(true)}
+                disabled={isInvited || isSuperadmin || anyBusy}
+                title={
+                  isInvited
+                    ? t('ui.usersAdmin.sendPasswordResetDisabledHint')
+                    : undefined
+                }
+                className={`${ACTION_BTN_BASE} ${ACTION_TINT.info}`}
+              >
+                <KeyRound className="h-4 w-4" />
+                <span className="text-xs">
+                  {resettingPassword
+                    ? t('ui.usersAdmin.btnSendingPasswordReset')
+                    : t('ui.usersAdmin.btnSendPasswordReset')}
                 </span>
               </Button>
 
@@ -408,7 +549,102 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
             </div>
           </div>
 
-          <div className="space-y-2 min-h-0 flex-1 flex flex-col">
+          <Tabs
+            value={activeTab}
+            onValueChange={(v) => setActiveTab(v as 'profile' | 'permissions')}
+            className="min-h-0 flex-1 flex flex-col"
+          >
+            <TabsList className="self-start">
+              <TabsTrigger value="permissions">
+                {t('ui.usersAdmin.tabPermissions')}
+              </TabsTrigger>
+              <TabsTrigger value="profile">
+                {t('ui.usersAdmin.tabProfile')}
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="profile" className="flex-1 min-h-0 overflow-y-auto mt-3">
+              <div className="space-y-3 max-w-xl">
+                <div className="space-y-1.5">
+                  <Label htmlFor="user-profile-name">
+                    {t('ui.usersAdmin.profileNameLabel')}
+                  </Label>
+                  <Input
+                    id="user-profile-name"
+                    value={profile.displayName}
+                    onChange={(e) =>
+                      setProfile((p) => ({ ...p, displayName: e.target.value }))
+                    }
+                    disabled={anyBusy}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="user-profile-email">
+                    {t('ui.usersAdmin.profileEmailLabel')}
+                  </Label>
+                  <Input
+                    id="user-profile-email"
+                    type="email"
+                    value={profile.email}
+                    onChange={(e) =>
+                      setProfile((p) => ({ ...p, email: e.target.value }))
+                    }
+                    disabled={anyBusy}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="user-profile-phone">
+                    {t('ui.usersAdmin.profilePhoneLabel')}
+                  </Label>
+                  <Input
+                    id="user-profile-phone"
+                    type="tel"
+                    placeholder={t('ui.usersAdmin.profilePhonePlaceholder')}
+                    value={profile.phoneNumber}
+                    onChange={(e) =>
+                      setProfile((p) => ({ ...p, phoneNumber: e.target.value }))
+                    }
+                    disabled={anyBusy}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="user-profile-language">
+                    {t('ui.usersAdmin.profileLanguageLabel')}
+                  </Label>
+                  <Select
+                    value={profile.language}
+                    onValueChange={(v) => setProfile((p) => ({ ...p, language: v }))}
+                    disabled={anyBusy}
+                  >
+                    <SelectTrigger id="user-profile-language">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LANGUAGE_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    {t('ui.usersAdmin.profileLanguageHint')}
+                  </p>
+                </div>
+                <div className="flex justify-end pt-2">
+                  <Button onClick={handleProfileSave} disabled={anyBusy}>
+                    {savingProfile
+                      ? t('ui.usersAdmin.profileSavingButton')
+                      : t('ui.usersAdmin.profileSaveButton')}
+                  </Button>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent
+              value="permissions"
+              className="flex-1 min-h-0 flex flex-col mt-3 space-y-2"
+            >
             <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
               {t('ui.usersAdmin.modalAppsHeader')}
             </h4>
@@ -497,15 +733,18 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
                 })}
               </div>
             )}
-          </div>
+            </TabsContent>
+          </Tabs>
 
           <DialogFooter>
             <Button variant="outline" onClick={onClose} disabled={anyBusy}>
               {t('ui.usersAdmin.btnCancel')}
             </Button>
-            <Button onClick={handleSave} disabled={anyBusy || loadingCatalog}>
-              {saving ? t('ui.usersAdmin.btnSaving') : t('ui.usersAdmin.btnSave')}
-            </Button>
+            {activeTab === 'permissions' && (
+              <Button onClick={handleSave} disabled={anyBusy || loadingCatalog}>
+                {saving ? t('ui.usersAdmin.btnSaving') : t('ui.usersAdmin.btnSave')}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -524,6 +763,35 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
             </Button>
             <Button variant="destructive" onClick={confirmSuspendNow} disabled={authBusy !== null}>
               {t('ui.usersAdmin.btnSuspend')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Password reset confirm dialog */}
+      <Dialog
+        open={confirmReset}
+        onOpenChange={(v) => !v && !resettingPassword && setConfirmReset(false)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('ui.usersAdmin.confirmPasswordResetTitle')}</DialogTitle>
+            <DialogDescription>
+              {t('ui.usersAdmin.confirmPasswordResetMsg', { email: user.email })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setConfirmReset(false)}
+              disabled={resettingPassword}
+            >
+              {t('ui.usersAdmin.btnCancel')}
+            </Button>
+            <Button onClick={handleSendPasswordReset} disabled={resettingPassword}>
+              {resettingPassword
+                ? t('ui.usersAdmin.btnSendingPasswordReset')
+                : t('ui.usersAdmin.btnSendResetEmail')}
             </Button>
           </DialogFooter>
         </DialogContent>
