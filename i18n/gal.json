@@ -155,7 +155,19 @@
       "closing": "Pechando…",
       "btnConfirmClose": "Confirmar peche",
       "reopening": "Reabrindo…",
-      "btnReopen": "Reabrir incidencia"
+      "btnReopen": "Reabrir incidencia",
+      "errAttach": "Non se puido adxuntar a imaxe",
+      "attachUpload": "Subir imaxe",
+      "attachUploadHint": "Adxuntar un ficheiro de imaxe",
+      "attachCapture": "Capturar pantalla",
+      "attachCaptureHint": "Captura a pantalla actual",
+      "attachPasteHint": "ou pega unha captura",
+      "attachmentReady": "Imaxe lista para enviar",
+      "attachmentPreviewAlt": "Previsualización do adxunto",
+      "attachmentAlt": "Imaxe adxunta",
+      "removeAttachment": "Quitar",
+      "viewAttachment": "Ver imaxe a tamaño completo",
+      "closeAttachment": "Pechar imaxe"
     },
     "login": {
       "errAuth": "Erro de autenticación",

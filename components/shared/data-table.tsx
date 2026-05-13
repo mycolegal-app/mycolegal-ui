@@ -264,12 +264,13 @@ export function DataTable<TData, TValue>({
 
   const effectivePageIndex = manualPagination ? (effectiveControlledPageIndex ?? 0) : undefined;
 
-  // In source/client mode, use TanStack globalFilter for search (debounced).
-  // In source/server mode, the server already filtered — pass empty so
-  // TanStack doesn't second-filter the page slice.
-  const globalFilter = usingSource && remote.state.mode === "client"
-    ? remote.state.searchDebounced
-    : "";
+  // When using a remote `source`, the server is the source of truth for the
+  // search filter — probe re-fires whenever `searchDebounced` changes, so the
+  // `data` array we render is already filtered. Setting globalFilter here
+  // would make TanStack second-filter the same rows with its default string
+  // matcher, which fails for queries like `#8987` (the literal `#` never
+  // appears in the column accessors). Always pass empty when usingSource.
+  const globalFilter = "";
 
   const table = useReactTable({
     data,

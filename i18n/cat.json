@@ -155,7 +155,19 @@
       "closing": "Tancant…",
       "btnConfirmClose": "Confirmar tancament",
       "reopening": "Reobrint…",
-      "btnReopen": "Reobrir incidència"
+      "btnReopen": "Reobrir incidència",
+      "errAttach": "No s'ha pogut adjuntar la imatge",
+      "attachUpload": "Pujar imatge",
+      "attachUploadHint": "Adjuntar un fitxer d'imatge",
+      "attachCapture": "Capturar pantalla",
+      "attachCaptureHint": "Captura la pantalla actual",
+      "attachPasteHint": "o enganxa una captura",
+      "attachmentReady": "Imatge llesta per enviar",
+      "attachmentPreviewAlt": "Previsualització de l'adjunt",
+      "attachmentAlt": "Imatge adjunta",
+      "removeAttachment": "Treure",
+      "viewAttachment": "Veure imatge a mida completa",
+      "closeAttachment": "Tancar imatge"
     },
     "login": {
       "errAuth": "Error d'autenticació",

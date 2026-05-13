@@ -1,11 +1,26 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Loader2, Send, CheckCircle2, RotateCcw, AlertCircle } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Loader2,
+  Send,
+  CheckCircle2,
+  RotateCcw,
+  AlertCircle,
+  Paperclip,
+  Camera,
+  Upload,
+  X as XIcon,
+} from "lucide-react";
 import { cn } from "../../lib/utils";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 import { useI18n } from "../i18n/i18n-context";
+import {
+  blobToCompressedJpeg,
+  captureViewport,
+  imageBlobFromPaste,
+} from "../../lib/screenshot-utils";
 
 export interface IncidentThreadIncident {
   id: string;
@@ -22,6 +37,8 @@ export interface IncidentThreadMessage {
   authorRole: "user" | "superadmin";
   body: string;
   createdAt: string;
+  /** True cuando el mensaje lleva un JPEG adjunto persistido en BD. */
+  hasScreenshot?: boolean;
 }
 
 interface IncidentThreadProps {
@@ -100,6 +117,13 @@ export function IncidentThread({
   const [closeMode, setCloseMode] = useState(false);
   const [closeDraft, setCloseDraft] = useState("");
   const [reopening, setReopening] = useState(false);
+  // Adjunto opcional para la respuesta (solo lo usa superadmin). Guardamos
+  // el data URL ya comprimido a JPEG para mandarlo tal cual al POST.
+  const [attachment, setAttachment] = useState<string | null>(null);
+  const [attaching, setAttaching] = useState(false);
+  const [zoomedSrc, setZoomedSrc] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const canAttach = viewerRole === "superadmin";
 
   const fetchMessages = useCallback(async () => {
     setError(null);
@@ -127,17 +151,20 @@ export function IncidentThread({
     setPosting(true);
     setError(null);
     try {
+      const payload: { body: string; screenshot?: string } = { body };
+      if (canAttach && attachment) payload.screenshot = attachment;
       const res = await fetch(`${apiBase}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ body }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body?.error?.message || body?.error || `HTTP ${res.status}`);
       }
       setDraft("");
+      setAttachment(null);
       await fetchMessages();
       onRefresh?.();
     } catch (err) {
@@ -145,7 +172,56 @@ export function IncidentThread({
     } finally {
       setPosting(false);
     }
-  }, [apiBase, draft, fetchMessages, onRefresh, t]);
+  }, [apiBase, attachment, canAttach, draft, fetchMessages, onRefresh, t]);
+
+  const ingestImageBlob = useCallback(
+    async (blob: Blob) => {
+      setAttaching(true);
+      setError(null);
+      try {
+        const dataUrl = await blobToCompressedJpeg(blob);
+        setAttachment(dataUrl);
+      } catch (err) {
+        setError((err as Error).message || t("ui.incidentThread.errAttach"));
+      } finally {
+        setAttaching(false);
+      }
+    },
+    [t],
+  );
+
+  const captureScreen = useCallback(async () => {
+    setAttaching(true);
+    setError(null);
+    try {
+      const { dataUrl } = await captureViewport();
+      setAttachment(dataUrl);
+    } catch (err) {
+      setError((err as Error).message || t("ui.incidentThread.errAttach"));
+    } finally {
+      setAttaching(false);
+    }
+  }, [t]);
+
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      if (!canAttach) return;
+      const blob = imageBlobFromPaste(e.nativeEvent);
+      if (!blob) return;
+      e.preventDefault();
+      void ingestImageBlob(blob);
+    },
+    [canAttach, ingestImageBlob],
+  );
+
+  const handleFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      e.target.value = "";
+      if (file) void ingestImageBlob(file);
+    },
+    [ingestImageBlob],
+  );
 
   const closeIncident = useCallback(async () => {
     const comment = closeDraft.trim();
@@ -270,11 +346,52 @@ export function IncidentThread({
                   {formatDateTime(m.createdAt)}
                 </p>
                 <p className="whitespace-pre-wrap">{m.body}</p>
+                {m.hasScreenshot && (
+                  <button
+                    type="button"
+                    onClick={() => setZoomedSrc(`${apiBase}/messages/${m.id}/screenshot`)}
+                    className={cn(
+                      "mt-2 block overflow-hidden rounded border",
+                      mine ? "border-white/30" : "border-gray-300",
+                    )}
+                    title={t("ui.incidentThread.viewAttachment")}
+                  >
+                    <img
+                      src={`${apiBase}/messages/${m.id}/screenshot`}
+                      alt={t("ui.incidentThread.attachmentAlt")}
+                      className="max-h-48 w-auto"
+                    />
+                  </button>
+                )}
               </div>
             </div>
           );
         })}
       </div>
+
+      {zoomedSrc && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setZoomedSrc(null)}
+        >
+          <button
+            type="button"
+            onClick={() => setZoomedSrc(null)}
+            className="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
+            aria-label={t("ui.incidentThread.closeAttachment")}
+          >
+            <XIcon className="h-5 w-5" />
+          </button>
+          <img
+            src={zoomedSrc}
+            alt={t("ui.incidentThread.attachmentAlt")}
+            className="max-h-full max-w-full"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
 
       {error && (
         <div className="flex items-start gap-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -289,6 +406,7 @@ export function IncidentThread({
           <Textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
+            onPaste={handlePaste}
             rows={3}
             placeholder={
               viewerRole === "user"
@@ -297,7 +415,67 @@ export function IncidentThread({
             }
             disabled={posting}
           />
-          <div className="flex flex-wrap justify-end gap-2">
+          {canAttach && attachment && (
+            <div className="flex items-center gap-3 rounded-md border border-gray-200 bg-gray-50 p-2">
+              <img
+                src={attachment}
+                alt={t("ui.incidentThread.attachmentPreviewAlt")}
+                className="h-16 w-auto rounded border"
+              />
+              <p className="flex-1 text-xs text-gray-600">
+                {t("ui.incidentThread.attachmentReady")}
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setAttachment(null)}
+                disabled={posting}
+              >
+                <XIcon className="mr-1 h-3.5 w-3.5" />
+                {t("ui.incidentThread.removeAttachment")}
+              </Button>
+            </div>
+          )}
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {canAttach && (
+              <>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={posting || attaching}
+                  title={t("ui.incidentThread.attachUploadHint")}
+                >
+                  <Upload className="mr-1 h-3.5 w-3.5" />
+                  {t("ui.incidentThread.attachUpload")}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={captureScreen}
+                  disabled={posting || attaching}
+                  title={t("ui.incidentThread.attachCaptureHint")}
+                >
+                  {attaching ? (
+                    <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Camera className="mr-1 h-3.5 w-3.5" />
+                  )}
+                  {t("ui.incidentThread.attachCapture")}
+                </Button>
+                <span className="hidden text-xs text-gray-400 sm:inline-flex sm:items-center sm:gap-1">
+                  <Paperclip className="h-3 w-3" />
+                  {t("ui.incidentThread.attachPasteHint")}
+                </span>
+              </>
+            )}
             <Button
               variant="outline"
               onClick={() => setCloseMode(true)}

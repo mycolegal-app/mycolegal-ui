@@ -119,6 +119,21 @@ export function createIncidentsRoutes(config: AuthProxyConfig) {
       },
     },
 
+    /** GET /api/incidents/mine/[id]/messages/[messageId]/screenshot. */
+    mineMessageScreenshot: {
+      async GET(
+        request: NextRequest,
+        { params }: { params: Promise<{ id: string; messageId: string }> },
+      ) {
+        const { id, messageId } = await params;
+        return proxyToAuth(
+          config,
+          request,
+          `/incidents/mine/${id}/messages/${messageId}/screenshot`,
+        );
+      },
+    },
+
     /**
      * GET /api/incidents/org-app — incidents from OTHER users in caller's
      * org against a specific appSlug (used by the "Mi cuenta" modal). The

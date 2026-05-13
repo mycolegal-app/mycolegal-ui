@@ -155,7 +155,19 @@
       "closing": "Ixten…",
       "btnConfirmClose": "Berretsi itxiera",
       "reopening": "Berriz irekitzen…",
-      "btnReopen": "Gertakaria berriz ireki"
+      "btnReopen": "Gertakaria berriz ireki",
+      "errAttach": "Ezin izan da irudia erantsi",
+      "attachUpload": "Igo irudia",
+      "attachUploadHint": "Erantsi irudi-fitxategi bat",
+      "attachCapture": "Pantaila-argazkia",
+      "attachCaptureHint": "Hartu uneko pantailaren argazkia",
+      "attachPasteHint": "edo itsatsi argazki bat",
+      "attachmentReady": "Irudia bidaltzeko prest",
+      "attachmentPreviewAlt": "Eranskinaren aurrebista",
+      "attachmentAlt": "Erantsitako irudia",
+      "removeAttachment": "Kendu",
+      "viewAttachment": "Ikusi irudia tamaina osoan",
+      "closeAttachment": "Itxi irudia"
     },
     "login": {
       "errAuth": "Autentifikazio errorea",
