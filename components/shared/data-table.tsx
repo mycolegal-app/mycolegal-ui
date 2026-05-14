@@ -61,9 +61,18 @@ interface DataTableProps<TData, TValue> {
    */
   scrollable?: boolean;
   /**
+   * When true together with `scrollable`, the DataTable becomes a flex column
+   * that fills its parent (which must be a flex column with a definite height,
+   * e.g. `flex h-full min-h-0 flex-col`). The tbody scroll area grows to fill
+   * whatever space remains under the toolbar and above the paginator instead of
+   * relying on `scrollBodyMaxHeight`. Use this when the page owns its own
+   * height (project rule: pages don't scroll, lists do).
+   */
+  fillParent?: boolean;
+  /**
    * CSS max-height for the scroll area when `scrollable` is true. Defaults
    * to a viewport-relative value that fits under a typical page header +
-   * toolbar + paginator.
+   * toolbar + paginator. Ignored when `fillParent` is true.
    */
   scrollBodyMaxHeight?: string;
   /**
@@ -221,6 +230,7 @@ export function DataTable<TData, TValue>({
   enableColumnVisibility = false,
   toolbar,
   scrollable = false,
+  fillParent = false,
   scrollBodyMaxHeight = "calc(100vh - 320px)",
   manualPagination: manualPaginationProp = false,
   pageIndex: controlledPageIndex,
@@ -356,7 +366,7 @@ export function DataTable<TData, TValue>({
   const showSearchInput = usingSource ? searchable : Boolean(searchKey);
 
   return (
-    <div className="space-y-4">
+    <div className={fillParent ? "flex h-full min-h-0 flex-col gap-4" : "space-y-4"}>
       {(showSearchInput || enableColumnVisibility || toolbar) && (
         <div className="flex flex-wrap items-center gap-2 text-xs [&_select]:h-8 [&_select]:px-2 [&_select]:py-1 [&_select]:text-xs [&_input[type=text]]:h-8 [&_input[type=text]]:px-2 [&_input[type=text]]:py-1 [&_input[type=text]]:text-xs">
           {showSearchInput && usingSource && (
@@ -422,8 +432,8 @@ export function DataTable<TData, TValue>({
       )}
 
       <div
-        className={`rounded-lg border${scrollable ? " overflow-y-auto" : ""}`}
-        style={scrollable ? { maxHeight: scrollBodyMaxHeight } : undefined}
+        className={`rounded-lg border${scrollable ? " overflow-y-auto" : ""}${fillParent && scrollable ? " flex-1 min-h-0" : ""}`}
+        style={scrollable && !fillParent ? { maxHeight: scrollBodyMaxHeight } : undefined}
       >
         <table className="w-full caption-bottom text-xs">
           {/*
