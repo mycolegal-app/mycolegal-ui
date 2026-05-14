@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import type { AppInfo } from "./app-info";
@@ -14,6 +14,7 @@ interface AppSwitcherBarProps {
 }
 
 const STORAGE_KEY = "mc:app-switcher:open";
+const HOVER_EXPAND_DELAY_MS = 150;
 
 /**
  * Subheader debajo del header estándar. Lista las apps habilitadas del usuario
@@ -28,8 +29,9 @@ const STORAGE_KEY = "mc:app-switcher:open";
  */
 export function AppSwitcherBar({ apps, currentSlug }: AppSwitcherBarProps) {
   const { t } = useI18n();
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     try {
@@ -41,16 +43,51 @@ export function AppSwitcherBar({ apps, currentSlug }: AppSwitcherBarProps) {
     }
   }, []);
 
-  function toggle() {
-    setExpanded((prev) => {
-      const next = !prev;
-      try {
-        window.localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
-      } catch {
-        /* ignore */
-      }
-      return next;
-    });
+  useEffect(() => {
+    return () => {
+      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    };
+  }, []);
+
+  const sortedApps = useMemo(
+    () =>
+      [...apps].sort((a, b) =>
+        a.name.localeCompare(b.name, "es", { sensitivity: "base" }),
+      ),
+    [apps],
+  );
+
+  function persist(next: boolean) {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function expand() {
+    setExpanded(true);
+    persist(true);
+  }
+
+  function collapse() {
+    setExpanded(false);
+    persist(false);
+  }
+
+  function handleHoverEnter() {
+    if (expanded || hoverTimerRef.current) return;
+    hoverTimerRef.current = setTimeout(() => {
+      hoverTimerRef.current = null;
+      expand();
+    }, HOVER_EXPAND_DELAY_MS);
+  }
+
+  function handleHoverLeave() {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
   }
 
   function navigate(app: AppInfo) {
@@ -66,7 +103,9 @@ export function AppSwitcherBar({ apps, currentSlug }: AppSwitcherBarProps) {
     return (
       <button
         type="button"
-        onClick={toggle}
+        onClick={expand}
+        onMouseEnter={handleHoverEnter}
+        onMouseLeave={handleHoverLeave}
         aria-label={t("ui.appSwitcher.expand")}
         title={t("ui.appSwitcher.expand")}
         className="flex h-[18px] w-full shrink-0 items-center justify-end border-b border-white/10 bg-[#0f1b2d] px-6 transition-colors hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
@@ -85,7 +124,7 @@ export function AppSwitcherBar({ apps, currentSlug }: AppSwitcherBarProps) {
       >
         <div className="flex flex-1 items-stretch overflow-x-auto px-6 py-1">
           <div className="mx-auto flex w-fit items-stretch gap-1">
-            {apps.map((app) => {
+            {sortedApps.map((app) => {
               const isActive = app.slug === currentSlug;
               return (
                 <button
@@ -118,7 +157,7 @@ export function AppSwitcherBar({ apps, currentSlug }: AppSwitcherBarProps) {
         </div>
         <button
           type="button"
-          onClick={toggle}
+          onClick={collapse}
           aria-label={t("ui.appSwitcher.collapse")}
           title={t("ui.appSwitcher.collapse")}
           className="flex w-10 shrink-0 items-center justify-center border-l border-white/10 text-white/80 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"

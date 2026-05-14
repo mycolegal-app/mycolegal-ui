@@ -86,6 +86,7 @@ function AppShellInner({
     // own overflow-y-auto kick in instead of the body scrolling. Project rule:
     // pages must never scroll vertically — the inner element owns the scroll.
     <div className="lg:ml-[220px] flex flex-1 flex-col h-screen min-h-0">
+      {appSwitcherBar}
       {header && (
         <header className="flex h-14 shrink-0 items-center justify-between border-b border-navy-600/30 bg-navy-700 px-6">
           {/* Mobile hamburger */}
@@ -121,7 +122,6 @@ function AppShellInner({
           </div>
         </header>
       )}
-      {appSwitcherBar}
       {breadcrumbs}
       <main className="flex-1 overflow-y-auto overflow-x-hidden p-6">{children}</main>
     </div>
