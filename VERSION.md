@@ -5,7 +5,7 @@
 
 ---
 
-## 1.59.0 — AppSwitcherBar: subheader conmutador de apps (2026-05-13)
+## 1.59.1 — AppSwitcherBar: subheader conmutador de apps (2026-05-13)
 
 Type: **minor**
 
@@ -20,11 +20,12 @@ header estándar. Una sola interacción para saltar entre apps habilitadas.
 - **API nuevo en `<AppSidebar>`**: prop `hideMyApps?: boolean`. Las
   apps que activan el subheader deben pasar `hideMyApps` para no
   duplicar el acceso al catálogo desde el sidebar.
-- **Comportamiento**: colapsado por defecto = cinta de 18px sobre
-  `bg-slate-300` con un único chevron a la derecha (sin literales, sin
-  ningún texto visible); expandido = fila horizontal de iconos+nombre
-  con scroll si hay overflow; app activa marcada con underline en color
-  primario.
+- **Comportamiento**: el subheader usa `bg-slate-500` tanto colapsado
+  como expandido. Colapsado = cinta de 18px con un único chevron a la
+  derecha (sin texto). Expandido = fila horizontal centrada de
+  icono (28px, ≈80% del logo brand del sidebar, sin recuadro) + nombre
+  en blanco a 10px, con scroll si hay overflow. App activa marcada con
+  underline cyan bajo el nombre.
 - **Persistencia**: `localStorage["mc:app-switcher:open"]` por
   usuario+dispositivo. La primera visita arranca expandido.
 - **i18n**: nueva sección `ui.appSwitcher.*` (`ariaLabel`, `expand`,
