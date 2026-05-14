@@ -5,6 +5,13 @@
 
 ---
 
+##  — Versión mejorada de DataTables (vistas de tablas) homogéneas para todas las apps (2026-05-14)
+
+Type: **revision**
+
+
+
+
 ## 1.59.3 — AppSwitcherBar: fondo unificado con sidebar (2026-05-13)
 
 Type: **patch**
