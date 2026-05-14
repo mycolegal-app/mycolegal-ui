@@ -83,44 +83,45 @@ export function AppSwitcherBar({ apps, currentSlug }: AppSwitcherBarProps) {
         aria-label={t("ui.appSwitcher.ariaLabel")}
         className="relative flex shrink-0 items-stretch border-b border-slate-200 bg-white"
       >
-        <div className="flex flex-1 items-stretch gap-1 overflow-x-auto px-6 py-2">
-          {apps.map((app) => {
-            const isActive = app.slug === currentSlug;
-            const isNavigating = navigatingTo === app.slug;
-            return (
-              <button
-                key={app.slug}
-                type="button"
-                onClick={() => navigate(app)}
-                disabled={!!navigatingTo || isActive}
-                title={app.name}
-                className={cn(
-                  "group flex w-[88px] shrink-0 flex-col items-center gap-1 rounded-md px-2 py-1.5 transition-colors",
-                  isActive
-                    ? "cursor-default"
-                    : "hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60",
-                )}
-              >
-                <AppLogo app={app} active={isActive} />
-                <span
+        <div className="flex flex-1 items-stretch overflow-x-auto px-6 py-1">
+          <div className="mx-auto flex w-fit items-stretch gap-1">
+            {apps.map((app) => {
+              const isActive = app.slug === currentSlug;
+              return (
+                <button
+                  key={app.slug}
+                  type="button"
+                  onClick={() => navigate(app)}
+                  disabled={!!navigatingTo || isActive}
+                  title={app.name}
                   className={cn(
-                    "max-w-full truncate text-[11px] font-medium leading-tight",
+                    "group flex w-[78px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-md px-1 py-0.5 transition-colors",
                     isActive
-                      ? "text-mc-primary-700"
-                      : "text-slate-600 group-hover:text-slate-900",
+                      ? "cursor-default"
+                      : "hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60",
                   )}
                 >
-                  {app.name}
-                </span>
-                {isActive && (
+                  <AppLogo app={app} active={isActive} />
                   <span
-                    aria-hidden="true"
-                    className="-mt-0.5 h-[2px] w-6 rounded-full bg-mc-primary-500"
-                  />
-                )}
-              </button>
-            );
-          })}
+                    className={cn(
+                      "w-full text-center text-[10px] font-medium leading-tight",
+                      isActive
+                        ? "text-mc-primary-700"
+                        : "text-slate-600 group-hover:text-slate-900",
+                    )}
+                  >
+                    {app.name}
+                  </span>
+                  {isActive && (
+                    <span
+                      aria-hidden="true"
+                      className="h-[2px] w-7 rounded-full bg-mc-primary-500"
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
         <button
           type="button"
@@ -140,21 +141,26 @@ export function AppSwitcherBar({ apps, currentSlug }: AppSwitcherBarProps) {
 function AppLogo({ app, active }: { app: AppInfo; active: boolean }) {
   const initials = app.name.slice(0, 2).toUpperCase();
   return (
-    <div
-      className={cn(
-        "flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded text-[10px] font-bold uppercase transition-colors",
-        active
-          ? "bg-mc-primary-500/15 text-mc-primary-700"
-          : "bg-slate-100 text-slate-500 group-hover:bg-slate-200 group-hover:text-slate-700",
-      )}
-    >
+    <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden">
       {app.logoSvg ? (
         <div
-          className="h-5 w-5 [&>svg]:h-full [&>svg]:w-full"
+          className={cn(
+            "h-11 w-11 transition-opacity [&>svg]:h-full [&>svg]:w-full",
+            active ? "opacity-100" : "opacity-90 group-hover:opacity-100",
+          )}
           dangerouslySetInnerHTML={{ __html: app.logoSvg }}
         />
       ) : (
-        initials
+        <span
+          className={cn(
+            "text-sm font-bold uppercase",
+            active
+              ? "text-mc-primary-700"
+              : "text-slate-500 group-hover:text-slate-700",
+          )}
+        >
+          {initials}
+        </span>
       )}
     </div>
   );
