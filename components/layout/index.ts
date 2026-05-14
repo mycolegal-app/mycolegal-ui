@@ -3,6 +3,7 @@ export type { UserInfo, OrgInfo, AppShellProps } from "./app-shell";
 export { PageHeaderProvider, usePageHeader } from "./page-header-context";
 export { PageTitle } from "./page-title";
 export { HeaderActions } from "./header-actions";
+export { PageShell } from "./page-shell";
 export type { AppInfo } from "./app-info";
 export { MyAppsSection } from "./my-apps-section";
 export { AppSwitcherBar } from "./app-switcher-bar";
