@@ -5,6 +5,37 @@
 
 ---
 
+## 1.59.0 — AppSwitcherBar: subheader conmutador de apps (2026-05-13)
+
+Type: **minor**
+
+Nuevo componente `AppSwitcherBar` que reemplaza la entrada "Mis
+aplicaciones" del sidebar por un subheader colapsable justo debajo del
+header estándar. Una sola interacción para saltar entre apps habilitadas.
+
+- **API nuevo en `<AppShell>`**: prop `showAppSwitcherBar?: boolean`.
+  Cuando es `true`, AppShell renderiza `<AppSwitcherBar apps={apps}
+  currentSlug={appSlug} />` entre el `<header>` y los breadcrumbs sin
+  alterar el header existente.
+- **API nuevo en `<AppSidebar>`**: prop `hideMyApps?: boolean`. Las
+  apps que activan el subheader deben pasar `hideMyApps` para no
+  duplicar el acceso al catálogo desde el sidebar.
+- **Comportamiento**: colapsado por defecto = cinta de 18px sobre
+  `bg-slate-300` con un único chevron a la derecha (sin literales, sin
+  ningún texto visible); expandido = fila horizontal de iconos+nombre
+  con scroll si hay overflow; app activa marcada con underline en color
+  primario.
+- **Persistencia**: `localStorage["mc:app-switcher:open"]` por
+  usuario+dispositivo. La primera visita arranca expandido.
+- **i18n**: nueva sección `ui.appSwitcher.*` (`ariaLabel`, `expand`,
+  `collapse`, `loadingApp`) en cast/cat/eus/gal. Los strings sólo se
+  usan como `aria-label`/`title` — la cinta colapsada no muestra
+  ningún texto.
+- **Rollout**: la primera app que lo activa es LegiFirma. Resto de
+  apps mantienen `MyAppsSection` hasta migrarse.
+
+---
+
 ## 1.58.0 — DataTable con prop `source` (auto cliente/servidor por umbral) (2026-05-12)
 
 Type: **minor**

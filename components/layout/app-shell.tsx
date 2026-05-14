@@ -5,6 +5,7 @@ import { Menu } from "lucide-react";
 import { PageHeaderProvider, usePageHeader } from "./page-header-context";
 import { type AppInfo } from "./app-info";
 import { IdleTimeout } from "./idle-timeout";
+import { AppSwitcherBar } from "./app-switcher-bar";
 import { AppInfoButton } from "../shared/app-info-button";
 import {
   DefaultHelpButton,
@@ -49,6 +50,10 @@ interface AppShellProps {
   overlays?: ReactNode;
   /** Wrapper providers (I18n, Help, etc.) — receives children to wrap */
   providers?: (children: ReactNode) => ReactNode;
+  /** Render the AppSwitcherBar subheader (collapsible icon strip) below the
+   *  main header. Replaces the sidebar "Mis aplicaciones" entry — apps that
+   *  enable this should also pass `hideMyApps` to their AppSidebar. */
+  showAppSwitcherBar?: boolean;
 }
 
 function AppShellInner({
@@ -59,6 +64,7 @@ function AppShellInner({
   commandPalette,
   helpButton,
   breadcrumbs,
+  appSwitcherBar,
   onToggleMobile,
 }: {
   children: ReactNode;
@@ -68,6 +74,7 @@ function AppShellInner({
   commandPalette?: ReactNode;
   helpButton?: ReactNode;
   breadcrumbs?: ReactNode;
+  appSwitcherBar?: ReactNode;
   onToggleMobile: () => void;
 }) {
   const { t } = useI18n();
@@ -114,6 +121,7 @@ function AppShellInner({
           </div>
         </header>
       )}
+      {appSwitcherBar}
       {breadcrumbs}
       <main className="flex-1 overflow-y-auto overflow-x-hidden p-6">{children}</main>
     </div>
@@ -154,6 +162,7 @@ export default function AppShell({
   breadcrumbs,
   overlays,
   providers,
+  showAppSwitcherBar,
 }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [user, setUser] = useState<UserInfo>({ displayName: "Cargando…", email: "", role: "" });
@@ -206,6 +215,11 @@ export default function AppShell({
           commandPalette={commandPalette}
           helpButton={helpButton}
           breadcrumbs={breadcrumbs}
+          appSwitcherBar={
+            showAppSwitcherBar ? (
+              <AppSwitcherBar apps={apps} currentSlug={appSlug} />
+            ) : undefined
+          }
           onToggleMobile={() => setMobileOpen(!mobileOpen)}
         >
           {children}

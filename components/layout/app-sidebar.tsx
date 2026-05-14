@@ -70,6 +70,10 @@ export interface AppSidebarProps {
   settingsHref?: string;
   /** Manual route (default: "/manual"). */
   manualHref?: string;
+  /** Oculta el bloque "Mis aplicaciones" del sidebar. Las apps que usen el
+   *  AppSwitcherBar (subheader) en su lugar deben activar este flag para
+   *  evitar duplicar el acceso al catálogo de apps. */
+  hideMyApps?: boolean;
 
   /* —— Props injected by <AppShell> —— */
   user: AppSidebarUser;
@@ -103,6 +107,7 @@ export function AppSidebar({
   adminHref = "/admin",
   settingsHref,
   manualHref = "/manual",
+  hideMyApps,
   user,
   apps,
   currentSlug,
@@ -236,10 +241,14 @@ export function AppSidebar({
           </div>
         )}
 
-        {/* Mis aplicaciones — siempre justo encima del Manual. */}
-        <div className="space-y-0.5 border-t border-white/10 px-3 pb-1 pt-3">
-          <MyAppsSection apps={apps} currentSlug={currentSlug} />
-        </div>
+        {/* Mis aplicaciones — siempre justo encima del Manual. Las apps que
+            renderizan el AppSwitcherBar (subheader) lo ocultan con
+            `hideMyApps` para no duplicar el acceso. */}
+        {!hideMyApps && (
+          <div className="space-y-0.5 border-t border-white/10 px-3 pb-1 pt-3">
+            <MyAppsSection apps={apps} currentSlug={currentSlug} />
+          </div>
+        )}
 
         {/* Manual — always above the user block, separated. */}
         <div className="space-y-0.5 border-t border-white/10 px-3 pb-3 pt-3">

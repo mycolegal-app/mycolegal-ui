@@ -380,6 +380,12 @@
       "loadingApp": "Carregant aplicació…",
       "appShortcutTitle": "Obre {name} ({combo})"
     },
+    "appSwitcher": {
+      "ariaLabel": "Canviar d'aplicació",
+      "expand": "Mostra les aplicacions",
+      "collapse": "Amaga les aplicacions",
+      "loadingApp": "Carregant aplicació…"
+    },
     "appShell": {
       "openMobileMenu": "Obrir menú lateral"
     },

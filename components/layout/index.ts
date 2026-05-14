@@ -5,6 +5,7 @@ export { PageTitle } from "./page-title";
 export { HeaderActions } from "./header-actions";
 export type { AppInfo } from "./app-info";
 export { MyAppsSection } from "./my-apps-section";
+export { AppSwitcherBar } from "./app-switcher-bar";
 export { SidebarFlyout } from "./sidebar-flyout";
 export { IdleTimeout } from "./idle-timeout";
 export { AppSidebar } from "./app-sidebar";

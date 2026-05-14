@@ -380,6 +380,12 @@
       "loadingApp": "Aplikazioa kargatzen…",
       "appShortcutTitle": "Ireki {name} ({combo})"
     },
+    "appSwitcher": {
+      "ariaLabel": "Aplikazioa aldatu",
+      "expand": "Aplikazioak erakutsi",
+      "collapse": "Aplikazioak ezkutatu",
+      "loadingApp": "Aplikazioa kargatzen…"
+    },
     "appShell": {
       "openMobileMenu": "Alboko menua ireki"
     },
