@@ -71,8 +71,10 @@ interface DataTableProps<TData, TValue> {
   fillParent?: boolean;
   /**
    * CSS max-height for the scroll area when `scrollable` is true. Defaults
-   * to a viewport-relative value that fits under a typical page header +
-   * toolbar + paginator. Ignored when `fillParent` is true.
+   * to a viewport-relative value that fits under a typical page chrome:
+   * AppSwitcherBar (expanded ~52px) + header (h-14) + breadcrumb + toolbar
+   * + paginator. Ignored when `fillParent` is true. Override on a per-page
+   * basis if your page has additional chrome above the table.
    */
   scrollBodyMaxHeight?: string;
   /**
@@ -231,7 +233,7 @@ export function DataTable<TData, TValue>({
   toolbar,
   scrollable = false,
   fillParent = false,
-  scrollBodyMaxHeight = "calc(100vh - 320px)",
+  scrollBodyMaxHeight = "calc(100vh - 360px)",
   manualPagination: manualPaginationProp = false,
   pageIndex: controlledPageIndex,
   totalRows: controlledTotalRows,
