@@ -69,7 +69,7 @@ export function AppSwitcherBar({ apps, currentSlug }: AppSwitcherBarProps) {
         onClick={toggle}
         aria-label={t("ui.appSwitcher.expand")}
         title={t("ui.appSwitcher.expand")}
-        className="flex h-[18px] w-full shrink-0 items-center justify-end border-b border-slate-700/60 bg-slate-500 px-6 transition-colors hover:bg-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
+        className="flex h-[18px] w-full shrink-0 items-center justify-end border-b border-white/10 bg-[#0f1b2d] px-6 transition-colors hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
       >
         <ChevronDown className="h-3.5 w-3.5 text-white" />
       </button>
@@ -81,7 +81,7 @@ export function AppSwitcherBar({ apps, currentSlug }: AppSwitcherBarProps) {
       <div
         role="navigation"
         aria-label={t("ui.appSwitcher.ariaLabel")}
-        className="relative flex shrink-0 items-stretch border-b border-slate-700/60 bg-slate-500"
+        className="relative flex shrink-0 items-stretch border-b border-white/10 bg-[#0f1b2d]"
       >
         <div className="flex flex-1 items-stretch overflow-x-auto px-6 py-1">
           <div className="mx-auto flex w-fit items-stretch gap-1">
@@ -121,7 +121,7 @@ export function AppSwitcherBar({ apps, currentSlug }: AppSwitcherBarProps) {
           onClick={toggle}
           aria-label={t("ui.appSwitcher.collapse")}
           title={t("ui.appSwitcher.collapse")}
-          className="flex w-10 shrink-0 items-center justify-center border-l border-slate-700/60 text-white/80 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
+          className="flex w-10 shrink-0 items-center justify-center border-l border-white/10 text-white/80 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
         >
           <ChevronUp className="h-4 w-4" />
         </button>

@@ -5,6 +5,19 @@
 
 ---
 
+## 1.59.3 — AppSwitcherBar: fondo unificado con sidebar (2026-05-13)
+
+Type: **patch**
+
+El subheader `AppSwitcherBar` ahora usa exactamente el mismo color de
+fondo que el sidebar (`bg-[#0f1b2d]`) en lugar de `bg-slate-500`. Así
+header (navy-700), subheader y sidebar comparten paleta oscura y se
+perciben como un único bloque de chrome de la app. Bordes pasan a
+`border-white/10` y el hover de la cinta colapsada a `hover:bg-white/5`
+para integrarse con el resto del cromado oscuro.
+
+---
+
 ## 1.59.1 — AppSwitcherBar: subheader conmutador de apps (2026-05-13)
 
 Type: **minor**
