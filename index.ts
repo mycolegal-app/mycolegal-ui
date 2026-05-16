@@ -69,6 +69,8 @@ export { SearchableSelect } from './components/shared/searchable-select';
 export type { SearchableOption } from './components/shared/searchable-select';
 export { ClientPicker } from './components/shared/client-picker';
 export type { ClientOption } from './components/shared/client-picker';
+export { ClienteFormDialog } from './components/shared/cliente-form-dialog';
+export type { ClienteFormData } from './components/shared/cliente-form-dialog';
 export { ActPicker } from './components/shared/act-picker';
 export type { ActOption } from './components/shared/act-picker';
 export { ActSearchBox } from './components/shared/act-search-box';

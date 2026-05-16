@@ -5,6 +5,25 @@
 
 ---
 
+## 1.62.0 — ClienteFormDialog compartido + edición/baja en ClientPicker (2026-05-16)
+
+Type: **minor**
+
+`ClienteFormDialog` se promueve a componente shared con dos modos
+(`create` + `edit`) y soft-delete integrado vía PATCH `active:false`.
+`ClientPicker` añade:
+- prop `onEdit?: (clienteId: string) => void` que muestra un icono
+  lápiz junto al cliente seleccionado para abrir el modal en modo edit.
+- prop `refreshToken?: number | string` para forzar refresco del label
+  tras editar el cliente sin cambiar `value`.
+
+El modal acepta `apiBase` igual que el picker. Endpoints requeridos:
+`GET {apiBase}/{id}`, `POST {apiBase}`, `PATCH {apiBase}/{id}`. El
+botón "Dar de baja" se controla con prop `canDelete` (el caller
+comprueba el permiso `clientes:delete`). Estado dummy/duplicado de
+`ClienteFormDialog` queda obsoleto en `mycolegal-notaria` y se
+reemplaza por el shared.
+
 ##  — Versión mejorada de DataTables (vistas de tablas) homogéneas para todas las apps (2026-05-14)
 
 Type: **revision**

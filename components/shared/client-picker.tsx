@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { UserPlus } from "lucide-react";
+import { Pencil, UserPlus } from "lucide-react";
 import { useI18n } from "../i18n/i18n-context";
 
 export interface ClientOption {
@@ -19,6 +19,12 @@ interface ClientPickerProps {
   onChange: (clientId: string) => void;
   /** Opcional: callback al pulsar "+ Crear nuevo cliente". */
   onCreateNew?: () => void;
+  /**
+   * Opcional: callback al pulsar el icono de editar mostrado junto al
+   * cliente ya seleccionado. Si no se pasa, el icono no se muestra. El
+   * caller normalmente abre un `ClienteFormDialog` en modo edit.
+   */
+  onEdit?: (clienteId: string) => void;
   placeholder?: string;
   label?: string;
   required?: boolean;
@@ -44,6 +50,13 @@ interface ClientPickerProps {
    * encaje en la misma fila que el resto de filtros compactos.
    */
   size?: "sm" | "md";
+  /**
+   * Cambia este valor (cualquier número/string distinto) para forzar al
+   * picker a refrescar el label del cliente seleccionado. Útil tras
+   * editar el cliente con `ClienteFormDialog`: el `value` no cambia
+   * pero el nombre sí, y el picker debe re-hidratarse.
+   */
+  refreshToken?: number | string;
 }
 
 /**
@@ -59,12 +72,14 @@ export function ClientPicker({
   value,
   onChange,
   onCreateNew,
+  onEdit,
   placeholder,
   label,
   required,
   apiBase = "/api/catalogs/clientes",
   formatNif,
   size = "md",
+  refreshToken,
 }: ClientPickerProps) {
   const inputSizeCls =
     size === "sm" ? "h-8 px-2 py-1 text-xs" : "px-3 py-2 text-sm";
@@ -93,19 +108,22 @@ export function ClientPicker({
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
-  // Carga el label del cliente seleccionado cuando llega `value` desde fuera.
+  // Carga el label del cliente seleccionado cuando llega `value` desde
+  // fuera, o cuando `refreshToken` cambia (forzado tras editar el cliente).
   useEffect(() => {
-    if (value && !selectedLabel) {
-      fetch(`${apiBase}/${value}`)
-        .then((r) => r.json())
-        .then((json) => {
-          if (json.data) {
-            setSelectedLabel(getDisplayName(json.data));
-          }
-        })
-        .catch(() => {});
-    }
-  }, [value, selectedLabel, apiBase]);
+    if (!value) return;
+    fetch(`${apiBase}/${value}`)
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.data) {
+          setSelectedLabel(getDisplayName(json.data));
+        }
+      })
+      .catch(() => {});
+    // selectedLabel se omite a propósito: este efecto debe recargar al
+    // cambiar `refreshToken` aunque ya haya un label cacheado.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, apiBase, refreshToken]);
 
   // Búsqueda con debounce.
   useEffect(() => {
@@ -166,15 +184,28 @@ export function ClientPicker({
       )}
       {value && selectedLabel ? (
         <div className={`flex items-center justify-between rounded-md border ${tagSizeCls}`}>
-          <span>{selectedLabel}</span>
-          <button
-            type="button"
-            onClick={handleClear}
-            aria-label={t("ui.clientPicker.clearAria")}
-            className="ml-2 text-gray-400 hover:text-gray-600"
-          >
-            ✕
-          </button>
+          <span className="truncate">{selectedLabel}</span>
+          <div className="ml-2 flex items-center gap-1">
+            {onEdit && (
+              <button
+                type="button"
+                onClick={() => onEdit(value)}
+                aria-label={t("ui.clientPicker.editAria")}
+                title={t("ui.clientPicker.editAria")}
+                className="text-gray-400 hover:text-cyan-600"
+              >
+                <Pencil className={size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4"} />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleClear}
+              aria-label={t("ui.clientPicker.clearAria")}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              ✕
+            </button>
+          </div>
         </div>
       ) : (
         <div className="flex items-stretch gap-2">
