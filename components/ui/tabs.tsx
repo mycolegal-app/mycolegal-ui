@@ -36,6 +36,14 @@ const TabsTrigger = React.forwardRef<
 ));
 TabsTrigger.displayName = TabsPrimitive.Trigger.displayName;
 
+// IMPORTANTE: `data-[state=inactive]:!hidden` fuerza `display: none` en los
+// TabsContent inactivos. Sin esto, cuando el consumidor añade clases como
+// `flex flex-1 flex-col` al TabsContent, la regla `.flex { display: flex }`
+// del autor sobreescribe el atributo HTML `hidden` que pone Radix (cuya
+// `[hidden] { display: none }` viene del user-agent y tiene menor prioridad).
+// El resultado era que los 5 TabsContent inactivos reservaban `flex-1` de
+// espacio cada uno y el contenido del activo aparecía en su fracción del
+// viewport en lugar de ocupar todo el alto disponible.
 const TabsContent = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>
@@ -43,7 +51,7 @@ const TabsContent = React.forwardRef<
   <TabsPrimitive.Content
     ref={ref}
     className={cn(
-      "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+      "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 data-[state=inactive]:!hidden",
       className
     )}
     {...props}
