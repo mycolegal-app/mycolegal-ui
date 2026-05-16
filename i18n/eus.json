@@ -343,7 +343,21 @@
       "saveBtn": "Gorde",
       "saving": "Gordetzen...",
       "resetBtn": "Berrezarri lehenetsira",
-      "btnCancel": "Utzi"
+      "btnCancel": "Utzi",
+      "viewVisual": "Bisuala",
+      "viewHtml": "HTML",
+      "visualHint": "Editore bisuala: gorputzaren edukia bakarrik. Estiloak eta diseinua (goiburua, marjinak, letra-tipoak) HTML moduan editatzen dira.",
+      "linkPrompt": "Estekaren URLa (utzi hutsik kentzeko)",
+      "btnBold": "Lodia",
+      "btnItalic": "Etzana",
+      "btnUnderline": "Marratua",
+      "btnH1": "1. izenburua",
+      "btnH2": "2. izenburua",
+      "btnBulletList": "Buletekin",
+      "btnOrderedList": "Zenbakitua",
+      "btnLink": "Esteka",
+      "btnUndo": "Desegin",
+      "btnRedo": "Berregin"
     },
     "commandPalette": {
       "placeholder": "Bilatu...",

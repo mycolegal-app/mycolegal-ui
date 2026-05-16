@@ -1,20 +1,31 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ExternalLink, Eye } from "lucide-react";
+import { useEditor, EditorContent, type Editor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Link from "@tiptap/extension-link";
+import {
+  Bold,
+  Italic,
+  Underline as UnderlineIcon,
+  Heading1,
+  Heading2,
+  List,
+  ListOrdered,
+  Link as LinkIcon,
+  Undo2,
+  Redo2,
+  ExternalLink,
+  Eye,
+} from "lucide-react";
 
 import { useI18n } from "../i18n/i18n-context";
 
 /**
- * Shape returned by /api/admin/document-templates. Each consuming app exposes
- * this endpoint, which merges the document template catalog with the
- * per-organisation overrides stored locally (DocumentoPlantilla).
- *
+ * Shape returned by /api/admin/document-templates.
  * Paralelo a EmailTemplateEntry pero para plantillas PDF:
  *   - Solo cuerpo (no hay subject — los PDFs no tienen asunto).
- *   - Macros con metadatos enriquecidos (`label`, `example`) para poder mostrar
- *     una etiqueta legible al usuario y para que el preview pueda sustituir
- *     valores realistas en lugar de los identificadores crudos.
+ *   - Macros con metadatos enriquecidos (`label`, `example`).
  */
 export interface DocumentTemplateMacro {
   key: string;
@@ -35,12 +46,66 @@ export interface DocumentTemplateEntry {
 }
 
 export interface DocumentTemplatesManagerProps {
-  /** Base URL where the app exposes the templates endpoint. */
   endpoint?: string;
-  /** Render a callout when the list is empty. */
   emptyMessage?: string;
-  /** Notifier for success/error toasts. */
   onToast?: (message: string, kind: "success" | "error") => void;
+}
+
+// ---------------------------------------------------------------------------
+// HTML splitting — separa el wrapper de impresión (<doctype>, <head><style>,
+// <html>, <body>) del contenido editable visualmente. El editor visual TipTap
+// solo conoce el contenido entre <body>...</body>; el resto se preserva
+// íntegro al recomponer el HTML para guardar/preview.
+// ---------------------------------------------------------------------------
+
+interface HtmlParts {
+  /** Texto bruto entre <head>...</head> (incluye <style>, <meta>, etc.). */
+  head: string;
+  /** Atributos del <body> ("class=..." o ""). */
+  bodyAttrs: string;
+  /** Contenido entre <body>...</body> — esto es lo que ve el editor visual. */
+  bodyContent: string;
+  /** Si el HTML original NO tenía wrapper completo, no recomponemos al guardar. */
+  hasWrapper: boolean;
+  /** Atributo lang del <html> si existía (`<html lang="es">`). */
+  htmlLang: string | null;
+}
+
+function splitHtml(fullHtml: string): HtmlParts {
+  const headMatch = fullHtml.match(/<head[^>]*>([\s\S]*?)<\/head>/i);
+  const bodyMatch = fullHtml.match(/<body([^>]*)>([\s\S]*)<\/body>/i);
+  const langMatch = fullHtml.match(/<html[^>]*\blang="([^"]*)"[^>]*>/i);
+  if (!bodyMatch) {
+    return {
+      head: "",
+      bodyAttrs: "",
+      bodyContent: fullHtml,
+      hasWrapper: false,
+      htmlLang: null,
+    };
+  }
+  return {
+    head: headMatch ? headMatch[1].trim() : "",
+    bodyAttrs: bodyMatch[1].trim(),
+    bodyContent: bodyMatch[2].trim(),
+    hasWrapper: true,
+    htmlLang: langMatch ? langMatch[1] : null,
+  };
+}
+
+function joinHtml(parts: HtmlParts, newBodyContent: string): string {
+  if (!parts.hasWrapper) return newBodyContent;
+  const langAttr = parts.htmlLang ? ` lang="${parts.htmlLang}"` : "";
+  const bodyOpen = parts.bodyAttrs ? `<body ${parts.bodyAttrs}>` : "<body>";
+  return `<!doctype html>
+<html${langAttr}>
+<head>
+${parts.head}
+</head>
+${bodyOpen}
+${newBodyContent}
+</body>
+</html>`;
 }
 
 export function DocumentTemplatesManager({
@@ -54,10 +119,16 @@ export function DocumentTemplatesManager({
   const [loading, setLoading] = useState(true);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [bodyHtml, setBodyHtml] = useState("");
+  const [view, setView] = useState<"visual" | "html">("visual");
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Partes del HTML completo. En modo visual el editor TipTap edita
+  // `parts.bodyContent` y el resto (head con <style>, doctype, attrs del
+  // body, lang) se preserva al recomponer.
+  const parts = useMemo(() => splitHtml(bodyHtml), [bodyHtml]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -87,8 +158,6 @@ export function DocumentTemplatesManager({
     [templates, selectedKey],
   );
 
-  // Hydrate the editable body whenever the selected template changes or the
-  // list refreshes after a save.
   useEffect(() => {
     if (!selected) {
       setBodyHtml("");
@@ -97,8 +166,6 @@ export function DocumentTemplatesManager({
     setBodyHtml(selected.body ?? selected.defaultBody);
   }, [selected]);
 
-  // Clear any cached preview when the user switches templates — the PDF would
-  // belong to the previous template and showing it would be confusing.
   useEffect(() => {
     setPreviewBlobUrl((prev) => {
       if (prev) URL.revokeObjectURL(prev);
@@ -106,18 +173,51 @@ export function DocumentTemplatesManager({
     });
   }, [selectedKey]);
 
-  // Final cleanup on unmount: release the last blob URL so the browser can
-  // reclaim its memory.
   useEffect(() => {
     return () => {
       if (previewBlobUrl) URL.revokeObjectURL(previewBlobUrl);
     };
-    // We intentionally depend only on the latest value at unmount time.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // TipTap edita SOLO el contenido del body. Al cambiar el editor, recomponemos
+  // el HTML completo con el head/wrapper original.
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Link.configure({ openOnClick: false, autolink: true, HTMLAttributes: { rel: "noopener" } }),
+    ],
+    content: parts.bodyContent,
+    editorProps: {
+      attributes: {
+        class:
+          "prose prose-sm max-w-none min-h-[260px] focus:outline-none px-3 py-2 leading-relaxed",
+      },
+    },
+    onUpdate: ({ editor }) => {
+      const newBody = editor.getHTML();
+      setBodyHtml(joinHtml(parts, newBody));
+    },
+    immediatelyRender: false,
+  });
+
+  // Sincronizar el contenido del editor visual cuando cambia la plantilla
+  // seleccionada o cuando el usuario vuelve del modo HTML al visual.
+  useEffect(() => {
+    if (!editor) return;
+    if (view !== "visual") return;
+    if (editor.getHTML() === parts.bodyContent) return;
+    editor.commands.setContent(parts.bodyContent || "<p></p>", false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor, parts.bodyContent, view, selectedKey]);
+
   function insertMacro(name: string) {
     const token = `{{${name}}}`;
+    if (view === "visual" && editor) {
+      editor.chain().focus().insertContent(token).run();
+      return;
+    }
+    // Modo HTML: insertar en la posición del cursor del textarea.
     const ta = textareaRef.current;
     if (!ta) {
       setBodyHtml((prev) => `${prev}${token}`);
@@ -127,14 +227,24 @@ export function DocumentTemplatesManager({
     const end = ta.selectionEnd ?? bodyHtml.length;
     const next = bodyHtml.slice(0, start) + token + bodyHtml.slice(end);
     setBodyHtml(next);
-    // Restore the cursor right after the inserted macro on the next tick so
-    // React has time to flush the new value.
     requestAnimationFrame(() => {
       if (!textareaRef.current) return;
       const pos = start + token.length;
       textareaRef.current.focus();
       textareaRef.current.setSelectionRange(pos, pos);
     });
+  }
+
+  function applyLink() {
+    if (!editor) return;
+    const previous = editor.getAttributes("link").href ?? "";
+    const url = window.prompt(t("ui.documentTemplates.linkPrompt"), previous);
+    if (url === null) return;
+    if (url === "") {
+      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+      return;
+    }
+    editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
   }
 
   async function handlePreview() {
@@ -293,20 +403,58 @@ export function DocumentTemplatesManager({
             )}
           </div>
 
-          {/* Body — raw HTML editor (PDFs incluyen <style>, @page, etc. y no
-              tiene sentido un WYSIWYG visual). */}
+          {/* Body — toolbar + editor visual / HTML crudo */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              {t("ui.documentTemplates.bodyLabel")}
-            </label>
-            <textarea
-              ref={textareaRef}
-              value={bodyHtml}
-              onChange={(ev) => setBodyHtml(ev.target.value)}
-              rows={20}
-              spellCheck={false}
-              className="w-full rounded border border-gray-300 px-2 py-1.5 text-xs font-mono leading-relaxed"
-            />
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-medium text-gray-600">
+                {t("ui.documentTemplates.bodyLabel")}
+              </label>
+              <div className="flex gap-1 rounded border border-gray-200 bg-gray-50 p-0.5 text-[10px]">
+                <button
+                  type="button"
+                  onClick={() => setView("visual")}
+                  className={`px-2 py-0.5 rounded ${
+                    view === "visual"
+                      ? "bg-white shadow-sm text-gray-900"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  {t("ui.documentTemplates.viewVisual")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setView("html")}
+                  className={`px-2 py-0.5 rounded ${
+                    view === "html"
+                      ? "bg-white shadow-sm text-gray-900"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  {t("ui.documentTemplates.viewHtml")}
+                </button>
+              </div>
+            </div>
+
+            {view === "visual" ? (
+              <div className="rounded border border-gray-300 overflow-hidden">
+                <Toolbar editor={editor} onLink={applyLink} t={t} />
+                <EditorContent editor={editor} />
+                {parts.hasWrapper && (
+                  <p className="bg-amber-50 border-t border-amber-200 px-2 py-1 text-[10px] text-amber-800">
+                    {t("ui.documentTemplates.visualHint")}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <textarea
+                ref={textareaRef}
+                value={bodyHtml}
+                onChange={(ev) => setBodyHtml(ev.target.value)}
+                rows={20}
+                spellCheck={false}
+                className="w-full rounded border border-gray-300 px-2 py-1.5 text-xs font-mono leading-relaxed"
+              />
+            )}
           </div>
 
           {/* Macros */}
@@ -389,6 +537,118 @@ export function DocumentTemplatesManager({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// TipTap toolbar — clon ligero del de email-templates-manager. No incluye el
+// botón de logo (los logos de los PDFs van en el `<head><style>` del wrapper
+// y se editan desde el modo HTML).
+// ---------------------------------------------------------------------------
+
+interface ToolbarProps {
+  editor: Editor | null;
+  onLink: () => void;
+  t: (key: string) => string;
+}
+
+function Toolbar({ editor, onLink, t }: ToolbarProps) {
+  if (!editor) {
+    return <div className="h-9 border-b border-gray-200 bg-gray-50" />;
+  }
+  const btnBase =
+    "h-7 w-7 inline-flex items-center justify-center rounded text-gray-600 hover:bg-gray-100 disabled:opacity-40";
+  const btnActive = "bg-gray-200 text-gray-900";
+
+  return (
+    <div className="flex flex-wrap items-center gap-0.5 border-b border-gray-200 bg-gray-50 px-1.5 py-1">
+      <button
+        type="button"
+        onClick={() => editor.chain().focus().toggleBold().run()}
+        title={t("ui.documentTemplates.btnBold")}
+        className={`${btnBase} ${editor.isActive("bold") ? btnActive : ""}`}
+      >
+        <Bold className="h-3.5 w-3.5" />
+      </button>
+      <button
+        type="button"
+        onClick={() => editor.chain().focus().toggleItalic().run()}
+        title={t("ui.documentTemplates.btnItalic")}
+        className={`${btnBase} ${editor.isActive("italic") ? btnActive : ""}`}
+      >
+        <Italic className="h-3.5 w-3.5" />
+      </button>
+      <button
+        type="button"
+        onClick={() => editor.chain().focus().toggleStrike().run()}
+        title={t("ui.documentTemplates.btnUnderline")}
+        className={`${btnBase} ${editor.isActive("strike") ? btnActive : ""}`}
+      >
+        <UnderlineIcon className="h-3.5 w-3.5" />
+      </button>
+      <span className="mx-1 h-4 w-px bg-gray-300" />
+      <button
+        type="button"
+        onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+        title={t("ui.documentTemplates.btnH1")}
+        className={`${btnBase} ${editor.isActive("heading", { level: 1 }) ? btnActive : ""}`}
+      >
+        <Heading1 className="h-3.5 w-3.5" />
+      </button>
+      <button
+        type="button"
+        onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+        title={t("ui.documentTemplates.btnH2")}
+        className={`${btnBase} ${editor.isActive("heading", { level: 2 }) ? btnActive : ""}`}
+      >
+        <Heading2 className="h-3.5 w-3.5" />
+      </button>
+      <span className="mx-1 h-4 w-px bg-gray-300" />
+      <button
+        type="button"
+        onClick={() => editor.chain().focus().toggleBulletList().run()}
+        title={t("ui.documentTemplates.btnBulletList")}
+        className={`${btnBase} ${editor.isActive("bulletList") ? btnActive : ""}`}
+      >
+        <List className="h-3.5 w-3.5" />
+      </button>
+      <button
+        type="button"
+        onClick={() => editor.chain().focus().toggleOrderedList().run()}
+        title={t("ui.documentTemplates.btnOrderedList")}
+        className={`${btnBase} ${editor.isActive("orderedList") ? btnActive : ""}`}
+      >
+        <ListOrdered className="h-3.5 w-3.5" />
+      </button>
+      <span className="mx-1 h-4 w-px bg-gray-300" />
+      <button
+        type="button"
+        onClick={onLink}
+        title={t("ui.documentTemplates.btnLink")}
+        className={`${btnBase} ${editor.isActive("link") ? btnActive : ""}`}
+      >
+        <LinkIcon className="h-3.5 w-3.5" />
+      </button>
+      <span className="mx-1 h-4 w-px bg-gray-300" />
+      <button
+        type="button"
+        onClick={() => editor.chain().focus().undo().run()}
+        disabled={!editor.can().undo()}
+        title={t("ui.documentTemplates.btnUndo")}
+        className={btnBase}
+      >
+        <Undo2 className="h-3.5 w-3.5" />
+      </button>
+      <button
+        type="button"
+        onClick={() => editor.chain().focus().redo().run()}
+        disabled={!editor.can().redo()}
+        title={t("ui.documentTemplates.btnRedo")}
+        className={btnBase}
+      >
+        <Redo2 className="h-3.5 w-3.5" />
+      </button>
     </div>
   );
 }

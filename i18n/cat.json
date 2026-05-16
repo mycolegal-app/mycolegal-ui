@@ -343,7 +343,21 @@
       "saveBtn": "Desar",
       "saving": "Desant...",
       "resetBtn": "Restaurar per defecte",
-      "btnCancel": "Cancel·lar"
+      "btnCancel": "Cancel·lar",
+      "viewVisual": "Visual",
+      "viewHtml": "HTML",
+      "visualHint": "Editor visual: només el contingut del cos. Estils i disposició (capçalera, marges, tipografies) s'editen des del mode HTML.",
+      "linkPrompt": "URL de l'enllaç (buit per treure)",
+      "btnBold": "Negreta",
+      "btnItalic": "Cursiva",
+      "btnUnderline": "Ratllat",
+      "btnH1": "Títol 1",
+      "btnH2": "Títol 2",
+      "btnBulletList": "Llista amb pics",
+      "btnOrderedList": "Llista numerada",
+      "btnLink": "Enllaç",
+      "btnUndo": "Desfer",
+      "btnRedo": "Refer"
     },
     "commandPalette": {
       "placeholder": "Cercar...",

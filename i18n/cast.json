@@ -343,7 +343,21 @@
       "saveBtn": "Guardar",
       "saving": "Guardando...",
       "resetBtn": "Restaurar por defecto",
-      "btnCancel": "Cancelar"
+      "btnCancel": "Cancelar",
+      "viewVisual": "Visual",
+      "viewHtml": "HTML",
+      "visualHint": "Editor visual: solo el contenido del cuerpo. Estilos y layout (header, márgenes, fuentes) se editan desde el modo HTML.",
+      "linkPrompt": "URL del enlace (vacío para quitar)",
+      "btnBold": "Negrita",
+      "btnItalic": "Cursiva",
+      "btnUnderline": "Tachado",
+      "btnH1": "Título 1",
+      "btnH2": "Título 2",
+      "btnBulletList": "Lista con viñetas",
+      "btnOrderedList": "Lista numerada",
+      "btnLink": "Enlace",
+      "btnUndo": "Deshacer",
+      "btnRedo": "Rehacer"
     },
     "commandPalette": {
       "placeholder": "Buscar...",
