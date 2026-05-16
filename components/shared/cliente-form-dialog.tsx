@@ -17,7 +17,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { Trash2 } from "lucide-react";
+import { Trash2, User, UserPlus } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -59,6 +59,7 @@ interface ClienteFormDialogProps {
   clienteId?: string;
   /** Prefill when opened from picker's failed search. */
   initialNombre?: string;
+  initialApellidos?: string;
   initialNif?: string;
   /** Whether the soft-delete button is shown (caller checks permission). */
   canDelete?: boolean;
@@ -105,6 +106,7 @@ export function ClienteFormDialog({
   apiBase = "/api/catalogs/clientes",
   clienteId,
   initialNombre,
+  initialApellidos,
   initialNif,
   canDelete,
   formatNif,
@@ -156,10 +158,11 @@ export function ClienteFormDialog({
       setForm({
         ...EMPTY,
         nombre: initialNombre ?? "",
+        apellidos: initialApellidos ?? "",
         nif: initialNif ?? "",
       });
     }
-  }, [open, isEdit, clienteId, apiBase, initialNombre, initialNif, t]);
+  }, [open, isEdit, clienteId, apiBase, initialNombre, initialApellidos, initialNif, t]);
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -239,141 +242,152 @@ export function ClienteFormDialog({
 
   const isPersonaJuridica = form.tipo === "PERSONA_JURIDICA";
 
+  const TitleIcon = isEdit ? User : UserPlus;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[640px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
+      <DialogContent className="sm:max-w-[680px] p-5 gap-3">
+        <DialogHeader className="space-y-0">
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <TitleIcon className="h-4 w-4 text-cyan-600" aria-hidden="true" />
             {isEdit ? t("ui.clienteForm.titleEdit") : t("ui.clienteForm.titleCreate")}
           </DialogTitle>
         </DialogHeader>
 
         {error && (
-          <div className="mb-2 rounded-md bg-red-50 p-3 text-sm text-red-700">
-            {error}
-          </div>
+          <div className="rounded-md bg-red-50 p-2 text-xs text-red-700">{error}</div>
         )}
 
         {loading ? (
-          <div className="py-8 text-center text-sm text-gray-500">
+          <div className="py-6 text-center text-sm text-gray-500">
             {t("ui.clienteForm.loading")}
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div className="grid grid-cols-12 gap-x-3 gap-y-2">
+              <div className="col-span-4">
                 <Label>{t("ui.clienteForm.tipo")} *</Label>
                 <select
                   value={form.tipo}
                   onChange={(e) => update("tipo", e.target.value as FormState["tipo"])}
-                  className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+                  className="mt-1 h-9 w-full rounded-md border px-2 text-sm"
                 >
                   <option value="PERSONA_FISICA">{t("ui.clienteForm.personaFisica")}</option>
                   <option value="PERSONA_JURIDICA">{t("ui.clienteForm.personaJuridica")}</option>
                 </select>
               </div>
-              <div>
+              <div className="col-span-4">
                 <Label htmlFor="nif">{t("ui.clienteForm.nif")}</Label>
                 <Input
                   id="nif"
                   value={form.nif}
                   onChange={(e) => update("nif", e.target.value)}
+                  className="h-9"
+                />
+              </div>
+              <div className="col-span-4">
+                <Label htmlFor="telefono">{t("ui.clienteForm.telefono")}</Label>
+                <Input
+                  id="telefono"
+                  value={form.telefono}
+                  onChange={(e) => update("telefono", e.target.value)}
+                  className="h-9"
                 />
               </div>
 
               {isPersonaJuridica ? (
-                <div className="col-span-2">
+                <div className="col-span-12">
                   <Label htmlFor="razonSocial">{t("ui.clienteForm.razonSocial")} *</Label>
                   <Input
                     id="razonSocial"
                     value={form.razonSocial}
                     onChange={(e) => update("razonSocial", e.target.value)}
                     required
+                    className="h-9"
                   />
                 </div>
               ) : (
                 <>
-                  <div>
+                  <div className="col-span-5">
                     <Label htmlFor="nombre">{t("ui.clienteForm.nombre")} *</Label>
                     <Input
                       id="nombre"
                       value={form.nombre}
                       onChange={(e) => update("nombre", e.target.value)}
                       required
+                      className="h-9"
                     />
                   </div>
-                  <div>
+                  <div className="col-span-7">
                     <Label htmlFor="apellidos">{t("ui.clienteForm.apellidos")}</Label>
                     <Input
                       id="apellidos"
                       value={form.apellidos}
                       onChange={(e) => update("apellidos", e.target.value)}
+                      className="h-9"
                     />
                   </div>
                 </>
               )}
 
-              <div>
-                <Label htmlFor="telefono">{t("ui.clienteForm.telefono")}</Label>
-                <Input
-                  id="telefono"
-                  value={form.telefono}
-                  onChange={(e) => update("telefono", e.target.value)}
-                />
-              </div>
-              <div>
+              <div className="col-span-12">
                 <Label htmlFor="email">{t("ui.clienteForm.email")}</Label>
                 <Input
                   id="email"
                   type="email"
                   value={form.email}
                   onChange={(e) => update("email", e.target.value)}
+                  className="h-9"
                 />
               </div>
 
-              <div className="col-span-2">
+              <div className="col-span-12">
                 <Label htmlFor="direccion">{t("ui.clienteForm.direccion")}</Label>
                 <Input
                   id="direccion"
                   value={form.direccion}
                   onChange={(e) => update("direccion", e.target.value)}
+                  className="h-9"
                 />
               </div>
-              <div>
+              <div className="col-span-3">
                 <Label htmlFor="codigoPostal">{t("ui.clienteForm.codigoPostal")}</Label>
                 <Input
                   id="codigoPostal"
                   value={form.codigoPostal}
                   onChange={(e) => update("codigoPostal", e.target.value)}
+                  className="h-9"
                 />
               </div>
-              <div>
+              <div className="col-span-5">
                 <Label htmlFor="ciudad">{t("ui.clienteForm.ciudad")}</Label>
                 <Input
                   id="ciudad"
                   value={form.ciudad}
                   onChange={(e) => update("ciudad", e.target.value)}
+                  className="h-9"
                 />
               </div>
-              <div className="col-span-2">
+              <div className="col-span-4">
                 <Label htmlFor="provincia">{t("ui.clienteForm.provincia")}</Label>
                 <Input
                   id="provincia"
                   value={form.provincia}
                   onChange={(e) => update("provincia", e.target.value)}
+                  className="h-9"
                 />
               </div>
-            </div>
 
-            <div>
-              <Label htmlFor="notas">{t("ui.clienteForm.notas")}</Label>
-              <textarea
-                id="notas"
-                value={form.notas}
-                onChange={(e) => update("notas", e.target.value)}
-                rows={3}
-                className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-              />
+              <div className="col-span-12">
+                <Label htmlFor="notas">{t("ui.clienteForm.notas")}</Label>
+                <textarea
+                  id="notas"
+                  value={form.notas}
+                  onChange={(e) => update("notas", e.target.value)}
+                  rows={2}
+                  className="mt-1 w-full rounded-md border px-2 py-1.5 text-sm"
+                />
+              </div>
             </div>
 
             <DialogFooter className="flex-row items-center justify-between gap-3 sm:justify-between">

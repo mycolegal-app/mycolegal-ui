@@ -17,8 +17,12 @@ interface ClientPickerProps {
   /** ID del cliente seleccionado. Cadena vacía = ninguno. */
   value: string;
   onChange: (clientId: string) => void;
-  /** Opcional: callback al pulsar "+ Crear nuevo cliente". */
-  onCreateNew?: () => void;
+  /**
+   * Opcional: callback al pulsar "+ Crear nuevo cliente". Recibe el texto
+   * que el usuario ya tenía escrito en el buscador, para que el caller
+   * pueda prellenar el dialog de alta (típicamente `ClienteFormDialog`).
+   */
+  onCreateNew?: (queryHint?: string) => void;
   /**
    * Opcional: callback al pulsar el icono de editar mostrado junto al
    * cliente ya seleccionado. Si no se pasa, el icono no se muestra. El
@@ -225,7 +229,7 @@ export function ClientPicker({
               type="button"
               onClick={() => {
                 setOpen(false);
-                onCreateNew?.();
+                onCreateNew?.(query.trim() || undefined);
               }}
               className={`inline-flex shrink-0 items-center gap-1.5 rounded-md border border-cyan-200 bg-cyan-50 font-medium text-cyan-700 hover:bg-cyan-100 ${createBtnSizeCls}`}
               title={t("ui.clientPicker.createNew")}
@@ -268,7 +272,7 @@ export function ClientPicker({
                 type="button"
                 onClick={() => {
                   setOpen(false);
-                  onCreateNew();
+                  onCreateNew(query.trim() || undefined);
                 }}
                 className="w-full px-3 py-2 text-left text-sm font-medium text-cyan-600 hover:bg-cyan-50"
               >
