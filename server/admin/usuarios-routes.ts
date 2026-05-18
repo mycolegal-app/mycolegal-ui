@@ -143,7 +143,9 @@ export function createUsuariosRoutes(deps: UsuariosRoutesDeps) {
             language: au.language ?? null,
             role: isAdminApp ? au.role : (hasAppAccess ? local.role : null),
             active: isAdminApp ? au.status === 'active' : (hasAppAccess ? local.active : false),
-            lastLoginAt: local.lastLoginAt,
+            // Admin general: último acceso a cualquier app (User.lastLogin en auth).
+            // App admin: último acceso a ESTA app (UserRole.lastLoginAt local).
+            lastLoginAt: isAdminApp ? au.lastLogin : local.lastLoginAt,
             avatarUrl: local.avatarUrl,
             authStatus: au.status,
             authRole: au.role,
@@ -164,7 +166,9 @@ export function createUsuariosRoutes(deps: UsuariosRoutesDeps) {
                 ? au.appPermission!.appRoleKey?.toUpperCase() || validRoles[1] || validRoles[0]
                 : null),
             active: isAdminApp ? au.status === 'active' : false,
-            lastLoginAt: null,
+            // En admin general no hay UserRole local (prisma=undefined), así que
+            // siempre caemos aquí: el último acceso global lo da auth.
+            lastLoginAt: isAdminApp ? au.lastLogin : null,
             avatarUrl: null,
             authStatus: au.status,
             authRole: au.role,
