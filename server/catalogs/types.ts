@@ -38,12 +38,15 @@ export type WithAuthFn = (handler: any) => any;
 export type SuccessFn = <T>(data: T, meta?: unknown) => NextResponse;
 
 /**
- * Minimal Prisma `userRole` table shape we touch — each app's generated
- * client satisfies this structurally.
+ * Minimal Prisma `userRole` table shape we touch. Returns are `any` because
+ * each app may pass either a raw `PrismaClient` or one extended with
+ * `$extends` (e.g. `withOrgScope`), and TS infers richer return types
+ * (`Promise<number | {}>` for `count`) for the extended client. Keeping
+ * the seam loose lets both satisfy the contract structurally.
  */
 export interface UserRolePrismaTable {
-  findMany(args?: any): Promise<any[]>;
-  count(args?: any): Promise<number>;
+  findMany(args?: any): Promise<any>;
+  count(args?: any): Promise<any>;
 }
 
 export interface CatalogPrisma {
