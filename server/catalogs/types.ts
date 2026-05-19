@@ -35,7 +35,13 @@ export type CatalogNextHandler<P = Record<string, string>> = (
  */
 export type WithAuthFn = (handler: any) => any;
 
-export type SuccessFn = <T>(data: T, meta?: unknown) => NextResponse;
+/**
+ * Loose seam: each app's `successResponse` has its own `PaginationMeta` type.
+ * Using `any` for `meta` lets the consumer's stricter signature satisfy this
+ * contract (a function that accepts `PaginationMeta` is NOT assignable to a
+ * function that accepts `unknown` — parameter contravariance bites).
+ */
+export type SuccessFn = (data: any, meta?: any) => NextResponse;
 
 /**
  * Minimal Prisma `userRole` table shape we touch. Returns are `any` because
@@ -66,12 +72,12 @@ export interface PaginationParamsLike {
   pageSize: number;
 }
 
-export type ParseSearchParamsFn = (url: URL) => ParsedSearchParamsLike;
-export type GetPaginationParamsFn = (sp: ParsedSearchParamsLike) => PaginationParamsLike;
+export type ParseSearchParamsFn = (url: URL) => any;
+export type GetPaginationParamsFn = (sp: any) => any;
 export type BuildPaginationMetaFn = (
   total: number,
   params: { page: number; pageSize: number },
-) => unknown;
+) => any;
 
 export interface EmpleadosCatalogRouteDeps {
   /** Org-scoped prisma client — must already filter `userRole.findMany` by org. */
