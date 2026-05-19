@@ -74,6 +74,8 @@ export type { ClienteFormData } from './components/shared/cliente-form-dialog';
 export { ActPicker } from './components/shared/act-picker';
 export type { ActOption } from './components/shared/act-picker';
 export { ActSearchBox } from './components/shared/act-search-box';
+export { EmpleadoAsignadoPicker } from './components/shared/empleado-asignado-picker';
+export type { EmpleadoOption } from './components/shared/empleado-asignado-picker';
 export { IdleTimeout } from './components/layout/idle-timeout';
 
 // Utilities

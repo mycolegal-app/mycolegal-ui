@@ -421,6 +421,12 @@
       "empty": "Ez dago eskatzailerik uneko zerrendan",
       "clearAria": "Eskatzailearen iragazkia kendu"
     },
+    "empleadoPicker": {
+      "placeholder": "Aukeratu langilea",
+      "loading": "Langileak kargatzen…",
+      "empty": "Ez dago langilerik eskuragarri",
+      "sinAsignar": "Esleitu gabe"
+    },
     "dataTable": {
       "searchPlaceholder": "Bilatu...",
       "showing": "Erakusten {start}-{end} ({total}-tik)",

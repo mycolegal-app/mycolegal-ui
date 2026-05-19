@@ -421,6 +421,12 @@
       "empty": "No hay solicitantes en la lista actual",
       "clearAria": "Quitar filtro de solicitante"
     },
+    "empleadoPicker": {
+      "placeholder": "Seleccionar empleado",
+      "loading": "Cargando empleados…",
+      "empty": "No hay empleados disponibles",
+      "sinAsignar": "Sin asignar"
+    },
     "dataTable": {
       "searchPlaceholder": "Buscar...",
       "showing": "Mostrando {start}-{end} de {total}",

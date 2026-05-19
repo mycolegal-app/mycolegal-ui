@@ -421,6 +421,12 @@
       "empty": "No hi ha sol·licitants a la llista actual",
       "clearAria": "Treure el filtre de sol·licitant"
     },
+    "empleadoPicker": {
+      "placeholder": "Seleccionar empleat",
+      "loading": "Carregant empleats…",
+      "empty": "No hi ha empleats disponibles",
+      "sinAsignar": "Sense assignar"
+    },
     "dataTable": {
       "searchPlaceholder": "Cercar...",
       "showing": "Mostrant {start}-{end} de {total}",
