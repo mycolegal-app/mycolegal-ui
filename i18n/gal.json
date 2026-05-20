@@ -262,6 +262,49 @@
       "back": "Volver",
       "loadingIncident": "Cargando incidencia…"
     },
+    "incidentProposals": {
+      "kind": {
+        "reply": "Resposta",
+        "question": "Pregunta ao usuario",
+        "close": "Peche proposto",
+        "reopen": "Reapertura"
+      },
+      "status": {
+        "pending": "Pendente",
+        "armed": "Armada — agarda despregue",
+        "sent": "Enviada",
+        "rejected": "Rexeitada"
+      },
+      "filter": {
+        "needs": "Por revisar",
+        "pending": "Pendentes",
+        "armed": "Armadas",
+        "sent": "Enviadas",
+        "rejected": "Rexeitadas",
+        "all": "Todas"
+      },
+      "proposedBy": "Proposta por {who} · {date}",
+      "messageLabel": "Mensaxe ao usuario",
+      "rationaleToggle": "Diagnóstico interno do axente",
+      "armedExplanation": "Aprobada. Enviarase automaticamente ao usuario e pecharase a incidencia cando o commit indicado chegue a produción en GCP.",
+      "sentAt": "Enviada o {date}",
+      "rejectedHeading": "Proposta rexeitada",
+      "openIncident": "Ver incidencia",
+      "btnApprove": "Aprobar e enviar",
+      "btnReject": "Rexeitar",
+      "btnEdit": "Editar mensaxe",
+      "btnCancelEdit": "Descartar cambios",
+      "btnCancel": "Cancelar",
+      "btnConfirmReject": "Confirmar rexeite",
+      "approving": "Enviando…",
+      "rejecting": "Rexeitando…",
+      "rejectCommentPlaceholder": "Motivo do rexeite (opcional)",
+      "errLoad": "Non se puideron cargar as propostas.",
+      "errApprove": "Non se puido aprobar a proposta.",
+      "errReject": "Non se puido rexeitar a proposta.",
+      "loading": "Cargando propostas…",
+      "empty": "Non hai propostas para mostrar."
+    },
     "incidentReporter": {
       "errSend": "Non se puido enviar a incidencia.",
       "errSendShort": "Erro ao enviar a incidencia.",

@@ -5,6 +5,26 @@
 
 ---
 
+## 1.66.0 — IncidentProposalCard + IncidentProposalsList para flujo de agente IA (2026-05-20)
+
+Type: **minor**
+
+Componentes shared para que el panel admin revise propuestas generadas
+por el agente IA contra incidencias abiertas.
+
+- `IncidentProposalCard`: tarjeta con el mensaje propuesto al usuario,
+  diagnóstico interno colapsable, indicador de `fixCommit/fixRepo` y
+  acciones inline aprobar/editar/rechazar. La aprobación de tipo `close`
+  con fix queda como `armed` (se dispara con el deploy a prod del repo);
+  el resto se envía inmediatamente.
+- `IncidentProposalsList`: feed cross-org con filtros por estado
+  (pending/armed/sent/rejected) y polling 30s. Apunta por defecto a
+  `/api/agent/admin` — admin proxea a auth con bearer + service key.
+- i18n cast/cat/eus/gal bajo `ui.incidentProposals.*`.
+
+Consumido inicialmente por mycolegal-admin en una tab "Propuestas IA"
+de la página de incidencias.
+
 ## 1.62.0 — ClienteFormDialog compartido + edición/baja en ClientPicker (2026-05-16)
 
 Type: **minor**

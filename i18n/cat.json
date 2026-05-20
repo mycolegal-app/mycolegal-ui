@@ -262,6 +262,49 @@
       "back": "Tornar",
       "loadingIncident": "Carregant incidència…"
     },
+    "incidentProposals": {
+      "kind": {
+        "reply": "Resposta",
+        "question": "Pregunta a l'usuari",
+        "close": "Tancament proposat",
+        "reopen": "Reobertura"
+      },
+      "status": {
+        "pending": "Pendent",
+        "armed": "Armada — espera desplegament",
+        "sent": "Enviada",
+        "rejected": "Rebutjada"
+      },
+      "filter": {
+        "needs": "Per revisar",
+        "pending": "Pendents",
+        "armed": "Armades",
+        "sent": "Enviades",
+        "rejected": "Rebutjades",
+        "all": "Totes"
+      },
+      "proposedBy": "Proposada per {who} · {date}",
+      "messageLabel": "Missatge a l'usuari",
+      "rationaleToggle": "Diagnòstic intern de l'agent",
+      "armedExplanation": "Aprovada. S'enviarà automàticament a l'usuari i es tancarà la incidència quan el commit indicat arribi a producció a GCP.",
+      "sentAt": "Enviada el {date}",
+      "rejectedHeading": "Proposta rebutjada",
+      "openIncident": "Veure incidència",
+      "btnApprove": "Aprovar i enviar",
+      "btnReject": "Rebutjar",
+      "btnEdit": "Editar missatge",
+      "btnCancelEdit": "Descartar canvis",
+      "btnCancel": "Cancel·lar",
+      "btnConfirmReject": "Confirmar rebuig",
+      "approving": "Enviant…",
+      "rejecting": "Rebutjant…",
+      "rejectCommentPlaceholder": "Motiu del rebuig (opcional)",
+      "errLoad": "No s'han pogut carregar les propostes.",
+      "errApprove": "No s'ha pogut aprovar la proposta.",
+      "errReject": "No s'ha pogut rebutjar la proposta.",
+      "loading": "Carregant propostes…",
+      "empty": "No hi ha propostes per mostrar."
+    },
     "incidentReporter": {
       "errSend": "No s'ha pogut enviar la incidència.",
       "errSendShort": "Error en enviar la incidència.",

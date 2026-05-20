@@ -56,6 +56,14 @@ export type {
   IncidentThreadIncident,
   IncidentThreadMessage,
 } from './components/shared/incident-thread';
+export { IncidentProposalCard } from './components/shared/incident-proposal-card';
+export type {
+  IncidentProposalCardProps,
+  IncidentProposalEntry,
+  IncidentProposalIncidentSummary,
+} from './components/shared/incident-proposal-card';
+export { IncidentProposalsList } from './components/shared/incident-proposals-list';
+export type { IncidentProposalsListProps } from './components/shared/incident-proposals-list';
 // Shared "my incidents" pages — every consumer app re-exports these as
 // the default export of their /incidencias and /incidencias/[number]
 // route segments. See server/incidents-routes.ts for the matching

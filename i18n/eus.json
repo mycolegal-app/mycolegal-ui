@@ -262,6 +262,49 @@
       "back": "Itzuli",
       "loadingIncident": "Gertakaria kargatzen…"
     },
+    "incidentProposals": {
+      "kind": {
+        "reply": "Erantzuna",
+        "question": "Galdera erabiltzaileari",
+        "close": "Itxiera-proposamena",
+        "reopen": "Berriz irekitzea"
+      },
+      "status": {
+        "pending": "Zain",
+        "armed": "Armatua — hedapenaren zain",
+        "sent": "Bidalita",
+        "rejected": "Baztertua"
+      },
+      "filter": {
+        "needs": "Berrikusi beharrekoak",
+        "pending": "Zain",
+        "armed": "Armatuak",
+        "sent": "Bidaliak",
+        "rejected": "Baztertuak",
+        "all": "Guztiak"
+      },
+      "proposedBy": "{who} proposatu du · {date}",
+      "messageLabel": "Erabiltzaileari bidaliko zaion mezua",
+      "rationaleToggle": "Agentearen barneko diagnostikoa",
+      "armedExplanation": "Onartua. Adierazitako commit-a GCP produkziora iristen denean, mezua erabiltzaileari automatikoki bidaliko zaio eta gertakaria itxiko da.",
+      "sentAt": "{date} bidalia",
+      "rejectedHeading": "Proposamena baztertua",
+      "openIncident": "Gertakaria ikusi",
+      "btnApprove": "Onartu eta bidali",
+      "btnReject": "Baztertu",
+      "btnEdit": "Mezua editatu",
+      "btnCancelEdit": "Aldaketak baztertu",
+      "btnCancel": "Utzi",
+      "btnConfirmReject": "Baztertzea berretsi",
+      "approving": "Bidaltzen…",
+      "rejecting": "Baztertzen…",
+      "rejectCommentPlaceholder": "Baztertze-arrazoia (aukerakoa)",
+      "errLoad": "Ezin izan dira proposamenak kargatu.",
+      "errApprove": "Ezin izan da proposamena onartu.",
+      "errReject": "Ezin izan da proposamena baztertu.",
+      "loading": "Proposamenak kargatzen…",
+      "empty": "Ez dago erakusteko proposamenik."
+    },
     "incidentReporter": {
       "errSend": "Ezin izan da gertakaria bidali.",
       "errSendShort": "Errorea gertakaria bidaltzean.",

@@ -262,6 +262,49 @@
       "back": "Volver",
       "loadingIncident": "Cargando incidencia…"
     },
+    "incidentProposals": {
+      "kind": {
+        "reply": "Respuesta",
+        "question": "Pregunta al usuario",
+        "close": "Cierre propuesto",
+        "reopen": "Reapertura"
+      },
+      "status": {
+        "pending": "Pendiente",
+        "armed": "Armada — espera deploy",
+        "sent": "Enviada",
+        "rejected": "Rechazada"
+      },
+      "filter": {
+        "needs": "Por revisar",
+        "pending": "Pendientes",
+        "armed": "Armadas",
+        "sent": "Enviadas",
+        "rejected": "Rechazadas",
+        "all": "Todas"
+      },
+      "proposedBy": "Propuesta por {who} · {date}",
+      "messageLabel": "Mensaje al usuario",
+      "rationaleToggle": "Diagnóstico interno del agente",
+      "armedExplanation": "Aprobada. Se enviará automáticamente al usuario y se cerrará la incidencia cuando el commit indicado llegue a producción en GCP.",
+      "sentAt": "Enviada el {date}",
+      "rejectedHeading": "Propuesta rechazada",
+      "openIncident": "Ver incidencia",
+      "btnApprove": "Aprobar y enviar",
+      "btnReject": "Rechazar",
+      "btnEdit": "Editar mensaje",
+      "btnCancelEdit": "Descartar cambios",
+      "btnCancel": "Cancelar",
+      "btnConfirmReject": "Confirmar rechazo",
+      "approving": "Enviando…",
+      "rejecting": "Rechazando…",
+      "rejectCommentPlaceholder": "Motivo del rechazo (opcional)",
+      "errLoad": "No se pudieron cargar las propuestas.",
+      "errApprove": "No se pudo aprobar la propuesta.",
+      "errReject": "No se pudo rechazar la propuesta.",
+      "loading": "Cargando propuestas…",
+      "empty": "No hay propuestas que mostrar."
+    },
     "incidentReporter": {
       "errSend": "No se pudo enviar la incidencia.",
       "errSendShort": "Error al enviar la incidencia.",
