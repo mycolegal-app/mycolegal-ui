@@ -55,6 +55,7 @@ import { useI18n } from '../i18n/i18n-context';
 import { toast } from '../../hooks/use-toast';
 import type { UserRow } from './users-admin-panel';
 import { AppPermissionsDialog } from './app-permissions-dialog';
+import { UserAuditTimeline } from './user-audit-timeline';
 
 const LANGUAGE_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'CAST', label: 'Castellano' },
@@ -148,7 +149,7 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
   const [authBusy, setAuthBusy] = useState<null | 'role' | 'status'>(null);
   const [confirmSuspend, setConfirmSuspend] = useState(false);
   const [permsDialogApp, setPermsDialogApp] = useState<AppCatalogEntry | null>(null);
-  const [activeTab, setActiveTab] = useState<'profile' | 'permissions'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'permissions' | 'audit'>('profile');
   const [profile, setProfile] = useState<{
     displayName: string;
     email: string;
@@ -571,7 +572,7 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
 
           <Tabs
             value={activeTab}
-            onValueChange={(v) => setActiveTab(v as 'profile' | 'permissions')}
+            onValueChange={(v) => setActiveTab(v as 'profile' | 'permissions' | 'audit')}
             className="h-[420px] flex flex-col"
           >
             <TabsList className="self-start">
@@ -580,6 +581,9 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
               </TabsTrigger>
               <TabsTrigger value="profile">
                 {t('ui.usersAdmin.tabProfile')}
+              </TabsTrigger>
+              <TabsTrigger value="audit">
+                {t('ui.usersAdmin.tabAudit')}
               </TabsTrigger>
             </TabsList>
 
@@ -746,22 +750,37 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
               </div>
             )}
             </TabsContent>
+
+            <TabsContent
+              value="audit"
+              className="flex-1 min-h-0 flex flex-col mt-3 data-[state=inactive]:hidden"
+            >
+              {user && (
+                <UserAuditTimeline
+                  apiBase={apiBase}
+                  authUserId={user.authUserId}
+                  enabled={activeTab === 'audit'}
+                />
+              )}
+            </TabsContent>
           </Tabs>
 
           <DialogFooter>
             <Button variant="outline" onClick={onClose} disabled={anyBusy}>
-              {t('ui.usersAdmin.btnCancel')}
+              {activeTab === 'audit' ? t('ui.usersAdmin.btnClose') : t('ui.usersAdmin.btnCancel')}
             </Button>
-            <Button
-              onClick={activeTab === 'profile' ? handleProfileSave : handleSave}
-              disabled={
-                anyBusy || (activeTab === 'permissions' && loadingCatalog)
-              }
-            >
-              {(activeTab === 'profile' ? savingProfile : saving)
-                ? t('ui.usersAdmin.btnSaving')
-                : t('ui.usersAdmin.btnSave')}
-            </Button>
+            {activeTab !== 'audit' && (
+              <Button
+                onClick={activeTab === 'profile' ? handleProfileSave : handleSave}
+                disabled={
+                  anyBusy || (activeTab === 'permissions' && loadingCatalog)
+                }
+              >
+                {(activeTab === 'profile' ? savingProfile : saving)
+                  ? t('ui.usersAdmin.btnSaving')
+                  : t('ui.usersAdmin.btnSave')}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

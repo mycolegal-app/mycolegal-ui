@@ -23,6 +23,7 @@ export {
   createUsuariosByIdResendInvitationRoute,
   createUsuariosByIdProfileRoute,
   createUsuariosByIdSendPasswordResetRoute,
+  createUsuariosByIdAuditRoute,
   createUsuariosCreateWithPasswordRoute,
   createUsuariosByIdAppPermRoute,
   createUsuariosAppPermsCatalogRoute,

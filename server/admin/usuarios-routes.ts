@@ -1395,3 +1395,58 @@ export function createUsuariosByIdSendPasswordResetRoute(deps: UsuariosRoutesDep
 
   return { POST };
 }
+
+// --------------------------------------------------------------------------
+// /api/admin/usuarios/[authUserId]/audit — GET timeline (AuditLog + mail)
+// --------------------------------------------------------------------------
+
+export function createUsuariosByIdAuditRoute(deps: UsuariosRoutesDeps) {
+  const {
+    withPermission,
+    successResponse,
+    errorResponse,
+    fetchFromAuth,
+    jwtCookieName,
+  } = deps;
+
+  const GET = withPermission('admin:users')(
+    async (req: NextRequest, ctx: AdminCtx<{ authUserId: string }>) => {
+      try {
+        const params = await ctx.params;
+        const orgId = getTargetOrgId(deps, ctx.auth, params);
+        const { authUserId } = params;
+
+        const cookieStore = await cookies();
+        const token = cookieStore.get(jwtCookieName)?.value;
+        if (!token) return errorResponse('UNAUTHORIZED', 'No token', 401);
+
+        const url = new URL(req.url);
+        const qp = new URLSearchParams();
+        for (const key of ['limit', 'category', 'appSlug', 'sinceMs', 'untilMs']) {
+          const v = url.searchParams.get(key);
+          if (v) qp.set(key, v);
+        }
+        const qs = qp.toString();
+
+        const res = await fetchFromAuth(
+          `/orgs/${orgId}/users/${authUserId}/timeline${qs ? `?${qs}` : ''}`,
+          token,
+        );
+        if (res.status >= 400) {
+          const msg =
+            res.data?.error?.message ||
+            res.data?.message ||
+            'Error al obtener la auditoría del usuario';
+          return errorResponse('AUTH_ERROR', msg, res.status);
+        }
+
+        return successResponse(res.data?.data ?? res.data ?? { data: [] });
+      } catch (error) {
+        console.error('[admin/usuarios/audit] GET error:', error);
+        return errorResponse('INTERNAL_ERROR', 'Error al obtener la auditoría', 500);
+      }
+    },
+  );
+
+  return { GET };
+}
