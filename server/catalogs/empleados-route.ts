@@ -44,6 +44,9 @@ export function createEmpleadosCatalogRoute(deps: EmpleadosCatalogRouteDeps) {
     if (sp.filters.search) {
       where.displayName = { contains: sp.filters.search, mode: 'insensitive' };
     }
+    if (sp.filters.role) {
+      where.role = sp.filters.role;
+    }
 
     const [data, total] = await Promise.all([
       db.userRole.findMany({
