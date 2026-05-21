@@ -536,6 +536,7 @@
       "emptyTitle": "No hi ha usuaris",
       "emptyDescription": "Convida usuaris a la teva organització perquè puguin accedir a l'aplicació.",
       "searchByName": "Cercar per nom...",
+      "showSuspended": "Mostrar suspesos",
       "colName": "Nom",
       "colEmail": "Correu",
       "colRole": "Rol",

@@ -126,6 +126,7 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
   const [deleteUser, setDeleteUser] = useState<UserRow | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editUser, setEditUser] = useState<UserRow | null>(null);
+  const [showSuspended, setShowSuspended] = useState(false);
 
   const [appsCatalog, setAppsCatalog] = useState<AppCatalogEntry[]>([]);
   const [loadingCatalog, setLoadingCatalog] = useState(true);
@@ -422,11 +423,26 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
     },
   ];
 
+  const visibleUsers = showSuspended
+    ? users
+    : users.filter((u) => u.authStatus !== 'suspended');
+
   return (
     <>
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          {toolbar ?? <div />}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            {toolbar}
+            <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={showSuspended}
+                onChange={(e) => setShowSuspended(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              {t('ui.usersAdmin.showSuspended')}
+            </label>
+          </div>
           <Button onClick={() => setInviteOpen(true)} size="sm">
             <UserPlus className="h-4 w-4 mr-1.5" />
             {t('ui.usersAdmin.btnInvite')}
@@ -437,7 +453,7 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
           <div className="flex justify-center py-16">
             <LoadingSpinner size="lg" />
           </div>
-        ) : users.length === 0 ? (
+        ) : visibleUsers.length === 0 ? (
           <EmptyState
             icon={Users}
             title={t('ui.usersAdmin.emptyTitle')}
@@ -446,7 +462,7 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
         ) : (
           <DataTable
             columns={columns}
-            data={users}
+            data={visibleUsers}
             searchKey="displayName"
             searchPlaceholder={t('ui.usersAdmin.searchByName')}
             pageSize={25}

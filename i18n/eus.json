@@ -536,6 +536,7 @@
       "emptyTitle": "Ez dago erabiltzailerik",
       "emptyDescription": "Gonbidatu erabiltzaileak zure erakundera, aplikaziora sartzeko.",
       "searchByName": "Bilatu izenez...",
+      "showSuspended": "Erakutsi etendakoak",
       "colName": "Izena",
       "colEmail": "Posta",
       "colRole": "Rola",
