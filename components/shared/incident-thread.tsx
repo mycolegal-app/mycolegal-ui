@@ -39,6 +39,13 @@ export interface IncidentThreadMessage {
   createdAt: string;
   /** True cuando el mensaje lleva un JPEG adjunto persistido en BD. */
   hasScreenshot?: boolean;
+  /**
+   * Read-receipt: cuándo el reporter vio este mensaje de soporte. Solo
+   * relevante en mensajes authorRole='superadmin'. NULL/undefined = aún
+   * no leído. El lado soporte (viewerRole='superadmin') lo muestra como
+   * "✓ Leído" / "Sin leer".
+   */
+  readByReporterAt?: string | null;
 }
 
 interface IncidentThreadProps {
@@ -362,6 +369,15 @@ export function IncidentThread({
                       className="max-h-48 w-auto"
                     />
                   </button>
+                )}
+                {/* Read-receipt: solo el lado soporte ve si el reporter
+                    leyó su mensaje. Para el usuario no tiene sentido. */}
+                {viewerRole === "superadmin" && m.authorRole === "superadmin" && (
+                  <p className={cn("mt-1 text-[10px]", mine ? "text-white/60" : "text-gray-400")}>
+                    {m.readByReporterAt
+                      ? t("ui.incidentThread.readByReporterAt", { date: formatDateTime(m.readByReporterAt) })
+                      : t("ui.incidentThread.notYetRead")}
+                  </p>
                 )}
               </div>
             </div>

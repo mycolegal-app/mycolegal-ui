@@ -142,6 +142,8 @@
       "openedOn": "{date}-(e)an irekia",
       "loadingMessages": "Mezuak kargatzen…",
       "noMessages": "Oraindik ez dago mezurik.",
+      "readByReporterAt": "✓ Erabiltzaileak irakurria: {date}",
+      "notYetRead": "Erabiltzaileak irakurri gabe",
       "authorSupport": "MycoLegal laguntza",
       "authorUser": "Erabiltzailea",
       "replyToSupport": "Erantzun laguntzari…",

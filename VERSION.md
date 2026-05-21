@@ -5,6 +5,21 @@
 
 ---
 
+## 1.68.0 — Read-receipt en IncidentThread (2026-05-21)
+
+Type: **minor**
+
+`IncidentThreadMessage` añade el campo opcional `readByReporterAt`. El
+componente `IncidentThread` muestra, solo en la vista de soporte
+(`viewerRole='superadmin'`), si el usuario que reportó ha leído cada
+mensaje de soporte ("✓ Leído por el usuario el …" / "Sin leer por el
+usuario"). Aditivo y retrocompatible — los consumidores en 1.67.0 siguen
+funcionando sin el indicador. Claves i18n nuevas
+`ui.incidentThread.readByReporterAt` y `notYetRead` en cast/cat/eus/gal.
+
+El backend (mycolegal-auth) setea `read_by_reporter_at` cuando el
+reporter abre su hilo (`GET /incidents/mine/:id/messages`).
+
 ## 1.66.0 — IncidentProposalCard + IncidentProposalsList para flujo de agente IA (2026-05-20)
 
 Type: **minor**

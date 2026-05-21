@@ -142,6 +142,8 @@
       "openedOn": "Aberta o {date}",
       "loadingMessages": "Cargando mensaxes…",
       "noMessages": "Aínda non hai mensaxes.",
+      "readByReporterAt": "✓ Lido polo usuario o {date}",
+      "notYetRead": "Sen ler polo usuario",
       "authorSupport": "Soporte MycoLegal",
       "authorUser": "Usuario",
       "replyToSupport": "Responde a soporte…",
