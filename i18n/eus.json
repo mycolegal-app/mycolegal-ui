@@ -1,5 +1,16 @@
 {
   "ui": {
+    "impersonation": {
+      "btn": "Erabiltzailea ordezkatu",
+      "confirmTitle": "Erabiltzailea ordezkatu",
+      "confirmBody": "{name} gisa jardungo duzu. Aplikazioa erabiltzaile honek ikusten duen bezala ikusiko duzu, eta zure ekintza guztiak zure benetako izenean erregistratuko dira. Edozein unetan itzul zaitezke zure saiora.",
+      "confirmCta": "Ordezkatu",
+      "confirmCtaBusy": "Hasten…",
+      "bannerActingAs": "{user} gisa ari zara jarduten",
+      "bannerExit": "Ordezkapenetik irten",
+      "bannerExiting": "Irteten…",
+      "toastError": "Ezin izan da ordezkapena hasi"
+    },
     "userAccount": {
       "title": "Nire kontua",
       "description": "Kudeatu zure datuak, aldatu pasahitza eta berrikusi aplikazio honi loturiko gertakariak.",
@@ -169,7 +180,8 @@
       "attachmentAlt": "Erantsitako irudia",
       "removeAttachment": "Kendu",
       "viewAttachment": "Ikusi irudia tamaina osoan",
-      "closeAttachment": "Itxi irudia"
+      "closeAttachment": "Itxi irudia",
+      "readOnlyNotice": "Gertaera hau laguntza gisa ari zara ikusten (irakurtzeko soilik). Erantzuteko edo ixteko, erabili administrazio-panela."
     },
     "login": {
       "errAuth": "Autentifikazio errorea",
@@ -253,7 +265,13 @@
       "colDescription": "Deskribapena",
       "colApp": "Aplikazioa",
       "colStatus": "Egoera",
-      "colLastActivity": "Azken jarduera"
+      "colLastActivity": "Azken jarduera",
+      "colReporter": "Nork jakinarazia",
+      "scopeMine": "Nire gertakariak",
+      "scopeOrg": "Erakunde osoa",
+      "titleOrg": "Erakundeko gertakariak",
+      "subtitleOrg": "Zure erakundeko erabiltzaileek jakinarazitako gertakari guztiak.",
+      "emptyOrg": "Ez dago gertakaririk zure erakundean."
     },
     "incidentDetail": {
       "errNotFound": "Ez dugu gertakari hau aurkitu.",

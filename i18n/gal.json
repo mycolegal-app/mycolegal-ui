@@ -1,5 +1,16 @@
 {
   "ui": {
+    "impersonation": {
+      "btn": "Suplantar usuario",
+      "confirmTitle": "Suplantar usuario",
+      "confirmBody": "Vas actuar como {name}. Verás a aplicación tal e como a ve este usuario, e todas as túas accións quedarán rexistradas co teu nome real. Poderás volver á túa sesión en calquera momento.",
+      "confirmCta": "Suplantar",
+      "confirmCtaBusy": "Iniciando…",
+      "bannerActingAs": "Estás actuando como {user}",
+      "bannerExit": "Saír da suplantación",
+      "bannerExiting": "Saíndo…",
+      "toastError": "Non se puido iniciar a suplantación"
+    },
     "userAccount": {
       "title": "A miña conta",
       "description": "Xestiona os teus datos, cambia a túa contrasinal e revisa as incidencias relacionadas con esta aplicación.",
@@ -169,7 +180,8 @@
       "attachmentAlt": "Imaxe adxunta",
       "removeAttachment": "Quitar",
       "viewAttachment": "Ver imaxe a tamaño completo",
-      "closeAttachment": "Pechar imaxe"
+      "closeAttachment": "Pechar imaxe",
+      "readOnlyNotice": "Estás vendo esta incidencia como soporte (só lectura). Para responder ou pechala, usa o panel de administración."
     },
     "login": {
       "errAuth": "Erro de autenticación",
@@ -253,7 +265,13 @@
       "colDescription": "Descrición",
       "colApp": "Aplicación",
       "colStatus": "Estado",
-      "colLastActivity": "Última actividade"
+      "colLastActivity": "Última actividade",
+      "colReporter": "Reportada por",
+      "scopeMine": "As miñas incidencias",
+      "scopeOrg": "Toda a organización",
+      "titleOrg": "Incidencias da organización",
+      "subtitleOrg": "Todas as incidencias reportadas polos usuarios da túa organización.",
+      "emptyOrg": "Non hai incidencias na túa organización."
     },
     "incidentDetail": {
       "errNotFound": "Non atopamos esta incidencia.",

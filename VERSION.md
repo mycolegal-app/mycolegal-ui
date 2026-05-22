@@ -5,6 +5,78 @@
 
 ---
 
+## 1.70.0 — Impersonación de usuarios (banner + botón en gestión de usuarios) (2026-05-22)
+
+Type: **minor**
+
+Soporte de UI compartida para que un superadmin (desde admin) o un org_admin
+(desde notaria/legifirma) actúe como otro usuario.
+
+- `server/impersonation.ts` (nuevo): handler config-driven `startImpersonation` /
+  `stopImpersonation` que preserva la sesión del actor en cookies `<name>__actor`
+  y conmuta a la sesión de impersonación; usado por las rutas `/api/auth/impersonate`
+  y `/api/auth/impersonate/stop` de cada app.
+- `components/shared/impersonation-banner.tsx` (nuevo): barra superior persistente
+  "Estás actuando como X — Salir", montada por `AppShell` cuando `/api/auth/me`
+  reporta `impersonatedBy`.
+- `components/admin/users-admin-panel.tsx`: botón "Impersonar" por fila con diálogo
+  de confirmación; gating por rol del actor (auto-resuelto vía `/api/auth/me`,
+  con props `enableImpersonation` / `currentAuthRole` / `impersonationLandingUrl`).
+- i18n `ui.impersonation.*` en cast/cat/eus/gal.
+
+## 1.69.0 — Modal "Mi cuenta": incidencias con scroll, abribles y lectura para gestores de la org (2026-05-22)
+
+Type: **minor**
+
+Arregla la pestaña **Incidencias** del `UserAccountDialog` (modal "Mi
+cuenta"), que desbordaba la pantalla sin scroll y no permitía abrir el
+hilo de una incidencia:
+
+- `DialogContent` ahora se limita a `max-h-[85vh]` con cabecera fija y la
+  pestaña activa con scroll propio. Aplica a las tres pestañas.
+- Cada fila de incidencia es clicable y navega a `/incidencias/:number`
+  cerrando el modal. Las **propias** siempre; las de **otros usuarios**
+  solo si el viewer puede gestionar incidencias de la org. El modal lo
+  decide con el flag `canManage` que devuelve el endpoint `org-app` (no
+  con el rol del cliente), así que cubre superadmin · org_admin ·
+  titulares de `admin:users`. Un usuario normal mantiene la sección
+  "otros" como resumen de solo lectura.
+- `IncidentThread` añade el prop `readOnly` (oculta responder/cerrar/
+  reabrir y muestra un aviso) para que un gestor pueda LEER el hilo de una
+  incidencia ajena sin actuar como usuario. `IncidentDetailPage` lo activa
+  según `viewerIsReporter` que devuelve el backend.
+- `MyIncidentsPage` (página `/incidencias`): un gestor de la org ve **por
+  defecto todas las incidencias de su organización** (con columna
+  "Reportada por") y un toggle "Toda la organización / Mis incidencias".
+  Un usuario normal sigue viendo solo las suyas, sin toggle. Lo decide el
+  flag `canManage` que ahora devuelven `GET /incidents/mine` y `GET
+  /incidents/org`.
+- Claves i18n nuevas `ui.incidentThread.readOnlyNotice` y, en `myIncidents`,
+  `colReporter`/`scopeMine`/`scopeOrg`/`titleOrg`/`subtitleOrg`/`emptyOrg`
+  (cast/cat/eus/gal).
+
+Backend (mycolegal-auth): las rutas de **lectura** `GET
+/incidents/mine/by-number/:number`, `GET /incidents/mine/:id` y `GET
+/incidents/mine/:id/messages` (+ screenshot) traen la incidencia con
+`bypassOwnership` y luego permiten **dueño ∨ gestor de la org** (helper
+`userHasOrgUserManagement`, mismo criterio que el panel admin); 404 en
+otro caso. El read-receipt solo se marca si quien abre es el reporter.
+`GET /incidents/mine` y `GET /incidents/org-app` añaden `canManage`; nueva
+ruta `GET /incidents/org` (gestores; 403 si no) lista todas las
+incidencias de la org. Las rutas de **escritura** (responder/cerrar/
+reabrir) siguen estrictamente del propietario. La respuesta de detalle
+incluye `viewerIsReporter`.
+
+Las apps de usuario (notaria, legifirma, archivo) añaden el proxy
+`/api/incidents/org` con su `@/lib/proxy` local (como `/notifications`),
+para no acoplar el build de la app a la versión del factory de ui.
+`MyIncidentsPage` degrada con gracia (cae a "mías" y oculta el toggle) si
+una app monta la página sin ese proxy.
+
+Aditivo y retrocompatible: `readOnly` por defecto `false` y los campos
+nuevos del backend son opcionales, así que consumidores en 1.68.0 siguen
+igual.
+
 ## 1.68.0 — Read-receipt en IncidentThread (2026-05-21)
 
 Type: **minor**

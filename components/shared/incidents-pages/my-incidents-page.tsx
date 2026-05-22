@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { NavLink as Link } from "../nav-link";
 import { Loader2, Inbox, Plus } from "lucide-react";
+import { cn } from "../../../lib/utils";
 import { PageTitle } from "../../layout/page-title";
 import { useI18n } from "../../i18n/i18n-context";
 
@@ -15,7 +16,11 @@ interface IncidentListEntry {
   closedByRole: string | null;
   lastActivityAt: string;
   createdAt: string;
+  /** Present only on the org-wide view (managers): who reported it. */
+  user?: { id: string; email: string; displayName: string } | null;
 }
+
+type Scope = "mine" | "org";
 
 const STATUS_TONES: Record<string, string> = {
   open: "bg-amber-100 text-amber-800",
@@ -41,16 +46,16 @@ function formatWhen(iso: string): string {
 }
 
 /**
- * User-facing list of the caller's own incidents. The bell deep-links into
- * the detail view by number (/incidencias/:number); this page is the index
- * that lets the user find old ones without going through the bell.
+ * User-facing list of incidents. A plain user sees their own; an org manager
+ * (superadmin / org_admin / admin:users) defaults to the org-wide view (all
+ * incidents of the org, with the reporter) and can toggle back to just their
+ * own. The backend (`canManage` on the list responses) decides which roles
+ * unlock the org scope; `GET /api/incidents/org` returns 403 otherwise.
  *
  * Shared across notaria/legifirma/archivo/… via `@mycolegal-app/ui`.
  *
  * `onReport` (opcional) habilita un CTA en el empty state. La app que la
- * monta lo enchufa al disparador del bug-reporter floating (típicamente abre
- * el modal global de incidencias). Si no se pasa, el empty state mantiene su
- * mensaje minimal sin botón.
+ * monta lo enchufa al disparador del bug-reporter floating.
  */
 interface MyIncidentsPageProps {
   onReport?: () => void;
@@ -59,33 +64,112 @@ interface MyIncidentsPageProps {
 export function MyIncidentsPage({ onReport }: MyIncidentsPageProps = {}) {
   const { t } = useI18n();
   const [items, setItems] = useState<IncidentListEntry[]>([]);
+  const [scope, setScope] = useState<Scope>("mine");
+  const [canManage, setCanManage] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setError(null);
-    try {
-      const res = await fetch("/api/incidents/mine?limit=100", { credentials: "include" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const body = await res.json();
-      setItems(body.data || []);
-    } catch (err) {
-      setError((err as Error).message || t("ui.myIncidents.errLoad"));
-    } finally {
-      setLoading(false);
-    }
+  const loadScope = useCallback(
+    async (s: Scope) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const ep = s === "org" ? "/api/incidents/org" : "/api/incidents/mine";
+        const res = await fetch(`${ep}?limit=100`, { credentials: "include" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const body = await res.json();
+        setItems(body.data || []);
+        if (typeof body.canManage === "boolean") setCanManage(body.canManage);
+      } catch (err) {
+        setError((err as Error).message || t("ui.myIncidents.errLoad"));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [t],
+  );
+
+  // On mount: load the user's own list to learn `canManage`. A manager is
+  // escalated to the org-wide view in the same pass (loading stays on, no
+  // flash of the "mine" list). A plain user just keeps their own.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch("/api/incidents/mine?limit=100", { credentials: "include" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const body = await res.json();
+        if (cancelled) return;
+        const cm = body.canManage === true;
+        setCanManage(cm);
+        if (cm) {
+          try {
+            const r2 = await fetch("/api/incidents/org?limit=100", { credentials: "include" });
+            if (!r2.ok) throw new Error(`HTTP ${r2.status}`);
+            const b2 = await r2.json();
+            if (cancelled) return;
+            setScope("org");
+            setItems(b2.data || []);
+          } catch {
+            // Org-wide view not wired in this app (no /api/incidents/org
+            // proxy) — degrade to the user's own list and hide the toggle.
+            if (cancelled) return;
+            setCanManage(false);
+            setScope("mine");
+            setItems(body.data || []);
+          }
+        } else {
+          setItems(body.data || []);
+        }
+      } catch (err) {
+        if (!cancelled) setError((err as Error).message || t("ui.myIncidents.errLoad"));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [t]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  const onScope = useCallback(
+    (s: Scope) => {
+      setScope(s);
+      void loadScope(s);
+    },
+    [loadScope],
+  );
+
+  const isOrg = scope === "org";
 
   return (
     <div className="mx-auto max-w-4xl space-y-4">
       <PageTitle
-        title={t("ui.myIncidents.title")}
-        subtitle={t("ui.myIncidents.subtitle")}
+        title={isOrg ? t("ui.myIncidents.titleOrg") : t("ui.myIncidents.title")}
+        subtitle={isOrg ? t("ui.myIncidents.subtitleOrg") : t("ui.myIncidents.subtitle")}
       />
+
+      {canManage && (
+        <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5 text-xs">
+          {(["org", "mine"] as Scope[]).map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => onScope(s)}
+              className={cn(
+                "rounded-md px-3 py-1 font-medium transition-colors",
+                scope === s
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-500 hover:text-gray-800",
+              )}
+            >
+              {s === "org" ? t("ui.myIncidents.scopeOrg") : t("ui.myIncidents.scopeMine")}
+            </button>
+          ))}
+        </div>
+      )}
 
       {loading && (
         <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -103,8 +187,8 @@ export function MyIncidentsPage({ onReport }: MyIncidentsPageProps = {}) {
       {!loading && !error && items.length === 0 && (
         <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-gray-300 bg-gray-50 py-10 text-sm text-gray-500">
           <Inbox className="h-6 w-6" />
-          <p>{t("ui.myIncidents.empty")}</p>
-          {onReport && (
+          <p>{isOrg ? t("ui.myIncidents.emptyOrg") : t("ui.myIncidents.empty")}</p>
+          {onReport && !isOrg && (
             <button
               type="button"
               onClick={onReport}
@@ -124,6 +208,7 @@ export function MyIncidentsPage({ onReport }: MyIncidentsPageProps = {}) {
               <tr className="border-b border-gray-100 text-left text-xs uppercase tracking-wide text-gray-500">
                 <th className="px-4 py-2">#</th>
                 <th className="px-4 py-2">{t("ui.myIncidents.colDescription")}</th>
+                {isOrg && <th className="px-4 py-2">{t("ui.myIncidents.colReporter")}</th>}
                 <th className="px-4 py-2">{t("ui.myIncidents.colApp")}</th>
                 <th className="px-4 py-2">{t("ui.myIncidents.colStatus")}</th>
                 <th className="px-4 py-2">{t("ui.myIncidents.colLastActivity")}</th>
@@ -146,6 +231,11 @@ export function MyIncidentsPage({ onReport }: MyIncidentsPageProps = {}) {
                         <span className="line-clamp-2">{i.description}</span>
                       </Link>
                     </td>
+                    {isOrg && (
+                      <td className="px-4 py-2 text-gray-500">
+                        {i.user?.displayName || i.user?.email || "—"}
+                      </td>
+                    )}
                     <td className="px-4 py-2 text-gray-500">{i.appSlug}</td>
                     <td className="px-4 py-2">
                       <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${tone}`}>

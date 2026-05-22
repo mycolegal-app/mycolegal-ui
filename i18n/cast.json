@@ -1,5 +1,16 @@
 {
   "ui": {
+    "impersonation": {
+      "btn": "Impersonar usuario",
+      "confirmTitle": "Impersonar usuario",
+      "confirmBody": "Vas a actuar como {name}. Verás la aplicación tal y como la ve este usuario, y todas tus acciones quedarán registradas a tu nombre real. Podrás volver a tu sesión en cualquier momento.",
+      "confirmCta": "Impersonar",
+      "confirmCtaBusy": "Iniciando…",
+      "bannerActingAs": "Estás actuando como {user}",
+      "bannerExit": "Salir de la impersonación",
+      "bannerExiting": "Saliendo…",
+      "toastError": "No se pudo iniciar la impersonación"
+    },
     "userAccount": {
       "title": "Mi cuenta",
       "description": "Gestiona tus datos, cambia tu contraseña y revisa las incidencias relacionadas con esta aplicación.",
@@ -169,7 +180,8 @@
       "attachmentAlt": "Imagen adjunta",
       "removeAttachment": "Quitar",
       "viewAttachment": "Ver imagen a tamaño completo",
-      "closeAttachment": "Cerrar imagen"
+      "closeAttachment": "Cerrar imagen",
+      "readOnlyNotice": "Estás viendo esta incidencia como soporte (solo lectura). Para responder o cerrarla, usa el panel de administración."
     },
     "login": {
       "errAuth": "Error de autenticación",
@@ -253,7 +265,13 @@
       "colDescription": "Descripción",
       "colApp": "Aplicación",
       "colStatus": "Estado",
-      "colLastActivity": "Última actividad"
+      "colLastActivity": "Última actividad",
+      "colReporter": "Reportada por",
+      "scopeMine": "Mis incidencias",
+      "scopeOrg": "Toda la organización",
+      "titleOrg": "Incidencias de la organización",
+      "subtitleOrg": "Todas las incidencias reportadas por los usuarios de tu organización.",
+      "emptyOrg": "No hay incidencias en tu organización."
     },
     "incidentDetail": {
       "errNotFound": "No encontramos esta incidencia.",

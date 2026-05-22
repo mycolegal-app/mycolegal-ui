@@ -19,7 +19,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Users, Lock, UserPlus, Trash2, Pencil, Ban, RotateCcw } from 'lucide-react';
+import { Users, Lock, UserPlus, Trash2, Pencil, Ban, RotateCcw, UserCog } from 'lucide-react';
 
 import { DataTable } from '../shared/data-table';
 import { LoadingSpinner } from '../shared/loading-spinner';
@@ -90,6 +90,22 @@ export interface UsersAdminPanelProps {
    * pass `false` to limit invitations to the email flow.
    */
   allowInitialPasswordInvite?: boolean;
+  /**
+   * Enable the per-row "Impersonar" action. The auth service is the real
+   * authority on who may impersonate whom; these props only gate the button's
+   * visibility so it doesn't show where it would surely 403.
+   */
+  enableImpersonation?: boolean;
+  /** Auth user id of the current actor — hides the button on their own row. */
+  currentAuthUserId?: string;
+  /** Org-level role of the current actor (`superadmin` | `org_admin`). */
+  currentAuthRole?: string;
+  /**
+   * Where to navigate after impersonation starts. Defaults to the app root
+   * (`/`). The admin console must set this to a user-facing app URL, since the
+   * impersonated (non-superadmin) user cannot use the admin console itself.
+   */
+  impersonationLandingUrl?: string;
 }
 
 const STATUS_VARIANTS: Record<
@@ -117,6 +133,10 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
     toolbar,
     showOrgRoleInModal = true,
     allowInitialPasswordInvite = true,
+    enableImpersonation = false,
+    currentAuthUserId,
+    currentAuthRole,
+    impersonationLandingUrl,
   } = props;
 
   const [users, setUsers] = useState<UserRow[]>([]);
@@ -127,6 +147,12 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editUser, setEditUser] = useState<UserRow | null>(null);
   const [showSuspended, setShowSuspended] = useState(false);
+  const [impersonateUser, setImpersonateUser] = useState<UserRow | null>(null);
+  const [impersonatingId, setImpersonatingId] = useState<string | null>(null);
+  // Current actor identity, self-resolved from /api/auth/me so consumer pages
+  // only need to flip `enableImpersonation`. Explicit props win when provided.
+  const [actorAuthUserId, setActorAuthUserId] = useState<string | undefined>(undefined);
+  const [actorAuthRole, setActorAuthRole] = useState<string | undefined>(undefined);
 
   const [appsCatalog, setAppsCatalog] = useState<AppCatalogEntry[]>([]);
   const [loadingCatalog, setLoadingCatalog] = useState(true);
@@ -170,6 +196,25 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
     fetchUsers();
     fetchCatalog();
   }, [fetchUsers, fetchCatalog]);
+
+  // Resolve the current actor (role + auth user id) to gate the impersonate
+  // button. Only needed when the feature is enabled. `authRole` is the notaria/
+  // legifirma shape; admin's /api/auth/me uses `role`.
+  useEffect(() => {
+    if (!enableImpersonation) return;
+    let cancelled = false;
+    fetch('/api/auth/me')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => {
+        if (cancelled || !json?.data) return;
+        setActorAuthUserId(json.data.authUserId ?? undefined);
+        setActorAuthRole(json.data.authRole ?? json.data.role ?? undefined);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [enableImpersonation]);
 
   async function handleInvite(data: {
     email: string;
@@ -271,6 +316,55 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
       toast({ title: t('ui.usersAdmin.toastAuthChangeError'), variant: 'destructive' });
     } finally {
       setDeletingId(null);
+    }
+  }
+
+  /**
+   * Whether the "Impersonar" button should appear for a given row. Mirrors the
+   * auth service rules so we don't offer an action that would 403:
+   *  - feature must be enabled and an actor role known
+   *  - never impersonate yourself
+   *  - only active users
+   *  - superadmin: anyone except another superadmin
+   *  - org_admin: only plain users of the org (not superadmin/org_admin)
+   */
+  function canImpersonate(u: UserRow): boolean {
+    if (!enableImpersonation) return false;
+    const actorId = currentAuthUserId ?? actorAuthUserId;
+    const actorRole = currentAuthRole ?? actorAuthRole;
+    if (u.authUserId && u.authUserId === actorId) return false;
+    const status = u.authStatus || (u.active ? 'active' : 'disabled');
+    if (status !== 'active') return false;
+    if (actorRole === 'superadmin') return u.authRole !== 'superadmin';
+    if (actorRole === 'org_admin') {
+      return u.authRole !== 'superadmin' && u.authRole !== 'org_admin';
+    }
+    return false;
+  }
+
+  async function handleImpersonate(user: UserRow) {
+    setImpersonatingId(user.authUserId);
+    try {
+      const res = await fetch('/api/auth/impersonate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserId: user.authUserId }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast({
+          title: err.error?.message || t('ui.impersonation.toastError'),
+          variant: 'destructive',
+        });
+        return;
+      }
+      // Full-page navigation so every app re-reads the swapped session cookie.
+      window.location.href = impersonationLandingUrl || '/';
+    } catch (error) {
+      console.error(error);
+      toast({ title: t('ui.impersonation.toastError'), variant: 'destructive' });
+    } finally {
+      setImpersonatingId(null);
     }
   }
 
@@ -393,6 +487,19 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
         const isProtected = u.role === protectedRole;
         return (
           <div className="flex items-center gap-1">
+            {canImpersonate(u) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setImpersonateUser(u)}
+                disabled={impersonatingId === u.authUserId}
+                className="h-7 w-7 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                title={t('ui.impersonation.btn')}
+                aria-label={t('ui.impersonation.btn')}
+              >
+                <UserCog className="h-3.5 w-3.5" />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"
@@ -587,6 +694,42 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
               disabled={!!deletingId}
             >
               {t('ui.usersAdmin.btnCancel')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!impersonateUser}
+        onOpenChange={(open) => !open && !impersonatingId && setImpersonateUser(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('ui.impersonation.confirmTitle')}</DialogTitle>
+            <DialogDescription>
+              {impersonateUser?.displayName} ({impersonateUser?.email})
+            </DialogDescription>
+          </DialogHeader>
+
+          <p className="text-sm text-muted-foreground">
+            {t('ui.impersonation.confirmBody', { name: impersonateUser?.displayName ?? '' })}
+          </p>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setImpersonateUser(null)}
+              disabled={!!impersonatingId}
+            >
+              {t('ui.usersAdmin.btnCancel')}
+            </Button>
+            <Button
+              onClick={() => impersonateUser && handleImpersonate(impersonateUser)}
+              disabled={!!impersonatingId}
+              className="bg-amber-500 text-amber-950 hover:bg-amber-600"
+            >
+              <UserCog className="h-4 w-4 mr-1.5" />
+              {impersonatingId ? t('ui.impersonation.confirmCtaBusy') : t('ui.impersonation.confirmCta')}
             </Button>
           </DialogFooter>
         </DialogContent>

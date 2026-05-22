@@ -20,6 +20,11 @@ export function IncidentDetailPage() {
   const numberParam = params?.number;
 
   const [incident, setIncident] = useState<IncidentThreadIncident | null>(null);
+  // A superadmin can open a teammate's incident here (read-only). The
+  // backend flags whether the caller is the reporter; non-reporters get a
+  // view without reply/close/reopen. Defaults to owner so the regular
+  // user flow keeps full interaction.
+  const [readOnly, setReadOnly] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,6 +41,7 @@ export function IncidentDetailPage() {
       }
       const body = await res.json();
       setIncident(body.data);
+      setReadOnly(body.data?.viewerIsReporter === false);
     } catch (err) {
       setError((err as Error).message || t("ui.incidentDetail.errLoad"));
     } finally {
@@ -80,6 +86,7 @@ export function IncidentDetailPage() {
           incident={incident}
           viewerRole="user"
           onRefresh={fetchIncident}
+          readOnly={readOnly}
         />
       )}
     </div>

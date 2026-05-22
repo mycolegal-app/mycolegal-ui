@@ -62,6 +62,13 @@ interface IncidentThreadProps {
   onRefresh?: () => void;
   /** Polling cadence for the thread while mounted. Default 15s. */
   pollIntervalMs?: number;
+  /**
+   * Read-only view: hides the reply box and the close/reopen actions, so
+   * the thread can be shown to someone who isn't the reporter (e.g. a
+   * superadmin opening a teammate's incident from "Mi cuenta"). Their
+   * support actions live in the admin panel, not here.
+   */
+  readOnly?: boolean;
 }
 
 function formatDateTime(iso: string): string {
@@ -113,6 +120,7 @@ export function IncidentThread({
   viewerRole,
   onRefresh,
   pollIntervalMs = 15_000,
+  readOnly = false,
 }: IncidentThreadProps) {
   const { t } = useI18n();
   const [messages, setMessages] = useState<IncidentThreadMessage[]>([]);
@@ -311,6 +319,13 @@ export function IncidentThread({
         <p className="whitespace-pre-wrap text-sm text-gray-800">{incident.description}</p>
       </div>
 
+      {readOnly && (
+        <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span>{t("ui.incidentThread.readOnlyNotice")}</span>
+        </div>
+      )}
+
       {/* Thread */}
       <div className="space-y-3">
         {loading && messages.length === 0 && (
@@ -417,7 +432,7 @@ export function IncidentThread({
       )}
 
       {/* Actions */}
-      {!isClosed && !closeMode && (
+      {!readOnly && !isClosed && !closeMode && (
         <div className="space-y-2">
           <Textarea
             value={draft}
@@ -511,7 +526,7 @@ export function IncidentThread({
         </div>
       )}
 
-      {!isClosed && closeMode && (
+      {!readOnly && !isClosed && closeMode && (
         <div className="space-y-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 p-3">
           <p className="text-sm font-medium text-gray-900">{t("ui.incidentThread.btnClose")}</p>
           <p className="text-xs text-gray-600">
@@ -547,7 +562,7 @@ export function IncidentThread({
         </div>
       )}
 
-      {isClosed && (
+      {!readOnly && isClosed && (
         <div className="flex justify-end">
           <Button variant="outline" onClick={reopenIncident} disabled={reopening}>
             {reopening ? (

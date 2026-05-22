@@ -7,6 +7,7 @@ import { type AppInfo } from "./app-info";
 import { IdleTimeout } from "./idle-timeout";
 import { AppSwitcherBar } from "./app-switcher-bar";
 import { AppInfoButton } from "../shared/app-info-button";
+import { ImpersonationBanner } from "../shared/impersonation-banner";
 import {
   DefaultHelpButton,
   DefaultSearchButton,
@@ -65,6 +66,7 @@ function AppShellInner({
   helpButton,
   breadcrumbs,
   appSwitcherBar,
+  impersonationBanner,
   onToggleMobile,
 }: {
   children: ReactNode;
@@ -75,6 +77,7 @@ function AppShellInner({
   helpButton?: ReactNode;
   breadcrumbs?: ReactNode;
   appSwitcherBar?: ReactNode;
+  impersonationBanner?: ReactNode;
   onToggleMobile: () => void;
 }) {
   const { t } = useI18n();
@@ -86,6 +89,7 @@ function AppShellInner({
     // own overflow-y-auto kick in instead of the body scrolling. Project rule:
     // pages must never scroll vertically — the inner element owns the scroll.
     <div className="lg:ml-[220px] flex flex-1 flex-col h-screen min-h-0">
+      {impersonationBanner}
       {appSwitcherBar}
       {header && (
         <header className="flex h-14 shrink-0 items-center justify-between border-b border-navy-600/30 bg-navy-700 px-6">
@@ -169,6 +173,9 @@ export default function AppShell({
   const [org, setOrg] = useState<OrgInfo | undefined>(undefined);
   const [apps, setApps] = useState<AppInfo[]>([]);
   const [inactivityTimeout, setInactivityTimeout] = useState(15);
+  // Label of the impersonated user when this is an impersonation session,
+  // null otherwise. Drives the persistent "acting as" banner.
+  const [impersonatedAs, setImpersonatedAs] = useState<string | null>(null);
   useAuthFetchGuard();
 
   useEffect(() => {
@@ -190,6 +197,11 @@ export default function AppShell({
           if (json.data.inactivityTimeout) {
             setInactivityTimeout(json.data.inactivityTimeout);
           }
+          setImpersonatedAs(
+            json.data.impersonatedBy
+              ? json.data.displayName || json.data.email || ""
+              : null,
+          );
         }
       })
       .catch(() => {});
@@ -219,6 +231,9 @@ export default function AppShell({
             showAppSwitcherBar ? (
               <AppSwitcherBar apps={apps} currentSlug={appSlug} />
             ) : undefined
+          }
+          impersonationBanner={
+            impersonatedAs ? <ImpersonationBanner targetLabel={impersonatedAs} /> : undefined
           }
           onToggleMobile={() => setMobileOpen(!mobileOpen)}
         >

@@ -1,5 +1,16 @@
 {
   "ui": {
+    "impersonation": {
+      "btn": "Suplantar usuari",
+      "confirmTitle": "Suplantar usuari",
+      "confirmBody": "Actuaràs com a {name}. Veuràs l'aplicació tal com la veu aquest usuari, i totes les teves accions quedaran registrades amb el teu nom real. Podràs tornar a la teva sessió en qualsevol moment.",
+      "confirmCta": "Suplantar",
+      "confirmCtaBusy": "Iniciant…",
+      "bannerActingAs": "Estàs actuant com a {user}",
+      "bannerExit": "Sortir de la suplantació",
+      "bannerExiting": "Sortint…",
+      "toastError": "No s'ha pogut iniciar la suplantació"
+    },
     "userAccount": {
       "title": "El meu compte",
       "description": "Gestiona les teves dades, canvia la contrasenya i revisa les incidències relacionades amb aquesta aplicació.",
@@ -169,7 +180,8 @@
       "attachmentAlt": "Imatge adjunta",
       "removeAttachment": "Treure",
       "viewAttachment": "Veure imatge a mida completa",
-      "closeAttachment": "Tancar imatge"
+      "closeAttachment": "Tancar imatge",
+      "readOnlyNotice": "Estàs veient aquesta incidència com a suport (només lectura). Per respondre o tancar-la, fes servir el panell d'administració."
     },
     "login": {
       "errAuth": "Error d'autenticació",
@@ -253,7 +265,13 @@
       "colDescription": "Descripció",
       "colApp": "Aplicació",
       "colStatus": "Estat",
-      "colLastActivity": "Última activitat"
+      "colLastActivity": "Última activitat",
+      "colReporter": "Reportada per",
+      "scopeMine": "Les meves incidències",
+      "scopeOrg": "Tota l'organització",
+      "titleOrg": "Incidències de l'organització",
+      "subtitleOrg": "Totes les incidències reportades pels usuaris de la teva organització.",
+      "emptyOrg": "No hi ha incidències a la teva organització."
     },
     "incidentDetail": {
       "errNotFound": "No trobem aquesta incidència.",

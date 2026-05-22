@@ -115,7 +115,10 @@ export function UserAccountDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      {/* Capped at 85vh + column layout so the header stays put and the
+          active tab scrolls on its own — long incident lists no longer
+          push the modal off-screen. */}
+      <DialogContent className="flex max-h-[85vh] max-w-3xl flex-col">
         <DialogHeader>
           <DialogTitle>{t("ui.userAccount.title")}</DialogTitle>
           <DialogDescription>
@@ -123,8 +126,8 @@ export function UserAccountDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="profile" className="mt-2">
-          <TabsList className="grid w-full grid-cols-3">
+        <Tabs defaultValue="profile" className="mt-2 flex min-h-0 flex-1 flex-col">
+          <TabsList className="grid w-full shrink-0 grid-cols-3">
             <TabsTrigger value="profile">
               <UserIcon className="mr-1.5 h-4 w-4" /> {t("ui.userAccount.tabProfile")}
             </TabsTrigger>
@@ -136,22 +139,23 @@ export function UserAccountDialog({
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="profile" className="mt-4">
+          <TabsContent value="profile" className="mt-4 min-h-0 flex-1 overflow-y-auto">
             <ProfileTab
               endpoint={ep.profile}
               onProfileUpdated={onProfileUpdated}
             />
           </TabsContent>
 
-          <TabsContent value="password" className="mt-4">
+          <TabsContent value="password" className="mt-4 min-h-0 flex-1 overflow-y-auto">
             <PasswordTab endpoint={ep.changePassword} />
           </TabsContent>
 
-          <TabsContent value="incidents" className="mt-4">
+          <TabsContent value="incidents" className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
             <IncidentsTab
               appSlug={appSlug}
               myIncidentsEndpoint={ep.myIncidents}
               orgAppIncidentsEndpoint={ep.orgAppIncidents}
+              onClose={() => onOpenChange(false)}
             />
           </TabsContent>
         </Tabs>
@@ -481,14 +485,22 @@ function IncidentsTab({
   appSlug,
   myIncidentsEndpoint,
   orgAppIncidentsEndpoint,
+  onClose,
 }: {
   appSlug: string;
   myIncidentsEndpoint: string;
   orgAppIncidentsEndpoint: string;
+  /** Closes the parent dialog — fired when a row navigates away. */
+  onClose: () => void;
 }) {
   const { t } = useI18n();
   const [mine, setMine] = useState<IncidentEntry[] | null>(null);
   const [others, setOthers] = useState<IncidentEntry[] | null>(null);
+  // Whether the viewer may open OTHERS' threads. The backend decides this
+  // (`canManage` on the org-app response) using the same rule as the admin
+  // incidents panel: superadmin / org_admin / admin:users. Plain users get
+  // the read-only summary only.
+  const [canOpenOthers, setCanOpenOthers] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -514,6 +526,7 @@ function IncidentsTab({
         );
         setMine(mineRows);
         setOthers(b2.data || []);
+        setCanOpenOthers(b2.canManage === true);
       } catch (err) {
         if (!cancelled) setError((err as Error).message);
       }
@@ -534,6 +547,8 @@ function IncidentsTab({
         items={mine}
         emptyText={t("ui.userAccount.emptyMine")}
         showReporter={false}
+        clickable
+        onClose={onClose}
       />
 
       <Section
@@ -541,6 +556,8 @@ function IncidentsTab({
         items={others}
         emptyText={t("ui.userAccount.emptyOthers")}
         showReporter
+        clickable={canOpenOthers}
+        onClose={onClose}
       />
 
       <div className="flex justify-end">
@@ -560,11 +577,17 @@ function Section({
   items,
   emptyText,
   showReporter,
+  clickable,
+  onClose,
 }: {
   title: string;
   items: IncidentEntry[] | null;
   emptyText: string;
   showReporter: boolean;
+  /** Whether rows navigate to the incident detail page on click. */
+  clickable: boolean;
+  /** Closes the parent dialog when a row navigates away. */
+  onClose: () => void;
 }) {
   const { t } = useI18n();
   return (
@@ -584,36 +607,44 @@ function Section({
             const tone = STATUS_TONES[i.status] || "bg-gray-100 text-gray-700";
             const labelKey = STATUS_LABEL_KEYS[i.status];
             const statusLabel = labelKey ? t(labelKey) : i.status;
-            const showLink = !showReporter; // only own incidents are clickable
-            const number = (
-              <span className="font-mono text-xs text-gray-500">#{i.number}</span>
+            // The whole row is the click target so the user doesn't have to
+            // aim for the tiny "#N". When not clickable (others + non-admin)
+            // it stays a plain div — the detail endpoint is owner-scoped, so
+            // navigating would only 404.
+            const rowInner = (
+              <>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`font-mono text-xs ${clickable ? "text-mc-primary-600" : "text-gray-500"}`}
+                    >
+                      #{i.number}
+                    </span>
+                    <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-medium ${tone}`}>
+                      {statusLabel}
+                    </span>
+                    {showReporter && i.reporterDisplayName && (
+                      <span className="text-xs text-gray-500">· {i.reporterDisplayName}</span>
+                    )}
+                  </div>
+                  <p className="mt-0.5 line-clamp-2 text-gray-700">{i.description}</p>
+                </div>
+                <span className="shrink-0 text-xs text-gray-400">{formatWhen(i.lastActivityAt)}</span>
+              </>
             );
             return (
-              <li key={i.id} className="px-3 py-2 text-sm">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      {showLink ? (
-                        <Link
-                          href={`/incidencias/${i.number}`}
-                          className="font-mono text-xs text-mc-primary-600 hover:underline"
-                        >
-                          #{i.number}
-                        </Link>
-                      ) : (
-                        number
-                      )}
-                      <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-medium ${tone}`}>
-                        {statusLabel}
-                      </span>
-                      {showReporter && i.reporterDisplayName && (
-                        <span className="text-xs text-gray-500">· {i.reporterDisplayName}</span>
-                      )}
-                    </div>
-                    <p className="mt-0.5 line-clamp-2 text-gray-700">{i.description}</p>
-                  </div>
-                  <span className="shrink-0 text-xs text-gray-400">{formatWhen(i.lastActivityAt)}</span>
-                </div>
+              <li key={i.id} className="text-sm">
+                {clickable ? (
+                  <Link
+                    href={`/incidencias/${i.number}`}
+                    onClick={onClose}
+                    className="flex items-start justify-between gap-3 px-3 py-2 transition-colors hover:bg-gray-50"
+                  >
+                    {rowInner}
+                  </Link>
+                ) : (
+                  <div className="flex items-start justify-between gap-3 px-3 py-2">{rowInner}</div>
+                )}
               </li>
             );
           })}
