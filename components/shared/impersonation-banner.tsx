@@ -16,8 +16,20 @@ import { useI18n } from "../i18n/i18n-context";
 interface ImpersonationBannerProps {
   /** Label of the user being impersonated (display name or email). */
   targetLabel: string;
-  /** Where to navigate after exiting. Defaults to the app root. */
+  /** Fallback exit target when no `mc-imp-return` cookie is present. Defaults to "/". */
   redirectAfterStop?: string;
+}
+
+/**
+ * The admin (superadmin) flow leaves a readable `mc-imp-return` cookie with the
+ * URL to return to on exit, because the superadmin's own session lives in a
+ * cookie the user-facing apps can't read. The org_admin flow has no such cookie
+ * and just reloads the current app.
+ */
+function readReturnUrl(): string | null {
+  if (typeof document === "undefined") return null;
+  const m = document.cookie.match(/(?:^|;\s*)mc-imp-return=([^;]+)/);
+  return m ? decodeURIComponent(m[1]) : null;
 }
 
 export function ImpersonationBanner({ targetLabel, redirectAfterStop }: ImpersonationBannerProps) {
@@ -26,12 +38,13 @@ export function ImpersonationBanner({ targetLabel, redirectAfterStop }: Imperson
 
   async function stop() {
     setBusy(true);
+    const returnUrl = readReturnUrl();
     try {
       await fetch("/api/auth/impersonate/stop", { method: "POST", keepalive: true });
     } catch {
       // ignore — navigate anyway; the actor session is restored server-side
     }
-    window.location.href = redirectAfterStop || "/";
+    window.location.href = returnUrl || redirectAfterStop || "/";
   }
 
   return (

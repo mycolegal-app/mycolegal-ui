@@ -57,8 +57,18 @@ export async function proxyToAuth(
     const data = await authResponse.json();
     return NextResponse.json(data, { status: authResponse.status });
   }
-  const text = await authResponse.text();
-  return new NextResponse(text, { status: authResponse.status });
+  // Non-JSON (e.g. image/jpeg incident screenshots): pass the raw bytes
+  // through with the upstream content-type instead of decoding as text,
+  // which corrupts binary. Also forward Cache-Control when present.
+  const buffer = await authResponse.arrayBuffer();
+  const passthroughHeaders = new Headers();
+  if (contentType) passthroughHeaders.set('content-type', contentType);
+  const cacheControl = authResponse.headers.get('cache-control');
+  if (cacheControl) passthroughHeaders.set('cache-control', cacheControl);
+  return new NextResponse(buffer, {
+    status: authResponse.status,
+    headers: passthroughHeaders,
+  });
 }
 
 /**

@@ -44,7 +44,19 @@ export interface ImpersonationConfig {
   accessCookieMaxAge: number;
   /** Refresh-token cookie max age (seconds). */
   refreshCookieMaxAge: number;
+  /**
+   * Where the actor should return after exiting impersonation. Set by the admin
+   * console (its own URL) because the superadmin's session lives in a different
+   * cookie that the user-facing apps can't read — so exiting from a user app
+   * would otherwise dump them on that app's login. Stored in a readable
+   * (non-httpOnly) `mc-imp-return` cookie the banner uses as its exit target.
+   * Omit for the org_admin flow, where exiting just reloads the current app.
+   */
+  returnUrlAfterStop?: string;
 }
+
+/** Readable cookie that tells the banner where to send the actor on exit. */
+const RETURN_COOKIE = 'mc-imp-return';
 
 interface ResolvedNames {
   sessionJwt: string;
@@ -166,6 +178,19 @@ export async function startImpersonation(
     response.cookies.set(names.sessionRefresh, refreshToken, cookieOptions(config, config.refreshCookieMaxAge));
   }
 
+  // Remember where to send the actor on exit (admin flow). Readable by the
+  // banner; carries only a URL, no secret.
+  if (config.returnUrlAfterStop) {
+    response.cookies.set(RETURN_COOKIE, config.returnUrlAfterStop, {
+      httpOnly: false,
+      secure: config.secureCookies,
+      sameSite: config.sameSite ?? ('lax' as const),
+      path: '/',
+      domain: config.cookieDomain,
+      maxAge: config.refreshCookieMaxAge,
+    });
+  }
+
   return response;
 }
 
@@ -232,9 +257,10 @@ export async function stopImpersonation(
     }
   }
 
-  // Drop the preserved-actor cookies.
+  // Drop the preserved-actor cookies and the return hint.
   response.cookies.delete(clearCookie(config, names.savedActorJwt));
   response.cookies.delete(clearCookie(config, names.savedActorRefresh));
+  response.cookies.delete(clearCookie(config, RETURN_COOKIE));
 
   return response;
 }

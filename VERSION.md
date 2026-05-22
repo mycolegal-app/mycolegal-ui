@@ -5,6 +5,48 @@
 
 ---
 
+## 1.72.0 — Incidencias: proxy catch-all compartido (un solo fichero por app) (2026-05-22)
+
+Type: **minor**
+
+Para que la pantalla de incidencias se monte igual en todas las apps sin
+replicar los ~10 ficheros de proxy por app:
+
+- `createIncidentsRoutes` añade `catchAll` (GET+POST). Cada app monta TODO
+  el namespace `/api/incidents/*` con un único fichero
+  `api/incidents/[[...path]]/route.ts`:
+
+  ```ts
+  import { incidentsRoutes } from '@/lib/incidents-server';
+  export const { GET, POST } = incidentsRoutes.catchAll;
+  ```
+
+  Cubre report (POST base), `mine`, `org`, `org-app`, `by-number`, hilo
+  (messages/close/reopen) y screenshots. Auth sigue aplicando auth +
+  permisos por path; solo reenvía dentro de `/incidents/*` (nunca toca el
+  admin `/orgs/:orgId/incidents/*`). Añadir un endpoint nuevo = cero
+  cambios en apps. Los handlers explícitos del factory se mantienen por
+  retrocompatibilidad.
+- `proxyToAuth` (auth-proxy): las respuestas no-JSON se reenvían como
+  bytes con su `content-type` (antes se leían con `.text()` y corrompían
+  binarios) → el screenshot del hilo de incidencias ya funciona vía proxy.
+
+Aditivo y retrocompatible: `catchAll` es nuevo y los handlers previos
+siguen exportados.
+
+## 1.71.0 — Impersonación: salida del superadmin vuelve al origen (2026-05-22)
+
+Type: **minor**
+
+- `server/impersonation.ts`: nuevo campo `returnUrlAfterStop` en `ImpersonationConfig`.
+  Cuando se setea (admin pasa su `APP_URL`), `startImpersonation` deja una cookie
+  legible `mc-imp-return` que `stopImpersonation` limpia.
+- `ImpersonationBanner`: al salir, redirige a `mc-imp-return` si existe (caso
+  superadmin cross-app → vuelve a admin) y si no recarga `/` (caso org_admin).
+- También separa cookie de actor vs. cookie de sesión (`actorJwtCookieName` /
+  `sessionJwtCookieName`) para soportar que admin (`admin_token`) escriba la
+  sesión de impersonación en la cookie compartida `mycolegal-token`.
+
 ## 1.70.0 — Impersonación de usuarios (banner + botón en gestión de usuarios) (2026-05-22)
 
 Type: **minor**

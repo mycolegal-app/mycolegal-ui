@@ -30,6 +30,41 @@ import { proxyToAuth, type AuthProxyConfig } from './auth-proxy';
 export function createIncidentsRoutes(config: AuthProxyConfig) {
   return {
     /**
+     * Catch-all for the WHOLE /api/incidents namespace. Mounted once per app
+     * as an optional catch-all so a single file wires every endpoint —
+     * report (POST /api/incidents), mine, org, org-app, by-number, the
+     * thread (messages/close/reopen) and screenshots:
+     *
+     *   // src/app/api/incidents/[[...path]]/route.ts
+     *   import { incidentsRoutes } from '@/lib/incidents-server';
+     *   export const { GET, POST } = incidentsRoutes.catchAll;
+     *
+     * Auth enforces auth + permissions per path; this only forwards within
+     * the `/incidents/*` namespace, so it never reaches the admin
+     * `/orgs/:orgId/incidents/*` routes. Adding a new incidents endpoint
+     * needs zero per-app changes. The explicit handlers below remain for
+     * apps that still wire routes one by one.
+     */
+    catchAll: {
+      async GET(
+        request: NextRequest,
+        ctx: { params: Promise<{ path?: string[] }> },
+      ) {
+        const { path } = await ctx.params;
+        const sub = path?.length ? `/${path.join('/')}` : '';
+        return proxyToAuth(config, request, `/incidents${sub}${request.nextUrl.search}`);
+      },
+      async POST(
+        request: NextRequest,
+        ctx: { params: Promise<{ path?: string[] }> },
+      ) {
+        const { path } = await ctx.params;
+        const sub = path?.length ? `/${path.join('/')}` : '';
+        return proxyToAuth(config, request, `/incidents${sub}${request.nextUrl.search}`);
+      },
+    },
+
+    /**
      * POST /api/incidents — submit a new incident report.
      * Reads JWT from cookie, forwards to auth /incidents.
      */
