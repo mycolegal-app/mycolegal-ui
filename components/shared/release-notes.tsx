@@ -26,13 +26,32 @@ const TYPE_STYLES: Record<string, string> = {
   patch: "bg-amber-100 text-amber-800 ring-amber-200",
 };
 
+// VERSION.md grows without bound, so only the most recent releases are shown
+// in the modal. Headings are newest-first, so the first N are what we keep.
+const MAX_VERSIONS = 10;
+
 export function ReleaseNotes({ markdown }: { markdown: string }) {
-  const blocks = parse(markdown);
+  const blocks = recentVersions(parse(markdown), MAX_VERSIONS);
   return (
     <div className="text-sm text-gray-800">
       {blocks.map((b, i) => renderBlock(b, i))}
     </div>
   );
+}
+
+// Keep every block up to the (max + 1)-th heading, then drop any separator
+// left dangling by the cut so the list doesn't end on a stray <hr>.
+function recentVersions(blocks: Block[], max: number): Block[] {
+  let headings = 0;
+  let end = blocks.length;
+  for (let i = 0; i < blocks.length; i++) {
+    if (blocks[i]!.kind === "heading" && ++headings > max) {
+      end = i;
+      break;
+    }
+  }
+  while (end > 0 && blocks[end - 1]!.kind === "hr") end--;
+  return blocks.slice(0, end);
 }
 
 function renderBlock(b: Block, i: number): ReactNode {

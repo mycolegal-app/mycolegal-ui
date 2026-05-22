@@ -5,6 +5,13 @@
 
 ---
 
+## 1.74.0 — Runtime de integración local (`lib/local-integration.ts`) (2026-05-22)
+
+`ejecutarIntegracionLocal(receta, inputs)`: ejecuta recetas de integración local (las
+devuelve el hub `facturae`) contra sistemas de la LAN de la notaría. A1 soporta
+`HTTP_DIRECT` (fetch directo con CORS); `AGENTE_*` (extensión + native messaging) llega
+en A2. Módulo puro, sin peer-deps. Ver `mycolegal-platform/PLAN_INTEGRACION_LOCAL.md`.
+
 ## 1.73.0 — Notificaciones: proxy catch-all compartido (mismo patrón que incidencias) (2026-05-22)
 
 Type: **minor**
