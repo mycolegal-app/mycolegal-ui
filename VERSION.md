@@ -5,6 +5,31 @@
 
 ---
 
+## 1.73.0 — Notificaciones: proxy catch-all compartido (mismo patrón que incidencias) (2026-05-22)
+
+Type: **minor**
+
+Para que la **campana** funcione igual en todas las apps sin replicar los
+4 ficheros de proxy de notificaciones por app:
+
+- Nuevo `server/notifications-routes.ts` → `createNotificationsRoutes(config)`
+  con `catchAll` (GET+PATCH+POST). Cada app monta TODO el namespace
+  `/api/notifications/*` con un único fichero
+  `api/notifications/[[...path]]/route.ts`:
+
+  ```ts
+  import { notificationsRoutes } from '@/lib/notifications-server';
+  export const { GET, PATCH, POST } = notificationsRoutes.catchAll;
+  ```
+
+  Cubre list (GET /), unread-count (GET /unread-count), mark-one
+  (PATCH /:id/read) y mark-all (POST /read-all). Auth aplica auth +
+  propiedad por path; solo reenvía dentro de `/notifications/*`.
+
+Mismo patrón que el catch-all de incidencias de 1.72.0. Las apps en
+`^1.72.0` ya admiten 1.73.0 (caret) → publicar + rebuild, sin tocar
+package.json de las apps.
+
 ## 1.72.0 — Incidencias: proxy catch-all compartido (un solo fichero por app) (2026-05-22)
 
 Type: **minor**
