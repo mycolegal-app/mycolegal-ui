@@ -5,6 +5,17 @@
 
 ---
 
+## 1.76.0 — Conector vía daemon loopback (transporte A) (2026-05-22)
+
+`lib/local-integration.ts`: el transporte del conector pasa de extensión +
+native messaging a **daemon loopback**. `AGENTE_HTTP`/`AGENTE_COMANDO` ahora
+llaman por `fetch` a `http://127.0.0.1:47117/{proxy,exec}` (el daemon responde
+con CORS + Private Network Access). Si el daemon no responde →
+`conector-no-disponible` → fallback manual. API pública (`ejecutarIntegracionLocal`,
+`RecetaIntegracion`, `PlantillaComando`) sin cambios.
+
+---
+
 ## 1.75.0 — Transportes de agente en el runtime de integración (A2) (2026-05-22)
 
 `lib/local-integration.ts` deja de devolver `transporte-no-soportado` para

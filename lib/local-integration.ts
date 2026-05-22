@@ -3,15 +3,15 @@
 //
 //   HTTP_DIRECT     → fetch directo desde el navegador a un target de la LAN
 //                     que admita CORS.
-//   AGENTE_HTTP     → `proxy` vía el conector local (extensión + native
-//                     messaging): HTTP a la LAN sin CORS. Ver connector/ (A2).
+//   AGENTE_HTTP     → `proxy` vía el conector local: HTTP a la LAN sin CORS.
 //   AGENTE_COMANDO  → `exec` de un comando whitelisted vía el conector. La
 //                     plantilla va FIRMADA (ed25519); el host la verifica,
 //                     comprueba allowlist + aprobación y ejecuta sin shell.
 //
-// El puente página↔extensión es `window.postMessage` (marca `__mycolegal`); el
-// content script lo relé al background y este al native host. Ver
-// connector/README.md y mycolegal-platform/PLAN_INTEGRACION_LOCAL.md §A.
+// Transporte del conector = daemon loopback (decisión A): la página llama por
+// `fetch` a `http://127.0.0.1:47117/{proxy,exec,ping}`. El daemon responde con
+// CORS + Private Network Access. Ver connector/README.md y
+// mycolegal-platform/PLAN_INTEGRACION_LOCAL.md §A.
 //
 // Módulo puro (sin React/Next/Prisma): se importa como
 // `@mycolegal-app/ui/lib/local-integration`.
@@ -155,14 +155,12 @@ async function ejecutarAgenteComando(
   return { ok: true, data: mapear(res.data, receta.responseMapping), raw: res.data };
 }
 
-// ── Puente con la extensión (window.postMessage ↔ content script) ───────────
-function nuevoId(): string {
-  const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
-  return c?.randomUUID?.() ?? `mc-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
+// ── Puente con el conector (daemon loopback en 127.0.0.1) ───────────────────
+// Puerto por defecto del daemon (coincide con `connector/native-host` config).
+const CONECTOR_BASE = 'http://127.0.0.1:47117';
 
-interface RespuestaPuente {
-  ok: boolean;
+interface RespuestaConector {
+  ok?: boolean;
   data?: unknown;
   reason?: string;
   detail?: string;
@@ -173,37 +171,33 @@ async function llamarAgente(
   payload: unknown,
   timeoutMs: number,
 ): Promise<ResultadoIntegracion> {
-  if (typeof window === 'undefined') {
+  if (typeof fetch === 'undefined') {
     return { ok: false, reason: 'sin-navegador', detail: 'AGENTE_* requiere navegador' };
   }
-  const id = nuevoId();
-  return new Promise<ResultadoIntegracion>((resolve) => {
-    let done = false;
-    const cleanup = () => {
-      if (done) return;
-      done = true;
-      clearTimeout(timer);
-      window.removeEventListener('message', onMsg);
+  try {
+    const res = await fetch(`${CONECTOR_BASE}/${kind}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload ?? {}),
+      signal: AbortSignal.timeout(timeoutMs + 2000),
+    });
+    const body = (await res.json().catch(() => null)) as RespuestaConector | null;
+    if (!body) {
+      return { ok: false, reason: 'conector-respuesta-invalida', detail: `http-${res.status}` };
+    }
+    if (body.ok) {
+      return { ok: true, data: (body.data as Record<string, unknown>) ?? {}, raw: body.data };
+    }
+    return { ok: false, reason: body.reason ?? 'agente-error', detail: body.detail };
+  } catch (err) {
+    // fetch falla si el daemon no está instalado/corriendo o si CORS/PNA bloquea
+    // → el consumidor cae a entrada manual informando el motivo.
+    return {
+      ok: false,
+      reason: 'conector-no-disponible',
+      detail: err instanceof Error ? err.message : String(err),
     };
-    const onMsg = (ev: MessageEvent) => {
-      if (ev.source !== window) return;
-      const d = ev.data as { __mycolegal?: boolean; dir?: string; id?: string } & RespuestaPuente;
-      if (!d || d.__mycolegal !== true || d.dir !== 'res' || d.id !== id) return;
-      cleanup();
-      if (d.ok) {
-        resolve({ ok: true, data: (d.data as Record<string, unknown>) ?? {}, raw: d.data });
-      } else {
-        resolve({ ok: false, reason: d.reason ?? 'agente-error', detail: d.detail });
-      }
-    };
-    // Margen extra sobre el timeout del host para no cortar antes que él.
-    const timer = setTimeout(() => {
-      cleanup();
-      resolve({ ok: false, reason: 'conector-no-disponible', detail: 'sin respuesta del conector' });
-    }, timeoutMs + 2000);
-    window.addEventListener('message', onMsg);
-    window.postMessage({ __mycolegal: true, dir: 'req', id, kind, payload }, window.location.origin);
-  });
+  }
 }
 
 // ── Helpers de plantilla/mapeo ──────────────────────────────────────────────
