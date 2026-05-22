@@ -715,6 +715,20 @@
       "trashOptionReactivateDesc": "L'usuari torna a poder iniciar sessió amb els permisos actuals.",
       "trashOptionDeleteTitle": "Eliminar definitivament",
       "trashOptionDeleteDesc": "Esborra l'usuari i tots els seus accessos de l'organització. Acció irreversible."
+    },
+    "mycobot": {
+      "railAria": "Obrir MycoBot — assistent de resolucions",
+      "title": "MycoBot",
+      "subtitle": "Assistent de resolucions",
+      "collapse": "Tancar el panell",
+      "emptyHint": "Pregunta'm sobre resolucions de la DGRN, doctrina o jurisprudència. Citaré sempre la font.",
+      "sources": "Fonts",
+      "thinking": "Pensant…",
+      "placeholder": "Pregunta sobre resolucions, doctrina…",
+      "send": "Enviar",
+      "disclaimer": "Respostes generades amb IA a partir del corpus; verifica sempre la font citada.",
+      "error": "No s'ha pogut obtenir resposta. Torna-ho a provar.",
+      "rateLimited": "Massa preguntes seguides. Espera un moment."
     }
   }
 }

@@ -5,6 +5,23 @@
 
 ---
 
+## 1.75.0 — Transportes de agente en el runtime de integración (A2) (2026-05-22)
+
+`lib/local-integration.ts` deja de devolver `transporte-no-soportado` para
+`AGENTE_HTTP`/`AGENTE_COMANDO` y los ejecuta vía el conector local (extensión +
+native messaging; ver `mycolegal-platform/connector/`):
+
+- **AGENTE_HTTP** → `proxy` (HTTP a la LAN sin CORS) por el puente
+  `window.postMessage` ↔ content script ↔ background ↔ native host.
+- **AGENTE_COMANDO** → `exec` de plantilla **firmada (ed25519)**; el host
+  verifica firma + allowlist + aprobación y ejecuta sin shell.
+- Nuevo tipo `PlantillaComando` (signed_blob + signature + params);
+  `requestTemplate` pasa a `PlantillaPeticion | PlantillaComando`.
+- Sin conector instalado → `{ok:false, reason:'conector-no-disponible'}` → el
+  consumidor cae a entrada manual (mismo patrón de fallback que A1).
+
+---
+
 ## 1.74.0 — Runtime de integración local (`lib/local-integration.ts`) (2026-05-22)
 
 `ejecutarIntegracionLocal(receta, inputs)`: ejecuta recetas de integración local (las

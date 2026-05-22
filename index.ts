@@ -46,6 +46,7 @@ export type {
   DocumentFieldSpec,
 } from './components/shared/document-producer';
 export { IncidentReporter } from './components/shared/incident-reporter';
+export { MycoBotRail } from './components/shared/mycobot-rail';
 export { UserAccountDialog } from './components/shared/user-account-dialog';
 export { SpainCCAAMap } from './components/shared/spain-ccaa-map';
 export type { SpainCCAAMapJurisdiccion, SpainCCAAMapProps } from './components/shared/spain-ccaa-map';

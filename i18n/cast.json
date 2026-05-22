@@ -715,6 +715,20 @@
       "trashOptionReactivateDesc": "El usuario vuelve a poder iniciar sesión con sus permisos actuales.",
       "trashOptionDeleteTitle": "Eliminar definitivamente",
       "trashOptionDeleteDesc": "Borra al usuario y todos sus accesos de la organización. Acción irreversible."
+    },
+    "mycobot": {
+      "railAria": "Abrir MycoBot — asistente de resoluciones",
+      "title": "MycoBot",
+      "subtitle": "Asistente de resoluciones",
+      "collapse": "Cerrar panel",
+      "emptyHint": "Pregúntame sobre resoluciones de la DGRN, doctrina o jurisprudencia. Citaré siempre la fuente.",
+      "sources": "Fuentes",
+      "thinking": "Pensando…",
+      "placeholder": "Pregunta sobre resoluciones, doctrina…",
+      "send": "Enviar",
+      "disclaimer": "Respuestas generadas con IA a partir del corpus; verifica siempre la fuente citada.",
+      "error": "No se pudo obtener respuesta. Inténtalo de nuevo.",
+      "rateLimited": "Demasiadas preguntas seguidas. Espera un momento."
     }
   }
 }

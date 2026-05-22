@@ -715,6 +715,20 @@
       "trashOptionReactivateDesc": "Erabiltzaileak berriro saioa hasteko aukera du dauzkan baimenekin.",
       "trashOptionDeleteTitle": "Behin betiko ezabatu",
       "trashOptionDeleteDesc": "Erabiltzailea eta bere sarbide guztiak erakundetik ezabatzen ditu. Ekintza itzulezina."
+    },
+    "mycobot": {
+      "railAria": "Ireki MycoBot — ebazpenen laguntzailea",
+      "title": "MycoBot",
+      "subtitle": "Ebazpenen laguntzailea",
+      "collapse": "Itxi panela",
+      "emptyHint": "Galdetu DGRNren ebazpenei, doktrinari edo jurisprudentziari buruz. Beti aipatuko dut iturria.",
+      "sources": "Iturriak",
+      "thinking": "Pentsatzen…",
+      "placeholder": "Galdetu ebazpenei, doktrinari buruz…",
+      "send": "Bidali",
+      "disclaimer": "IAk corpusetik sortutako erantzunak; egiaztatu beti aipatutako iturria.",
+      "error": "Ezin izan da erantzunik lortu. Saiatu berriro.",
+      "rateLimited": "Galdera gehiegi jarraian. Itxaron pixka bat."
     }
   }
 }
