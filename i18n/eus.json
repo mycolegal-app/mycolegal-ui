@@ -728,7 +728,15 @@
       "send": "Bidali",
       "disclaimer": "IAk corpusetik sortutako erantzunak; egiaztatu beti aipatutako iturria.",
       "error": "Ezin izan da erantzunik lortu. Saiatu berriro.",
-      "rateLimited": "Galdera gehiegi jarraian. Itxaron pixka bat."
+      "rateLimited": "Galdera gehiegi jarraian. Itxaron pixka bat.",
+      "history": "Historia",
+      "newConversation": "Elkarrizketa berria",
+      "noHistory": "Oraindik ez duzu elkarrizketarik.",
+      "turnos": "{n} txanda",
+      "backToChat": "Itzuli",
+      "prevCita": "Aurreko ebazpena",
+      "nextCita": "Hurrengo ebazpena",
+      "openFull": "Ikusi fitxa osoa"
     }
   }
 }

@@ -728,7 +728,15 @@
       "send": "Enviar",
       "disclaimer": "Respostes generades amb IA a partir del corpus; verifica sempre la font citada.",
       "error": "No s'ha pogut obtenir resposta. Torna-ho a provar.",
-      "rateLimited": "Massa preguntes seguides. Espera un moment."
+      "rateLimited": "Massa preguntes seguides. Espera un moment.",
+      "history": "Historial",
+      "newConversation": "Nova conversa",
+      "noHistory": "Encara no tens converses.",
+      "turnos": "{n} torns",
+      "backToChat": "Tornar",
+      "prevCita": "Resolució anterior",
+      "nextCita": "Resolució següent",
+      "openFull": "Veure la fitxa completa"
     }
   }
 }

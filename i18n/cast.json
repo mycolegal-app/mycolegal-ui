@@ -728,7 +728,15 @@
       "send": "Enviar",
       "disclaimer": "Respuestas generadas con IA a partir del corpus; verifica siempre la fuente citada.",
       "error": "No se pudo obtener respuesta. Inténtalo de nuevo.",
-      "rateLimited": "Demasiadas preguntas seguidas. Espera un momento."
+      "rateLimited": "Demasiadas preguntas seguidas. Espera un momento.",
+      "history": "Historial",
+      "newConversation": "Nueva conversación",
+      "noHistory": "Aún no tienes conversaciones.",
+      "turnos": "{n} turnos",
+      "backToChat": "Volver",
+      "prevCita": "Resolución anterior",
+      "nextCita": "Resolución siguiente",
+      "openFull": "Ver ficha completa"
     }
   }
 }

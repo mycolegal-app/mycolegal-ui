@@ -1,7 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Sparkles, ChevronRight, Send, Loader2, ExternalLink, Scale } from "lucide-react";
+import {
+  Sparkles,
+  ChevronRight,
+  ChevronLeft,
+  Send,
+  Loader2,
+  ExternalLink,
+  Scale,
+  History,
+  PlusCircle,
+  ArrowLeft,
+} from "lucide-react";
 import { useI18n } from "../i18n/i18n-context";
 
 // Cita devuelta por el backend (AskResult.citas de consultor).
@@ -21,20 +32,57 @@ interface Msg {
   error?: boolean;
 }
 
+// Resumen de conversación (GET …/conversaciones).
+interface ConversacionResumen {
+  id: string;
+  titulo: string;
+  updatedAt: string;
+  turnos: number;
+}
+
+// Ficha de resolución para el visor in-rail (GET …/{id}).
+interface ResolucionDetalle {
+  id: string;
+  ordinal: number;
+  fecha: string | null;
+  fechaRaw: string | null;
+  clase: string | null;
+  claseRaw: string | null;
+  fuenteLabel: string | null;
+  referenciaBoe: string | null;
+  publicacion: string | null;
+  norma: string | null;
+  titulo: string | null;
+  cabecera: string | null;
+  resumen: string | null;
+  body: string | null;
+  categorias?: { categoria: string; categoriaRaw: string }[];
+}
+
 interface MycoBotRailProps {
   /** Gate: si la org no tiene Consultor, el rail NO se renderiza. */
   available?: boolean;
-  /** Endpoint POST {pregunta} → { data: { respuesta, citas, sinResultado } }. */
+  /** Endpoint POST {pregunta, conversacionId?} → { data: { conversacionId, respuesta, citas, sinResultado } }. */
   askUrl?: string;
   /**
    * Base URL de Consultor para deep-link de citas (`${consultorUrl}/resoluciones/[id]`).
    * Pasar `""` cuando el rail se monta DENTRO de Consultor → enlaces relativos.
-   * `undefined` → las citas se muestran sin enlace.
+   * `undefined` → las citas no enlazan a la página completa (el visor in-rail sí funciona).
    */
   consultorUrl?: string;
 }
 
 const OPEN_STORAGE_KEY = "mycolegal:mycobot:open";
+
+type View = "chat" | "history" | "resolucion";
+
+interface ViewerState {
+  citas: Cita[];
+  index: number;
+  detalle: ResolucionDetalle | null;
+  loading: boolean;
+  error: boolean;
+}
 
 /**
  * Rail de chat de MycoBot (asistente de resoluciones). Colapsado por defecto
@@ -42,16 +90,29 @@ const OPEN_STORAGE_KEY = "mycolegal:mycobot:open";
  * el evento `mycolegal:open-mycobot` (detail.pregunta opcional) que dispara la
  * paleta de comandos. No es modal: la app sigue usable mientras está abierto.
  *
+ * v2: conversación multi-turno (recuerda el hilo vía `conversacionId`), panel de
+ * historial e inspección de citas SIN salir del rail (el visor preserva la
+ * conversación, de modo que se puede navegar entre las resoluciones citadas y
+ * volver al hilo intacto).
+ *
  * Se monta UNA vez en el app-shell de cada app (como <IncidentReporter/>), con
  * `available` calculado server-side a partir de las apps de la org.
  */
 export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask", consultorUrl }: MycoBotRailProps) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
+  const [view, setView] = useState<View>("chat");
   const [messages, setMessages] = useState<Msg[]>([]);
+  const [conversacionId, setConversacionId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [conversaciones, setConversaciones] = useState<ConversacionResumen[] | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [viewer, setViewer] = useState<ViewerState | null>(null);
   const threadRef = useRef<HTMLDivElement>(null);
+
+  // Base de los endpoints de resoluciones (quita el sufijo `/ask`).
+  const baseUrl = askUrl.replace(/\/ask$/, "");
 
   // Hidrata el estado abierto/colapsado (por defecto colapsado).
   useEffect(() => {
@@ -75,6 +136,7 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
     async (pregunta: string) => {
       const q = pregunta.trim();
       if (!q || loading) return;
+      setView("chat");
       setInput("");
       setMessages((m) => [...m, { role: "user", text: q }]);
       setLoading(true);
@@ -82,7 +144,7 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
         const res = await fetch(askUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ pregunta: q }),
+          body: JSON.stringify({ pregunta: q, conversacionId }),
         });
         const json = await res.json().catch(() => ({}));
         if (!res.ok) {
@@ -94,6 +156,7 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
           return;
         }
         const data = json.data ?? {};
+        if (data.conversacionId) setConversacionId(data.conversacionId);
         setMessages((m) => [
           ...m,
           { role: "bot", text: data.respuesta ?? "", citas: data.citas ?? [], sinResultado: !!data.sinResultado },
@@ -104,7 +167,98 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
         setLoading(false);
       }
     },
-    [askUrl, loading, t],
+    [askUrl, conversacionId, loading, t],
+  );
+
+  // Empieza un hilo nuevo (no borra el historial persistido en el servidor).
+  const newConversation = useCallback(() => {
+    setMessages([]);
+    setConversacionId(null);
+    setViewer(null);
+    setView("chat");
+  }, []);
+
+  // Abre el panel de historial y carga la lista de conversaciones.
+  const openHistory = useCallback(async () => {
+    setView("history");
+    setHistoryLoading(true);
+    try {
+      const res = await fetch(`${baseUrl}/conversaciones`);
+      const json = await res.json().catch(() => ({}));
+      setConversaciones(res.ok ? json.data ?? [] : []);
+    } catch {
+      setConversaciones([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [baseUrl]);
+
+  // Carga una conversación pasada como hilo activo.
+  const loadConversation = useCallback(
+    async (id: string) => {
+      setView("chat");
+      setLoading(true);
+      setMessages([]);
+      try {
+        const res = await fetch(`${baseUrl}/conversaciones/${id}`);
+        const json = await res.json().catch(() => ({}));
+        const turnos: {
+          pregunta: string;
+          respuesta: string | null;
+          citas?: Cita[];
+          sinResultado?: boolean;
+        }[] = res.ok ? json.data ?? [] : [];
+        const msgs: Msg[] = [];
+        for (const turno of turnos) {
+          msgs.push({ role: "user", text: turno.pregunta });
+          if (turno.respuesta != null) {
+            msgs.push({
+              role: "bot",
+              text: turno.respuesta,
+              citas: turno.citas ?? [],
+              sinResultado: !!turno.sinResultado,
+            });
+          }
+        }
+        setMessages(msgs);
+        setConversacionId(id);
+      } catch {
+        setMessages([{ role: "bot", text: t("ui.mycobot.error"), error: true }]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [baseUrl, t],
+  );
+
+  // Abre el visor in-rail de una cita (sin cerrar ni resetear la conversación).
+  const openCita = useCallback(
+    async (citas: Cita[], index: number) => {
+      setViewer({ citas, index, detalle: null, loading: true, error: false });
+      setView("resolucion");
+      try {
+        const res = await fetch(`${baseUrl}/${citas[index].resolucionId}`);
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setViewer((v) => (v ? { ...v, loading: false, error: true } : v));
+          return;
+        }
+        setViewer((v) => (v ? { ...v, detalle: json.data ?? null, loading: false } : v));
+      } catch {
+        setViewer((v) => (v ? { ...v, loading: false, error: true } : v));
+      }
+    },
+    [baseUrl],
+  );
+
+  const navCita = useCallback(
+    (delta: number) => {
+      if (!viewer) return;
+      const next = viewer.index + delta;
+      if (next < 0 || next >= viewer.citas.length) return;
+      void openCita(viewer.citas, next);
+    },
+    [viewer, openCita],
   );
 
   // Pop-out desde la paleta de comandos: abre el rail y, si trae pregunta, la lanza.
@@ -120,12 +274,12 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
 
   // Auto-scroll al final del hilo.
   useEffect(() => {
-    threadRef.current?.scrollTo({ top: threadRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, loading]);
+    if (view === "chat") threadRef.current?.scrollTo({ top: threadRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages, loading, view]);
 
   if (!available) return null;
 
-  const citationHref = (c: Cita) =>
+  const citationHref = (c: { resolucionId: string }) =>
     consultorUrl !== undefined
       ? `${consultorUrl.replace(/\/$/, "")}/resoluciones/${c.resolucionId}`
       : undefined;
@@ -149,11 +303,29 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
       {open && (
         <aside className="fixed right-0 top-0 z-50 flex h-full w-full max-w-[380px] flex-col border-l bg-white shadow-2xl">
           <header className="flex items-center gap-2 border-b bg-cyan-600 px-4 py-3 text-white">
-            <Sparkles className="h-4 w-4" />
+            <Sparkles className="h-4 w-4 shrink-0" />
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold leading-tight">{t("ui.mycobot.title")}</p>
               <p className="text-[11px] leading-tight text-cyan-100">{t("ui.mycobot.subtitle")}</p>
             </div>
+            <button
+              type="button"
+              onClick={() => (view === "history" ? setView("chat") : void openHistory())}
+              aria-label={t("ui.mycobot.history")}
+              title={t("ui.mycobot.history")}
+              className={`rounded p-1 hover:bg-white/10 ${view === "history" ? "bg-white/15" : ""}`}
+            >
+              <History className="h-[18px] w-[18px]" />
+            </button>
+            <button
+              type="button"
+              onClick={newConversation}
+              aria-label={t("ui.mycobot.newConversation")}
+              title={t("ui.mycobot.newConversation")}
+              className="rounded p-1 hover:bg-white/10"
+            >
+              <PlusCircle className="h-[18px] w-[18px]" />
+            </button>
             <button
               type="button"
               onClick={() => setOpenPersisted(false)}
@@ -164,98 +336,231 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
             </button>
           </header>
 
-          <div ref={threadRef} className="flex-1 space-y-3 overflow-y-auto p-4">
-            {messages.length === 0 && (
-              <p className="px-1 py-6 text-center text-sm text-gray-500">{t("ui.mycobot.emptyHint")}</p>
-            )}
-            {messages.map((m, i) => (
-              <div key={i} className={m.role === "user" ? "flex justify-end" : "flex justify-start"}>
-                <div
-                  className={
-                    m.role === "user"
-                      ? "max-w-[85%] rounded-lg bg-cyan-600 px-3 py-2 text-sm text-white"
-                      : `max-w-[92%] rounded-lg px-3 py-2 text-sm ${m.error ? "bg-red-50 text-red-700" : "bg-gray-100 text-gray-800"}`
-                  }
+          {/* ── Historial de conversaciones ─────────────────────────── */}
+          {view === "history" && (
+            <div className="flex-1 overflow-y-auto p-3">
+              {historyLoading && (
+                <div className="flex items-center gap-2 px-1 py-6 text-sm text-gray-500">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {t("ui.mycobot.thinking")}
+                </div>
+              )}
+              {!historyLoading && conversaciones && conversaciones.length === 0 && (
+                <p className="px-1 py-6 text-center text-sm text-gray-500">{t("ui.mycobot.noHistory")}</p>
+              )}
+              {!historyLoading && conversaciones && conversaciones.length > 0 && (
+                <ul className="space-y-1">
+                  {conversaciones.map((c) => (
+                    <li key={c.id}>
+                      <button
+                        type="button"
+                        onClick={() => void loadConversation(c.id)}
+                        className={`w-full rounded-md px-3 py-2 text-left hover:bg-gray-100 ${c.id === conversacionId ? "bg-cyan-50" : ""}`}
+                      >
+                        <span className="block truncate text-sm text-gray-800">{c.titulo}</span>
+                        <span className="mt-0.5 block text-[11px] text-gray-400">
+                          {new Date(c.updatedAt).toLocaleDateString()} · {t("ui.mycobot.turnos", { n: c.turnos })}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
+          {/* ── Visor de resolución in-rail ─────────────────────────── */}
+          {view === "resolucion" && viewer && (
+            <>
+              <div className="flex items-center gap-1 border-b bg-gray-50 px-2 py-1.5">
+                <button
+                  type="button"
+                  onClick={() => setView("chat")}
+                  className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-cyan-700 hover:bg-gray-200"
                 >
-                  <p className="whitespace-pre-wrap leading-relaxed">{m.text}</p>
-                  {m.role === "bot" && m.citas && m.citas.length > 0 && (
-                    <div className="mt-2 border-t border-gray-200 pt-2">
-                      <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
-                        {t("ui.mycobot.sources")}
-                      </p>
-                      <ul className="space-y-1">
-                        {m.citas.map((c, j) => {
-                          const href = citationHref(c);
-                          const label = c.referenciaBoe || `#${c.ordinal}`;
-                          const inner = (
-                            <span className="flex items-start gap-1.5">
-                              <Scale className="mt-0.5 h-3 w-3 shrink-0 text-cyan-600" />
-                              <span className="min-w-0">
-                                <span className="font-mono text-[11px] text-cyan-700">[{j + 1}] {label}</span>
-                                {c.titulo && <span className="block truncate text-[11px] text-gray-500">{c.titulo}</span>}
-                              </span>
-                              {href && <ExternalLink className="ml-auto mt-0.5 h-3 w-3 shrink-0 text-gray-400" />}
-                            </span>
-                          );
-                          return (
-                            <li key={c.resolucionId + j}>
-                              {href ? (
-                                <a href={href} target="_blank" rel="noopener noreferrer" className="block rounded px-1 py-0.5 hover:bg-gray-200">
-                                  {inner}
-                                </a>
-                              ) : (
-                                <span className="block px-1 py-0.5">{inner}</span>
-                              )}
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
-                  )}
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  {t("ui.mycobot.backToChat")}
+                </button>
+                <div className="ml-auto flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => navCita(-1)}
+                    disabled={viewer.index === 0}
+                    aria-label={t("ui.mycobot.prevCita")}
+                    className="rounded p-1 hover:bg-gray-200 disabled:opacity-30"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <span className="text-[11px] tabular-nums text-gray-500">
+                    {viewer.index + 1}/{viewer.citas.length}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => navCita(1)}
+                    disabled={viewer.index >= viewer.citas.length - 1}
+                    aria-label={t("ui.mycobot.nextCita")}
+                    className="rounded p-1 hover:bg-gray-200 disabled:opacity-30"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
-            ))}
-            {loading && (
-              <div className="flex items-center gap-2 px-1 text-sm text-gray-500">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                {t("ui.mycobot.thinking")}
+              <div className="flex-1 overflow-y-auto p-4">
+                {viewer.loading && (
+                  <div className="flex items-center gap-2 px-1 py-6 text-sm text-gray-500">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {t("ui.mycobot.thinking")}
+                  </div>
+                )}
+                {!viewer.loading && viewer.error && (
+                  <p className="px-1 py-6 text-center text-sm text-red-600">{t("ui.mycobot.error")}</p>
+                )}
+                {!viewer.loading && !viewer.error && viewer.detalle && (
+                  <article className="space-y-3">
+                    <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                      {viewer.detalle.referenciaBoe && (
+                        <span className="rounded bg-cyan-100 px-1.5 py-0.5 font-mono text-cyan-800">
+                          {viewer.detalle.referenciaBoe}
+                        </span>
+                      )}
+                      {(viewer.detalle.claseRaw || viewer.detalle.clase) && (
+                        <span className="rounded bg-gray-100 px-1.5 py-0.5 text-gray-600">
+                          {viewer.detalle.claseRaw || viewer.detalle.clase}
+                        </span>
+                      )}
+                      {viewer.detalle.fecha && (
+                        <span className="text-gray-500">{new Date(viewer.detalle.fecha).toLocaleDateString()}</span>
+                      )}
+                    </div>
+                    {(viewer.detalle.cabecera || viewer.detalle.titulo) && (
+                      <h2 className="text-sm font-semibold leading-snug text-gray-900">
+                        {viewer.detalle.cabecera || viewer.detalle.titulo}
+                      </h2>
+                    )}
+                    {viewer.detalle.resumen && (
+                      <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-gray-700">
+                        {viewer.detalle.resumen}
+                      </p>
+                    )}
+                    {viewer.detalle.body && (
+                      <p className="whitespace-pre-wrap border-t pt-3 text-[13px] leading-relaxed text-gray-600">
+                        {viewer.detalle.body}
+                      </p>
+                    )}
+                    {citationHref({ resolucionId: viewer.detalle.id }) && (
+                      <a
+                        href={citationHref({ resolucionId: viewer.detalle.id })}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[12px] font-medium text-cyan-700 hover:underline"
+                      >
+                        {t("ui.mycobot.openFull")}
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    )}
+                  </article>
+                )}
               </div>
-            )}
-          </div>
+            </>
+          )}
 
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              void ask(input);
-            }}
-            className="border-t p-3"
-          >
-            <div className="flex items-end gap-2">
-              <textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    void ask(input);
-                  }
+          {/* ── Conversación (chat) ─────────────────────────────────── */}
+          {view === "chat" && (
+            <>
+              <div ref={threadRef} className="flex-1 space-y-3 overflow-y-auto p-4">
+                {messages.length === 0 && (
+                  <p className="px-1 py-6 text-center text-sm text-gray-500">{t("ui.mycobot.emptyHint")}</p>
+                )}
+                {messages.map((m, i) => (
+                  <div key={i} className={m.role === "user" ? "flex justify-end" : "flex justify-start"}>
+                    <div
+                      className={
+                        m.role === "user"
+                          ? "max-w-[85%] rounded-lg bg-cyan-600 px-3 py-2 text-sm text-white"
+                          : `max-w-[92%] rounded-lg px-3 py-2 text-sm ${m.error ? "bg-red-50 text-red-700" : "bg-gray-100 text-gray-800"}`
+                      }
+                    >
+                      <p className="whitespace-pre-wrap leading-relaxed">{m.text}</p>
+                      {m.role === "bot" && m.citas && m.citas.length > 0 && (
+                        <div className="mt-2 border-t border-gray-200 pt-2">
+                          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                            {t("ui.mycobot.sources")}
+                          </p>
+                          <ul className="space-y-1">
+                            {m.citas.map((c, j) => {
+                              const label = c.referenciaBoe || `#${c.ordinal}`;
+                              return (
+                                <li key={c.resolucionId + j}>
+                                  <button
+                                    type="button"
+                                    onClick={() => void openCita(m.citas!, j)}
+                                    className="block w-full rounded px-1 py-0.5 text-left hover:bg-gray-200"
+                                  >
+                                    <span className="flex items-start gap-1.5">
+                                      <Scale className="mt-0.5 h-3 w-3 shrink-0 text-cyan-600" />
+                                      <span className="min-w-0">
+                                        <span className="font-mono text-[11px] text-cyan-700">
+                                          [{j + 1}] {label}
+                                        </span>
+                                        {c.titulo && (
+                                          <span className="block truncate text-[11px] text-gray-500">{c.titulo}</span>
+                                        )}
+                                      </span>
+                                      <ChevronRight className="ml-auto mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
+                                    </span>
+                                  </button>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {loading && (
+                  <div className="flex items-center gap-2 px-1 text-sm text-gray-500">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {t("ui.mycobot.thinking")}
+                  </div>
+                )}
+              </div>
+
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void ask(input);
                 }}
-                rows={2}
-                placeholder={t("ui.mycobot.placeholder")}
-                aria-label={t("ui.mycobot.placeholder")}
-                className="min-h-[40px] flex-1 resize-none rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
-              />
-              <button
-                type="submit"
-                disabled={loading || !input.trim()}
-                aria-label={t("ui.mycobot.send")}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-cyan-600 text-white hover:bg-cyan-700 disabled:opacity-40"
+                className="border-t p-3"
               >
-                <Send className="h-4 w-4" />
-              </button>
-            </div>
-            <p className="mt-1.5 text-[10px] text-gray-400">{t("ui.mycobot.disclaimer")}</p>
-          </form>
+                <div className="flex items-end gap-2">
+                  <textarea
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        void ask(input);
+                      }
+                    }}
+                    rows={2}
+                    placeholder={t("ui.mycobot.placeholder")}
+                    aria-label={t("ui.mycobot.placeholder")}
+                    className="min-h-[40px] flex-1 resize-none rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+                  />
+                  <button
+                    type="submit"
+                    disabled={loading || !input.trim()}
+                    aria-label={t("ui.mycobot.send")}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-cyan-600 text-white hover:bg-cyan-700 disabled:opacity-40"
+                  >
+                    <Send className="h-4 w-4" />
+                  </button>
+                </div>
+                <p className="mt-1.5 text-[10px] text-gray-400">{t("ui.mycobot.disclaimer")}</p>
+              </form>
+            </>
+          )}
         </aside>
       )}
     </>
