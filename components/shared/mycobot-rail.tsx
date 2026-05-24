@@ -284,6 +284,12 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
       ? `${consultorUrl.replace(/\/$/, "")}/resoluciones/${c.resolucionId}`
       : undefined;
 
+  // El rail se monta DENTRO de Consultor con `consultorUrl=""` (enlaces relativos).
+  // En ese caso, seleccionar una cita abre la SECCIÓN de Resoluciones (`/resoluciones/[id]`)
+  // en lugar del visor in-rail; en las demás apps no existe esa sección local, así que
+  // se mantiene el visor in-rail (con su enlace "abrir ficha completa" a Consultor).
+  const inConsultor = consultorUrl === "";
+
   return (
     <>
       {/* Handle colapsado: borde derecho, vertical */}
@@ -489,26 +495,38 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
                           <ul className="space-y-1">
                             {m.citas.map((c, j) => {
                               const label = c.referenciaBoe || `#${c.ordinal}`;
+                              const cls = "block w-full rounded px-1 py-0.5 text-left hover:bg-gray-200";
+                              const inner = (
+                                <span className="flex items-start gap-1.5">
+                                  <Scale className="mt-0.5 h-3 w-3 shrink-0 text-cyan-600" />
+                                  <span className="min-w-0">
+                                    <span className="font-mono text-[11px] text-cyan-700">
+                                      [{j + 1}] {label}
+                                    </span>
+                                    {c.titulo && (
+                                      <span className="block truncate text-[11px] text-gray-500">{c.titulo}</span>
+                                    )}
+                                  </span>
+                                  <ChevronRight className="ml-auto mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
+                                </span>
+                              );
                               return (
                                 <li key={c.resolucionId + j}>
-                                  <button
-                                    type="button"
-                                    onClick={() => void openCita(m.citas!, j)}
-                                    className="block w-full rounded px-1 py-0.5 text-left hover:bg-gray-200"
-                                  >
-                                    <span className="flex items-start gap-1.5">
-                                      <Scale className="mt-0.5 h-3 w-3 shrink-0 text-cyan-600" />
-                                      <span className="min-w-0">
-                                        <span className="font-mono text-[11px] text-cyan-700">
-                                          [{j + 1}] {label}
-                                        </span>
-                                        {c.titulo && (
-                                          <span className="block truncate text-[11px] text-gray-500">{c.titulo}</span>
-                                        )}
-                                      </span>
-                                      <ChevronRight className="ml-auto mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
-                                    </span>
-                                  </button>
+                                  {inConsultor ? (
+                                    // Dentro de Consultor: navega a la sección de Resoluciones.
+                                    <a href={`/resoluciones/${c.resolucionId}`} className={cls}>
+                                      {inner}
+                                    </a>
+                                  ) : (
+                                    // En otras apps: visor de la resolución dentro del propio rail.
+                                    <button
+                                      type="button"
+                                      onClick={() => void openCita(m.citas!, j)}
+                                      className={cls}
+                                    >
+                                      {inner}
+                                    </button>
+                                  )}
                                 </li>
                               );
                             })}
