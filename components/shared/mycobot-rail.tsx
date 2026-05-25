@@ -71,6 +71,12 @@ interface MycoBotRailProps {
    * `undefined` → las citas no enlazan a la página completa (el visor in-rail sí funciona).
    */
   consultorUrl?: string;
+  /**
+   * Slug de la app desde la que se monta el rail (p.ej. "notaria"). Se envía en
+   * cada `/ask` para seleccionar el addendum por-app del System Prompt y, más
+   * adelante, dar foco a la recuperación de ayuda de producto.
+   */
+  appSlug?: string;
 }
 
 const OPEN_STORAGE_KEY = "mycolegal:mycobot:open";
@@ -99,7 +105,7 @@ interface ViewerState {
  * Se monta UNA vez en el app-shell de cada app (como <IncidentReporter/>), con
  * `available` calculado server-side a partir de las apps de la org.
  */
-export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask", consultorUrl }: MycoBotRailProps) {
+export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask", consultorUrl, appSlug }: MycoBotRailProps) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<View>("chat");
@@ -145,7 +151,7 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
         const res = await fetch(askUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ pregunta: q, conversacionId }),
+          body: JSON.stringify({ pregunta: q, conversacionId, appSlug }),
         });
         const json = await res.json().catch(() => ({}));
         if (!res.ok) {

@@ -10,14 +10,15 @@ import { MycoBotRail } from "./mycobot-rail";
  * devuelve ese endpoint. Las llamadas (ask, conversaciones, detalle) van por el
  * proxy `/api/resoluciones/[[...path]]` de la app → Consultor inter.
  *
- * Incluir MycoBot en una app nueva = montar `<MycoBot/>` (de @mycolegal-app/ui)
- * en su app-shell + el catch-all `api/resoluciones/[[...path]]/route.ts` +
- * env CONSULTOR_INTERNAL_URL e INTER_SERVICE_KEY. Nada más.
+ * Incluir MycoBot en una app nueva = montar `<MycoBot appSlug="..."/>` (de
+ * @mycolegal-app/ui) en su app-shell + el catch-all
+ * `api/resoluciones/[[...path]]/route.ts` + env CONSULTOR_INTERNAL_URL e
+ * INTER_SERVICE_KEY. Nada más.
  *
  * Dentro de Consultor NO se usa este wrapper: allí se monta `<MycoBotRail/>`
  * directamente (siempre disponible, endpoints y deep-links relativos).
  */
-export function MycoBot() {
+export function MycoBot({ appSlug }: { appSlug?: string }) {
   const [cfg, setCfg] = useState<{ available: boolean; consultorUrl?: string }>({ available: false });
 
   useEffect(() => {
@@ -30,5 +31,5 @@ export function MycoBot() {
       .catch(() => {});
   }, []);
 
-  return <MycoBotRail available={cfg.available} consultorUrl={cfg.consultorUrl} />;
+  return <MycoBotRail available={cfg.available} consultorUrl={cfg.consultorUrl} appSlug={appSlug} />;
 }
