@@ -385,7 +385,8 @@
       "versionAuth": "Auth",
       "releaseNotes": "Bertsioaren oharrak",
       "notesEmpty": "Ez dago argitaratutako bertsio oharrik.",
-      "notesError": "Ezin izan dira oharrak kargatu."
+      "notesError": "Ezin izan dira oharrak kargatu.",
+      "versionSharedlib": "Sharedlib"
     },
     "emailTemplates": {
       "emptyDefault": "Aplikazio honek ez du posta gertaerarik adierazten.",

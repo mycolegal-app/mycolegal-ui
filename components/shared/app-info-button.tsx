@@ -98,6 +98,9 @@ export function AppInfoButton({
               <dl className="divide-y divide-gray-200 border-b border-gray-200 pb-2">
                 <VersionRow label={t("ui.appInfo.versionApp")} value={version?.app} />
                 <VersionRow label={t("ui.appInfo.versionUi")} value={version?.ui} />
+                {version?.sharedlib && (
+                  <VersionRow label={t("ui.appInfo.versionSharedlib")} value={version.sharedlib} />
+                )}
                 <VersionRow label={t("ui.appInfo.versionAuth")} value={version?.auth} />
               </dl>
               <h3 className="mt-5 mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">

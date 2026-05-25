@@ -39,7 +39,7 @@ interface SetPasswordFormProps {
   /** Copy shown on the success screen before the redirect fires. */
   successTitle?: string;
   /** Version footer (same shape as LoginForm). */
-  versionInfo?: { platform?: string; ui?: string };
+  versionInfo?: { platform?: string; ui?: string; sharedlib?: string };
 }
 
 export function SetPasswordForm({
@@ -194,6 +194,7 @@ export function SetPasswordForm({
               data-testid="version-info"
               data-version-platform={versionInfo.platform}
               data-version-ui={versionInfo.ui}
+              data-version-sharedlib={versionInfo.sharedlib}
             >
               {versionInfo.platform && <>v{versionInfo.platform}</>}
               {versionInfo.platform && versionInfo.ui && <> · </>}

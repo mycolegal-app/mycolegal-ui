@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 export interface VersionInfo {
   app: string;
   ui: string;
+  /** Versión de @mycolegal-app/sharedlib (opcional: solo apps que ya lo consumen). */
+  sharedlib?: string;
   auth: string;
 }
 

@@ -32,7 +32,7 @@ interface LoginFormProps {
   /** Callback after successful login (alternative to redirectTo) */
   onSuccess?: (data: { token: string; user: Record<string, unknown> }) => void;
   /** Version info shown discreetly in the bottom-left corner */
-  versionInfo?: { platform?: string; ui?: string };
+  versionInfo?: { platform?: string; ui?: string; sharedlib?: string };
   /**
    * URL del enlace "¿Olvidaste tu contraseña?". Por defecto la ruta relativa
    * `/forgot-password` (legacy, in-app). En la plataforma actual el flujo de
@@ -238,7 +238,7 @@ export function LoginForm({
             &copy; {new Date().getFullYear()} MycoLegalTech S.A.
           </p>
           {versionInfo && (
-            <p className="text-[10px] text-mc-slate-700 mt-2 font-mono" data-testid="version-info" data-version-platform={versionInfo.platform} data-version-ui={versionInfo.ui}>
+            <p className="text-[10px] text-mc-slate-700 mt-2 font-mono" data-testid="version-info" data-version-platform={versionInfo.platform} data-version-ui={versionInfo.ui} data-version-sharedlib={versionInfo.sharedlib}>
               {versionInfo.platform && <>v{versionInfo.platform}</>}
               {versionInfo.platform && versionInfo.ui && <> · </>}
               {versionInfo.ui && <>ui {versionInfo.ui}</>}
@@ -376,7 +376,7 @@ export function LoginForm({
           )}
         </div>
         {versionInfo && (
-          <p className="absolute bottom-3 left-6 text-[10px] text-mc-slate-400 font-mono lg:hidden" data-testid="version-info-mobile" data-version-platform={versionInfo.platform} data-version-ui={versionInfo.ui}>
+          <p className="absolute bottom-3 left-6 text-[10px] text-mc-slate-400 font-mono lg:hidden" data-testid="version-info-mobile" data-version-platform={versionInfo.platform} data-version-ui={versionInfo.ui} data-version-sharedlib={versionInfo.sharedlib}>
             {versionInfo.platform && <>v{versionInfo.platform}</>}
             {versionInfo.platform && versionInfo.ui && <> · </>}
             {versionInfo.ui && <>ui {versionInfo.ui}</>}

@@ -385,7 +385,8 @@
       "versionAuth": "Auth",
       "releaseNotes": "Notas de la versión",
       "notesEmpty": "No hay notas de versión publicadas.",
-      "notesError": "No se han podido cargar las notas."
+      "notesError": "No se han podido cargar las notas.",
+      "versionSharedlib": "Sharedlib"
     },
     "emailTemplates": {
       "emptyDefault": "Esta aplicación no declara eventos de correo.",

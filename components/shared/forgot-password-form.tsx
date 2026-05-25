@@ -24,7 +24,7 @@ interface ForgotPasswordFormProps {
   /** Path to go back to (defaults to /login). */
   loginPath?: string;
   /** Version footer. */
-  versionInfo?: { platform?: string; ui?: string };
+  versionInfo?: { platform?: string; ui?: string; sharedlib?: string };
 }
 
 /**
@@ -142,6 +142,7 @@ export function ForgotPasswordForm({
               data-testid="version-info"
               data-version-platform={versionInfo.platform}
               data-version-ui={versionInfo.ui}
+              data-version-sharedlib={versionInfo.sharedlib}
             >
               {versionInfo.platform && <>v{versionInfo.platform}</>}
               {versionInfo.platform && versionInfo.ui && <> · </>}
