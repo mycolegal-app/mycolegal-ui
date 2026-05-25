@@ -1,5 +1,29 @@
 {
   "ui": {
+    "billing": {
+      "title": "Suscripciones",
+      "currentApp": "App actual",
+      "perMonth": "{amount}/mes",
+      "includedUnits": "{n} {unit} incluidas",
+      "overagePrice": "luego {amount}/{unit}",
+      "usage": "{used} de {included} {unit} este ciclo",
+      "overageThisCycle": "+{n} de más",
+      "subscribe": "Suscribir",
+      "manage": "Gestionar plan",
+      "renews": "Se renueva el {date}",
+      "cancelsOn": "Se cancela el {date}",
+      "courtesy": "Cortesía",
+      "courtesyUntil": "Cortesía hasta {date}",
+      "adminOnly": "Solo los administradores de la organización pueden gestionar las suscripciones.",
+      "loadError": "No se pudieron cargar las suscripciones.",
+      "actionError": "No se pudo completar la operación. Inténtalo de nuevo.",
+      "status": {
+        "active": "Activa",
+        "trialing": "En prueba",
+        "pastDue": "Pago pendiente",
+        "none": "Sin suscripción"
+      }
+    },
     "impersonation": {
       "btn": "Impersonar usuario",
       "confirmTitle": "Impersonar usuario",

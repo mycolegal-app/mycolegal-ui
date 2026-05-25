@@ -1,5 +1,29 @@
 {
   "ui": {
+    "billing": {
+      "title": "Subscripcions",
+      "currentApp": "Aplicació actual",
+      "perMonth": "{amount}/mes",
+      "includedUnits": "{n} {unit} incloses",
+      "overagePrice": "després {amount}/{unit}",
+      "usage": "{used} de {included} {unit} aquest cicle",
+      "overageThisCycle": "+{n} de més",
+      "subscribe": "Subscriure's",
+      "manage": "Gestionar el pla",
+      "renews": "Es renova el {date}",
+      "cancelsOn": "Es cancel·la el {date}",
+      "courtesy": "Cortesia",
+      "courtesyUntil": "Cortesia fins al {date}",
+      "adminOnly": "Només els administradors de l'organització poden gestionar les subscripcions.",
+      "loadError": "No s'han pogut carregar les subscripcions.",
+      "actionError": "No s'ha pogut completar l'operació. Torna-ho a provar.",
+      "status": {
+        "active": "Activa",
+        "trialing": "En prova",
+        "pastDue": "Pagament pendent",
+        "none": "Sense subscripció"
+      }
+    },
     "impersonation": {
       "btn": "Suplantar usuari",
       "confirmTitle": "Suplantar usuari",

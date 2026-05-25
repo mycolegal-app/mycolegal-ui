@@ -1,5 +1,29 @@
 {
   "ui": {
+    "billing": {
+      "title": "Subscricións",
+      "currentApp": "Aplicación actual",
+      "perMonth": "{amount}/mes",
+      "includedUnits": "{n} {unit} incluídas",
+      "overagePrice": "logo {amount}/{unit}",
+      "usage": "{used} de {included} {unit} neste ciclo",
+      "overageThisCycle": "+{n} de máis",
+      "subscribe": "Subscribirse",
+      "manage": "Xestionar o plan",
+      "renews": "Renóvase o {date}",
+      "cancelsOn": "Cancélase o {date}",
+      "courtesy": "Cortesía",
+      "courtesyUntil": "Cortesía ata o {date}",
+      "adminOnly": "Só os administradores da organización poden xestionar as subscricións.",
+      "loadError": "Non se puideron cargar as subscricións.",
+      "actionError": "Non se puido completar a operación. Téntao de novo.",
+      "status": {
+        "active": "Activa",
+        "trialing": "En proba",
+        "pastDue": "Pagamento pendente",
+        "none": "Sen subscrición"
+      }
+    },
     "impersonation": {
       "btn": "Suplantar usuario",
       "confirmTitle": "Suplantar usuario",

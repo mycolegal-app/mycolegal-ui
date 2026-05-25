@@ -1,5 +1,29 @@
 {
   "ui": {
+    "billing": {
+      "title": "Harpidetzak",
+      "currentApp": "Uneko aplikazioa",
+      "perMonth": "{amount}/hilean",
+      "includedUnits": "{n} {unit} barne",
+      "overagePrice": "ondoren {amount}/{unit}",
+      "usage": "{included}-(e)tik {used} {unit} ziklo honetan",
+      "overageThisCycle": "+{n} gehiago",
+      "subscribe": "Harpidetu",
+      "manage": "Kudeatu plana",
+      "renews": "{date}-(e)an berritzen da",
+      "cancelsOn": "{date}-(e)an bertan behera uzten da",
+      "courtesy": "Adeitasuna",
+      "courtesyUntil": "Adeitasuna {date} arte",
+      "adminOnly": "Erakundeko administratzaileek soilik kudea ditzakete harpidetzak.",
+      "loadError": "Ezin izan dira harpidetzak kargatu.",
+      "actionError": "Ezin izan da eragiketa burutu. Saiatu berriro.",
+      "status": {
+        "active": "Aktiboa",
+        "trialing": "Probaldian",
+        "pastDue": "Ordainketa zain",
+        "none": "Harpidetzarik gabe"
+      }
+    },
     "impersonation": {
       "btn": "Erabiltzailea ordezkatu",
       "confirmTitle": "Erabiltzailea ordezkatu",
