@@ -52,6 +52,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { useI18n } from '../i18n/i18n-context';
+import { apiErrorMessage } from '../../lib/api-error';
 import { toast } from '../../hooks/use-toast';
 import type { UserRow } from './users-admin-panel';
 import { AppPermissionsDialog } from './app-permissions-dialog';
@@ -236,7 +237,7 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         toast({
-          title: err.error?.message || t('ui.usersAdmin.toastPermissionsError'),
+          title: apiErrorMessage(t, { status: res.status, code: err?.error?.code, message: err?.error?.message }, t('ui.usersAdmin.toastPermissionsError')),
           variant: 'destructive',
         });
         return;
@@ -262,7 +263,7 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         toast({
-          title: err.error?.message || t('ui.usersAdmin.toastResendInvitationError'),
+          title: apiErrorMessage(t, { status: res.status, code: err?.error?.code, message: err?.error?.message }, t('ui.usersAdmin.toastResendInvitationError')),
           variant: 'destructive',
         });
         return;
@@ -293,7 +294,7 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         toast({
-          title: err.error?.message || t('ui.usersAdmin.toastPasswordResetError'),
+          title: apiErrorMessage(t, { status: res.status, code: err?.error?.code, message: err?.error?.message }, t('ui.usersAdmin.toastPasswordResetError')),
           variant: 'destructive',
         });
         return;
@@ -344,7 +345,7 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         toast({
-          title: err.error?.message || t('ui.usersAdmin.toastProfileError'),
+          title: apiErrorMessage(t, { status: res.status, code: err?.error?.code, message: err?.error?.message }, t('ui.usersAdmin.toastProfileError')),
           variant: 'destructive',
         });
         return;
@@ -374,7 +375,7 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         toast({
-          title: err.error?.message || t('ui.usersAdmin.toastAuthChangeError'),
+          title: apiErrorMessage(t, { status: res.status, code: err?.error?.code, message: err?.error?.message }, t('ui.usersAdmin.toastAuthChangeError')),
           variant: 'destructive',
         });
         return;

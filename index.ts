@@ -92,6 +92,8 @@ export { IdleTimeout } from './components/layout/idle-timeout';
 
 // Utilities
 export { cn, formatCurrency, formatDate, formatDateTime } from './lib/utils';
+export { apiErrorMessage, apiErrorFromResponse } from './lib/api-error';
+export type { ApiErrorInfo, TranslateFn } from './lib/api-error';
 
 // Hooks
 export { toast, useToast } from './hooks/use-toast';

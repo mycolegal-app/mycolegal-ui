@@ -7,6 +7,7 @@ import { cn } from "../../lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { useI18n } from "../i18n/i18n-context";
+import { apiErrorMessage } from "../../lib/api-error";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -695,7 +696,13 @@ export function DocFillingModal({
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.error ?? `HTTP ${res.status}`);
+      throw new Error(
+        apiErrorMessage(
+          t,
+          { status: res.status, message: typeof err?.error === "string" ? err.error : err?.error?.message },
+          t("ui.docfilling.errFailed"),
+        ),
+      );
     }
 
     const { data } = await res.json();

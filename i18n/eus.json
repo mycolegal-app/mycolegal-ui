@@ -1,5 +1,17 @@
 {
   "ui": {
+    "errors": {
+      "generic": "Ezin izan da ekintza osatu. Saiatu berriro.",
+      "NETWORK": "Ezin izan da konektatu. Egiaztatu konexioa eta saiatu berriro.",
+      "UNAUTHORIZED": "Zure saioa iraungi da. Hasi saioa berriro.",
+      "FORBIDDEN": "Ez duzu baimenik ekintza hau egiteko.",
+      "NOT_FOUND": "Ez da eskatutako baliabidea aurkitu.",
+      "RATE_LIMITED": "Eskaera gehiegi jarraian. Itxaron une bat eta saiatu berriro.",
+      "SUBSCRIPTION_REQUIRED": "Zure erakundeak ez du harpidetza aktiborik. Harpidetu funtzio hau erabiltzeko.",
+      "NOT_AVAILABLE": "Funtzio hau ez dago erabilgarri une honetan.",
+      "CONFLICT": "Eragiketak uneko egoerarekin gatazka du. Birkargatu orria eta saiatu berriro.",
+      "PAYLOAD_TOO_LARGE": "Edukia handiegia da."
+    },
     "billing": {
       "title": "Harpidetzak",
       "currentApp": "Uneko aplikazioa",

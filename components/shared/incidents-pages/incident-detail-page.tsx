@@ -7,6 +7,7 @@ import { ChevronLeft, Loader2 } from "lucide-react";
 import { IncidentThread, type IncidentThreadIncident } from "../incident-thread";
 import { PageTitle } from "../../layout/page-title";
 import { useI18n } from "../../i18n/i18n-context";
+import { apiErrorMessage } from "../../../lib/api-error";
 
 /**
  * User-facing detail view for an incident the logged-in user reported.
@@ -37,7 +38,10 @@ export function IncidentDetailPage() {
       });
       if (!res.ok) {
         if (res.status === 404) throw new Error(t("ui.incidentDetail.errNotFound"));
-        throw new Error(`HTTP ${res.status}`);
+        const body = await res.json().catch(() => ({}));
+        throw new Error(
+          apiErrorMessage(t, { status: res.status, code: body?.error?.code, message: body?.error?.message }, t("ui.incidentDetail.errLoad")),
+        );
       }
       const body = await res.json();
       setIncident(body.data);

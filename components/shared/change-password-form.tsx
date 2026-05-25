@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useI18n } from "../i18n/i18n-context";
+import { apiErrorMessage } from "../../lib/api-error";
 
 interface ChangePasswordFormProps {
   /** API endpoint that proxies to /auth/change-password. */
@@ -54,7 +55,10 @@ export function ChangePasswordForm({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data?.error?.message || data?.error || t("ui.userAccount.errChangePassword"));
+        const message = data?.error?.message || (typeof data?.error === "string" ? data.error : undefined);
+        setError(
+          apiErrorMessage(t, { status: res.status, code: data?.error?.code, message }, t("ui.userAccount.errChangePassword")),
+        );
         return;
       }
       window.location.href = redirectTo;

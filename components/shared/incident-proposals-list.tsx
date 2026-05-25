@@ -5,6 +5,7 @@ import { Loader2, RefreshCcw } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { Button } from "../ui/button";
 import { useI18n } from "../i18n/i18n-context";
+import { apiErrorMessage } from "../../lib/api-error";
 import {
   IncidentProposalCard,
   type IncidentProposalEntry,
@@ -77,7 +78,16 @@ export function IncidentProposalsList({
         if (incidentId) params.set("incidentId", incidentId);
         const url = `${apiBase}/proposals${params.size > 0 ? `?${params.toString()}` : ""}`;
         const res = await fetch(url, { credentials: "include" });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) {
+          const j = await res.json().catch(() => ({}));
+          throw new Error(
+            apiErrorMessage(
+              t,
+              { status: res.status, code: j?.error?.code, message: typeof j?.error === "string" ? j.error : j?.error?.message },
+              t("ui.incidentProposals.errLoad"),
+            ),
+          );
+        }
         const body = (await res.json()) as ListResponse;
         setItems(body.data ?? []);
       } catch (e) {

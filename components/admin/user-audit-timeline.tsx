@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { useI18n } from '../i18n/i18n-context';
+import { apiErrorMessage } from '../../lib/api-error';
 
 interface AuthTimelineEntry {
   kind: 'auth';
@@ -171,7 +172,9 @@ export function UserAuditTimeline({ apiBase, authUserId, enabled }: UserAuditTim
       .then(async (res) => {
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
-          throw new Error(body?.error?.message || `HTTP ${res.status}`);
+          throw new Error(
+            apiErrorMessage(t, { status: res.status, code: body?.error?.code, message: body?.error?.message }, t('ui.errors.generic')),
+          );
         }
         const body = await res.json();
         // The endpoint may wrap in { data: { data: [...] } } or { data: [...] }.
@@ -187,7 +190,7 @@ export function UserAuditTimeline({ apiBase, authUserId, enabled }: UserAuditTim
         }
       })
       .catch((err) => {
-        if (!cancelled) setError(err.message || 'Error');
+        if (!cancelled) setError(err?.message || t('ui.errors.generic'));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);

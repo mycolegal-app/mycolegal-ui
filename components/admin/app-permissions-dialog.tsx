@@ -35,6 +35,7 @@ import {
   SelectValue,
 } from '../ui/select';
 import { useI18n } from '../i18n/i18n-context';
+import { apiErrorMessage } from '../../lib/api-error';
 import { toast } from '../../hooks/use-toast';
 import type { UserRow } from './users-admin-panel';
 import type { AppCatalogEntry } from './user-permissions-modal';
@@ -228,7 +229,11 @@ export function AppPermissionsDialog({
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         toast({
-          title: err.error?.message || t('ui.usersAdmin.toastPermsError'),
+          title: apiErrorMessage(
+            t,
+            { status: res.status, code: err?.error?.code, message: err?.error?.message },
+            t('ui.usersAdmin.toastPermsError'),
+          ),
           variant: 'destructive',
         });
         return;
@@ -238,7 +243,10 @@ export function AppPermissionsDialog({
       onClose();
     } catch (err) {
       console.error(err);
-      toast({ title: t('ui.usersAdmin.toastPermsError'), variant: 'destructive' });
+      toast({
+        title: apiErrorMessage(t, { code: 'NETWORK' }, t('ui.usersAdmin.toastPermsError')),
+        variant: 'destructive',
+      });
     } finally {
       setSaving(false);
     }

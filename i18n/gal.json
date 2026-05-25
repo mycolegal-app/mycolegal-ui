@@ -1,5 +1,17 @@
 {
   "ui": {
+    "errors": {
+      "generic": "Non se puido completar a acción. Téntao de novo.",
+      "NETWORK": "Non se puido conectar. Comproba a túa conexión e téntao de novo.",
+      "UNAUTHORIZED": "A túa sesión caducou. Volve iniciar sesión.",
+      "FORBIDDEN": "Non tes permiso para realizar esta acción.",
+      "NOT_FOUND": "Non se atopou o recurso solicitado.",
+      "RATE_LIMITED": "Demasiadas solicitudes seguidas. Agarda un momento e téntao de novo.",
+      "SUBSCRIPTION_REQUIRED": "A túa organización non ten unha subscrición activa. Subscríbete para usar esta función.",
+      "NOT_AVAILABLE": "Esta función non está dispoñible neste momento.",
+      "CONFLICT": "A operación entra en conflito co estado actual. Recarga a páxina e téntao de novo.",
+      "PAYLOAD_TOO_LARGE": "O contido é demasiado grande."
+    },
     "billing": {
       "title": "Subscricións",
       "currentApp": "Aplicación actual",

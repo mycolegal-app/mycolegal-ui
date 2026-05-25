@@ -1,5 +1,17 @@
 {
   "ui": {
+    "errors": {
+      "generic": "No s'ha pogut completar l'acció. Torna-ho a provar.",
+      "NETWORK": "No s'ha pogut connectar. Comprova la connexió i torna-ho a provar.",
+      "UNAUTHORIZED": "La teva sessió ha caducat. Torna a iniciar sessió.",
+      "FORBIDDEN": "No tens permís per fer aquesta acció.",
+      "NOT_FOUND": "No s'ha trobat el recurs sol·licitat.",
+      "RATE_LIMITED": "Massa sol·licituds seguides. Espera un moment i torna-ho a provar.",
+      "SUBSCRIPTION_REQUIRED": "La teva organització no té cap subscripció activa. Subscriu-te per utilitzar aquesta funció.",
+      "NOT_AVAILABLE": "Aquesta funció no està disponible en aquest moment.",
+      "CONFLICT": "L'operació entra en conflicte amb l'estat actual. Torna a carregar la pàgina i prova-ho de nou.",
+      "PAYLOAD_TOO_LARGE": "El contingut és massa gran."
+    },
     "billing": {
       "title": "Subscripcions",
       "currentApp": "Aplicació actual",

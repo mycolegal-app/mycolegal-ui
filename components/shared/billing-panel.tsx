@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertCircle, CreditCard, ExternalLink, Gift, Loader2 } from "lucide-react";
 import { useI18n } from "../i18n/i18n-context";
+import { apiErrorMessage } from "../../lib/api-error";
 import { useIsOrgAdmin } from "../../hooks/use-is-org-admin";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
@@ -72,7 +73,12 @@ export function BillingPanel({ currentApp }: BillingPanelProps) {
         setItems([]);
         return;
       }
-      if (!res.ok) throw new Error(String(res.status));
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        setError(apiErrorMessage(t, { status: res.status, code: json?.error?.code, message: json?.error?.message }, t("ui.billing.loadError")));
+        setItems([]);
+        return;
+      }
       const json = await res.json();
       setItems((json?.data ?? []) as BillingItem[]);
     } catch {
@@ -98,6 +104,10 @@ export function BillingPanel({ currentApp }: BillingPanelProps) {
         body: JSON.stringify(body),
       });
       const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(apiErrorMessage(t, { status: res.status, code: json?.error?.code, message: json?.error?.message }, t("ui.billing.actionError")));
+        return;
+      }
       // checkout de una org ya activa → caemos al portal de gestión.
       if (op === "checkout" && json?.alreadyActive) {
         return action(app, "portal");

@@ -28,6 +28,7 @@ import { InviteUserDialog } from '../shared/invite-user-dialog';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { useI18n } from '../i18n/i18n-context';
+import { apiErrorMessage } from '../../lib/api-error';
 import {
   Dialog,
   DialogContent,
@@ -239,7 +240,7 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
       if (!res.ok) {
         const err = await res.json();
         toast({
-          title: err.error?.message || t(errorKey),
+          title: apiErrorMessage(t, { status: res.status, code: err?.error?.code, message: err?.error?.message }, t(errorKey)),
           variant: 'destructive',
         });
         return;
@@ -266,7 +267,7 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
       if (!res.ok) {
         const err = await res.json();
         toast({
-          title: err.error?.message || t('ui.usersAdmin.toastDeleteError'),
+          title: apiErrorMessage(t, { status: res.status, code: err?.error?.code, message: err?.error?.message }, t('ui.usersAdmin.toastDeleteError')),
           variant: 'destructive',
         });
         return;
@@ -297,7 +298,7 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         toast({
-          title: err.error?.message || t('ui.usersAdmin.toastAuthChangeError'),
+          title: apiErrorMessage(t, { status: res.status, code: err?.error?.code, message: err?.error?.message }, t('ui.usersAdmin.toastAuthChangeError')),
           variant: 'destructive',
         });
         return;
@@ -353,7 +354,7 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         toast({
-          title: err.error?.message || t('ui.impersonation.toastError'),
+          title: apiErrorMessage(t, { status: res.status, code: err?.error?.code, message: err?.error?.message }, t('ui.impersonation.toastError')),
           variant: 'destructive',
         });
         return;

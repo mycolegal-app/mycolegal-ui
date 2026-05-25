@@ -14,6 +14,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { useI18n } from "../i18n/i18n-context";
+import { apiErrorMessage } from "../../lib/api-error";
 
 // Cita devuelta por el backend (AskResult.citas de consultor).
 interface Cita {
@@ -148,10 +149,13 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
         });
         const json = await res.json().catch(() => ({}));
         if (!res.ok) {
-          const msg =
-            res.status === 429
-              ? json?.error?.message || t("ui.mycobot.rateLimited")
-              : t("ui.mycobot.error");
+          // Patrón unificado: código→i18n, si no mensaje del backend (salvo 500),
+          // si no el fallback del propio asistente. Ver lib/api-error.
+          const msg = apiErrorMessage(
+            t,
+            { status: res.status, code: json?.error?.code, message: json?.error?.message },
+            t("ui.mycobot.error"),
+          );
           setMessages((m) => [...m, { role: "bot", text: msg, error: true }]);
           return;
         }
@@ -162,7 +166,8 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
           { role: "bot", text: data.respuesta ?? "", citas: data.citas ?? [], sinResultado: !!data.sinResultado },
         ]);
       } catch {
-        setMessages((m) => [...m, { role: "bot", text: t("ui.mycobot.error"), error: true }]);
+        const msg = apiErrorMessage(t, { code: "NETWORK" }, t("ui.mycobot.error"));
+        setMessages((m) => [...m, { role: "bot", text: msg, error: true }]);
       } finally {
         setLoading(false);
       }

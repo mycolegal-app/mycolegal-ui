@@ -14,6 +14,7 @@ import { cn } from "../../lib/utils";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 import { useI18n } from "../i18n/i18n-context";
+import { apiErrorMessage } from "../../lib/api-error";
 
 export interface IncidentProposalIncidentSummary {
   id: string;
@@ -144,7 +145,13 @@ export function IncidentProposalCard({
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        throw new Error(j?.error ?? `HTTP ${res.status}`);
+        throw new Error(
+          apiErrorMessage(
+            t,
+            { status: res.status, message: typeof j?.error === "string" ? j.error : j?.error?.message },
+            t("ui.incidentProposals.errApprove"),
+          ),
+        );
       }
       onChange?.();
     } catch (e) {
@@ -166,7 +173,13 @@ export function IncidentProposalCard({
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        throw new Error(j?.error ?? `HTTP ${res.status}`);
+        throw new Error(
+          apiErrorMessage(
+            t,
+            { status: res.status, message: typeof j?.error === "string" ? j.error : j?.error?.message },
+            t("ui.incidentProposals.errReject"),
+          ),
+        );
       }
       onChange?.();
     } catch (e) {

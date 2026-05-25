@@ -13,6 +13,7 @@ import {
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 import { useI18n } from "../i18n/i18n-context";
+import { apiErrorMessage } from "../../lib/api-error";
 
 interface IncidentReporterProps {
   /** App slug sent with the report (e.g. "notaria", "legifirma"). */
@@ -218,7 +219,11 @@ export function IncidentReporter({
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body?.error?.message || body?.error || body?.message || `HTTP ${res.status}`);
+        const message =
+          body?.error?.message || (typeof body?.error === "string" ? body.error : undefined) || body?.message;
+        throw new Error(
+          apiErrorMessage(t, { status: res.status, code: body?.error?.code, message }, t("ui.incidentReporter.errSend")),
+        );
       }
       setResult("ok");
       // Auto-close after short success flash

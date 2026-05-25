@@ -6,6 +6,7 @@ import { Loader2, Inbox, Plus } from "lucide-react";
 import { cn } from "../../../lib/utils";
 import { PageTitle } from "../../layout/page-title";
 import { useI18n } from "../../i18n/i18n-context";
+import { apiErrorMessage } from "../../../lib/api-error";
 
 interface IncidentListEntry {
   id: string;
@@ -76,7 +77,12 @@ export function MyIncidentsPage({ onReport }: MyIncidentsPageProps = {}) {
       try {
         const ep = s === "org" ? "/api/incidents/org" : "/api/incidents/mine";
         const res = await fetch(`${ep}?limit=100`, { credentials: "include" });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(
+            apiErrorMessage(t, { status: res.status, code: body?.error?.code, message: body?.error?.message }, t("ui.myIncidents.errLoad")),
+          );
+        }
         const body = await res.json();
         setItems(body.data || []);
         if (typeof body.canManage === "boolean") setCanManage(body.canManage);

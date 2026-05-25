@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { Bell, Check, CheckCheck, Loader2, X } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { useI18n } from "../i18n/i18n-context";
+import { apiErrorMessage } from "../../lib/api-error";
 
 export interface NotificationEntry {
   id: string;
@@ -131,7 +132,12 @@ export function NotificationsBell({
     setError(null);
     try {
       const res = await fetch(`${apiBase}?limit=20`, { credentials: "include" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(
+          apiErrorMessage(t, { status: res.status, code: j?.error?.code, message: j?.error?.message }, t("ui.notifications.errLoad")),
+        );
+      }
       const body = (await res.json()) as ListResponse;
       setItems(body.data);
       setUnread(body.unread);

@@ -1,5 +1,17 @@
 {
   "ui": {
+    "errors": {
+      "generic": "No se ha podido completar la acción. Inténtalo de nuevo.",
+      "NETWORK": "No se ha podido conectar. Comprueba tu conexión e inténtalo de nuevo.",
+      "UNAUTHORIZED": "Tu sesión ha caducado. Vuelve a iniciar sesión.",
+      "FORBIDDEN": "No tienes permiso para realizar esta acción.",
+      "NOT_FOUND": "No se ha encontrado el recurso solicitado.",
+      "RATE_LIMITED": "Demasiadas solicitudes seguidas. Espera un momento e inténtalo de nuevo.",
+      "SUBSCRIPTION_REQUIRED": "Tu organización no tiene una suscripción activa. Suscríbete para usar esta función.",
+      "NOT_AVAILABLE": "Esta función no está disponible en este momento.",
+      "CONFLICT": "La operación entra en conflicto con el estado actual. Recarga la página e inténtalo de nuevo.",
+      "PAYLOAD_TOO_LARGE": "El contenido es demasiado grande."
+    },
     "billing": {
       "title": "Suscripciones",
       "currentApp": "App actual",

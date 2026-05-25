@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { NavLink as Link } from "./nav-link";
 import { Loader2, Save, KeyRound, User as UserIcon, Inbox, ExternalLink } from "lucide-react";
 import { useI18n } from "../i18n/i18n-context";
+import { apiErrorMessage } from "../../lib/api-error";
 import {
   Dialog,
   DialogContent,
@@ -193,7 +194,12 @@ function ProfileTab({
       setError(null);
       try {
         const res = await fetch(endpoint, { credentials: "include" });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({}));
+          throw new Error(
+            apiErrorMessage(t, { status: res.status, code: errBody?.error?.code, message: errBody?.error?.message }, t("ui.userAccount.errLoadProfile")),
+          );
+        }
         const body = await res.json();
         const p: ProfileShape = body.data ?? body;
         if (cancelled) return;
@@ -232,7 +238,9 @@ function ProfileTab({
         });
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
-          throw new Error(body?.error?.message || body?.message || `HTTP ${res.status}`);
+          throw new Error(
+            apiErrorMessage(t, { status: res.status, code: body?.error?.code, message: body?.error?.message || body?.message }, t("ui.userAccount.errSave")),
+          );
         }
         const body = await res.json();
         const updated: ProfileShape = body.data ?? body;
@@ -402,11 +410,11 @@ function PasswordTab({ endpoint }: { endpoint: string }) {
         const body = await res.json().catch(() => ({}));
         // Soporta tres shapes: `{error:{message}}` (apps consumer),
         // `{message}` (legacy), `{error:"texto"}` (Fastify default — auth).
-        const msg = body?.error?.message
-          || body?.message
-          || (typeof body?.error === 'string' ? body.error : null)
-          || `HTTP ${res.status}`;
-        throw new Error(msg);
+        const message =
+          body?.error?.message || body?.message || (typeof body?.error === 'string' ? body.error : undefined);
+        throw new Error(
+          apiErrorMessage(t, { status: res.status, code: body?.error?.code, message }, t("ui.userAccount.errChangePassword")),
+        );
       }
       setCurrent("");
       setNext("");
