@@ -229,7 +229,14 @@
       "removeAttachment": "Treure",
       "viewAttachment": "Veure imatge a mida completa",
       "closeAttachment": "Tancar imatge",
-      "readOnlyNotice": "Estàs veient aquesta incidència com a suport (només lectura). Per respondre o tancar-la, fes servir el panell d'administració."
+      "readOnlyNotice": "Estàs veient aquesta incidència com a suport (només lectura). Per respondre o tancar-la, fes servir el panell d'administració.",
+      "filesHeading": "Fitxers adjunts",
+      "noFiles": "No hi ha fitxers adjunts.",
+      "attachFile": "Adjuntar fitxer",
+      "attachFileHint": "Adjuntar un document (PDF, Excel, …) al fil. Màxim 5 MB.",
+      "errAttachFile": "No s'ha pogut pujar el fitxer",
+      "downloadFile": "Descarregar",
+      "uploaderAgent": "MycoLegal"
     },
     "login": {
       "errAuth": "Error d'autenticació",

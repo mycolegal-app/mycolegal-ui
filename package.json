@@ -1,6 +1,6 @@
 {
   "name": "@mycolegal-app/ui",
-  "version": "1.85.1",
+  "version": "1.85.2",
   "type": "module",
   "main": "./index.ts",
   "publishConfig": {
@@ -30,6 +30,7 @@
   ],
   "peerDependencies": {
     "@playwright/test": ">=1.40",
+    "google-auth-library": ">=9",
     "next": ">=14",
     "react": ">=18",
     "react-dom": ">=18",
@@ -40,6 +41,9 @@
       "optional": true
     },
     "@playwright/test": {
+      "optional": true
+    },
+    "google-auth-library": {
       "optional": true
     }
   },
@@ -74,6 +78,7 @@
     "@types/node": "^22.19.17",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "google-auth-library": "^9.15.0",
     "typescript": "^6.0.2"
   },
   "description": "e2e fixtures publicadas como JS compilado (Playwright no transforma .ts dentro de node_modules) — desbloquea imports de @mycolegal-app/ui/e2e/shared-lock-fixture desde specs."

@@ -229,7 +229,14 @@
       "removeAttachment": "Kendu",
       "viewAttachment": "Ikusi irudia tamaina osoan",
       "closeAttachment": "Itxi irudia",
-      "readOnlyNotice": "Gertaera hau laguntza gisa ari zara ikusten (irakurtzeko soilik). Erantzuteko edo ixteko, erabili administrazio-panela."
+      "readOnlyNotice": "Gertaera hau laguntza gisa ari zara ikusten (irakurtzeko soilik). Erantzuteko edo ixteko, erabili administrazio-panela.",
+      "filesHeading": "Eranskinak",
+      "noFiles": "Ez dago eranskinik.",
+      "attachFile": "Fitxategia erantsi",
+      "attachFileHint": "Dokumentu bat (PDF, Excel, …) harira erantsi. Gehienez 5 MB.",
+      "errAttachFile": "Ezin izan da fitxategia igo",
+      "downloadFile": "Deskargatu",
+      "uploaderAgent": "MycoLegal"
     },
     "login": {
       "errAuth": "Autentifikazio errorea",

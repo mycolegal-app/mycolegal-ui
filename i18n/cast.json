@@ -229,7 +229,14 @@
       "removeAttachment": "Quitar",
       "viewAttachment": "Ver imagen a tamaño completo",
       "closeAttachment": "Cerrar imagen",
-      "readOnlyNotice": "Estás viendo esta incidencia como soporte (solo lectura). Para responder o cerrarla, usa el panel de administración."
+      "readOnlyNotice": "Estás viendo esta incidencia como soporte (solo lectura). Para responder o cerrarla, usa el panel de administración.",
+      "filesHeading": "Archivos adjuntos",
+      "noFiles": "No hay archivos adjuntos.",
+      "attachFile": "Adjuntar archivo",
+      "attachFileHint": "Adjuntar un documento (PDF, Excel, …) al hilo. Máximo 5 MB.",
+      "errAttachFile": "No se pudo subir el archivo",
+      "downloadFile": "Descargar",
+      "uploaderAgent": "MycoLegal"
     },
     "login": {
       "errAuth": "Error de autenticación",

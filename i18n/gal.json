@@ -229,7 +229,14 @@
       "removeAttachment": "Quitar",
       "viewAttachment": "Ver imaxe a tamaño completo",
       "closeAttachment": "Pechar imaxe",
-      "readOnlyNotice": "Estás vendo esta incidencia como soporte (só lectura). Para responder ou pechala, usa o panel de administración."
+      "readOnlyNotice": "Estás vendo esta incidencia como soporte (só lectura). Para responder ou pechala, usa o panel de administración.",
+      "filesHeading": "Ficheiros anexos",
+      "noFiles": "Non hai ficheiros anexos.",
+      "attachFile": "Anexar ficheiro",
+      "attachFileHint": "Anexar un documento (PDF, Excel, …) ao fío. Máximo 5 MB.",
+      "errAttachFile": "Non se puido subir o ficheiro",
+      "downloadFile": "Descargar",
+      "uploaderAgent": "MycoLegal"
     },
     "login": {
       "errAuth": "Erro de autenticación",

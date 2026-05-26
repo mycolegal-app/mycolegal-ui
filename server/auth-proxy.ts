@@ -65,6 +65,10 @@ export async function proxyToAuth(
   if (contentType) passthroughHeaders.set('content-type', contentType);
   const cacheControl = authResponse.headers.get('cache-control');
   if (cacheControl) passthroughHeaders.set('cache-control', cacheControl);
+  // Preserve the download filename for attachments (PDF/XLSX/…). Screenshots
+  // don't set it, so this stays a no-op for them.
+  const disposition = authResponse.headers.get('content-disposition');
+  if (disposition) passthroughHeaders.set('content-disposition', disposition);
   return new NextResponse(buffer, {
     status: authResponse.status,
     headers: passthroughHeaders,

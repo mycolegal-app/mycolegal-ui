@@ -10,6 +10,8 @@ import {
   Paperclip,
   Camera,
   Upload,
+  Download,
+  FileText,
   X as XIcon,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
@@ -48,6 +50,17 @@ export interface IncidentThreadMessage {
   readByReporterAt?: string | null;
 }
 
+export interface IncidentThreadAttachment {
+  id: string;
+  messageId?: string | null;
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+  /** `user` | `superadmin` | `agent` — who uploaded it. */
+  uploadedByRole: string;
+  createdAt: string;
+}
+
 interface IncidentThreadProps {
   /**
    * Base path for the thread's HTTP operations. The component appends
@@ -78,6 +91,22 @@ function formatDateTime(iso: string): string {
     month: "short",
     hour: "2-digit",
     minute: "2-digit",
+  });
+}
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/** Reads a File into a base64 data URL (the backend strips the prefix). */
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("read-failed"));
+    reader.readAsDataURL(file);
   });
 }
 
@@ -138,6 +167,11 @@ export function IncidentThread({
   const [attaching, setAttaching] = useState(false);
   const [zoomedSrc, setZoomedSrc] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Adjuntos-archivo (documentos arbitrarios en GCS), distintos del JPEG
+  // inline de las respuestas. Lista + subida (solo soporte) + descarga.
+  const [files, setFiles] = useState<IncidentThreadAttachment[]>([]);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const docInputRef = useRef<HTMLInputElement>(null);
   const canAttach = viewerRole === "superadmin";
 
   const fetchMessages = useCallback(async () => {
@@ -154,11 +188,28 @@ export function IncidentThread({
     }
   }, [apiBase, t]);
 
+  // Tolerant: an older auth without the attachments endpoint just yields an
+  // empty list rather than surfacing a thread-wide error.
+  const fetchAttachments = useCallback(async () => {
+    try {
+      const res = await fetch(`${apiBase}/attachments`, { credentials: "include" });
+      if (!res.ok) return;
+      const body = await res.json();
+      setFiles(body.data || []);
+    } catch {
+      /* ignore — attachments are best-effort */
+    }
+  }, [apiBase]);
+
   useEffect(() => {
     fetchMessages();
-    const id = setInterval(fetchMessages, pollIntervalMs);
+    fetchAttachments();
+    const id = setInterval(() => {
+      fetchMessages();
+      fetchAttachments();
+    }, pollIntervalMs);
     return () => clearInterval(id);
-  }, [fetchMessages, pollIntervalMs]);
+  }, [fetchMessages, fetchAttachments, pollIntervalMs]);
 
   const postReply = useCallback(async () => {
     const body = draft.trim();
@@ -236,6 +287,58 @@ export function IncidentThread({
       if (file) void ingestImageBlob(file);
     },
     [ingestImageBlob],
+  );
+
+  // Sube un documento arbitrario (PDF/XLSX/…) al hilo. Report-level
+  // (sin messageId). Solo soporte. El backend acota a 5 MB.
+  const uploadFile = useCallback(
+    async (file: File) => {
+      setUploadingFile(true);
+      setError(null);
+      try {
+        const dataBase64 = await fileToDataUrl(file);
+        const res = await fetch(`${apiBase}/attachments`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            filename: file.name,
+            mimeType: file.type || "application/octet-stream",
+            dataBase64,
+          }),
+        });
+        if (!res.ok) {
+          const b = await res.json().catch(() => ({}));
+          throw new Error(b?.error?.message || b?.error || `HTTP ${res.status}`);
+        }
+        await fetchAttachments();
+        onRefresh?.();
+      } catch (err) {
+        setError((err as Error).message || t("ui.incidentThread.errAttachFile"));
+      } finally {
+        setUploadingFile(false);
+      }
+    },
+    [apiBase, fetchAttachments, onRefresh, t],
+  );
+
+  const handleDocChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      e.target.value = "";
+      if (file) void uploadFile(file);
+    },
+    [uploadFile],
+  );
+
+  const uploaderLabel = useCallback(
+    (role: string): string =>
+      role === "agent"
+        ? t("ui.incidentThread.uploaderAgent")
+        : role === "superadmin"
+          ? t("ui.incidentThread.authorSupport")
+          : t("ui.incidentThread.authorUser"),
+    [t],
   );
 
   const closeIncident = useCallback(async () => {
@@ -399,6 +502,79 @@ export function IncidentThread({
           );
         })}
       </div>
+
+      {/* Archivos adjuntos (documentos en GCS): distintos del JPEG inline.
+          Visible para todos los que pueden leer el hilo; subida solo soporte. */}
+      {(files.length > 0 || (canAttach && !readOnly)) && (
+        <div className="rounded-lg border border-gray-200 bg-white px-4 py-3">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-gray-500">
+              <Paperclip className="h-3.5 w-3.5" />
+              {t("ui.incidentThread.filesHeading")}
+            </p>
+            {canAttach && !readOnly && (
+              <>
+                <input
+                  ref={docInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={handleDocChange}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => docInputRef.current?.click()}
+                  disabled={uploadingFile}
+                  title={t("ui.incidentThread.attachFileHint")}
+                >
+                  {uploadingFile ? (
+                    <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Upload className="mr-1 h-3.5 w-3.5" />
+                  )}
+                  {t("ui.incidentThread.attachFile")}
+                </Button>
+              </>
+            )}
+          </div>
+          {files.length === 0 ? (
+            <p className="text-xs text-gray-400">{t("ui.incidentThread.noFiles")}</p>
+          ) : (
+            <ul className="divide-y divide-gray-100">
+              {files.map((f) => (
+                <li key={f.id} className="flex items-center justify-between gap-3 py-2">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <FileText className="h-4 w-4 shrink-0 text-gray-400" />
+                    <div className="min-w-0">
+                      <a
+                        href={`${apiBase}/attachments/${f.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block truncate text-sm font-medium text-cyan hover:underline"
+                        title={f.filename}
+                      >
+                        {f.filename}
+                      </a>
+                      <p className="text-[11px] text-gray-400">
+                        {formatBytes(f.sizeBytes)} · {uploaderLabel(f.uploadedByRole)} · {formatDateTime(f.createdAt)}
+                      </p>
+                    </div>
+                  </div>
+                  <a
+                    href={`${apiBase}/attachments/${f.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex shrink-0 items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    {t("ui.incidentThread.downloadFile")}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       {zoomedSrc && (
         <div
