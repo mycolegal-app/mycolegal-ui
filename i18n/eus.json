@@ -773,7 +773,11 @@
       "backToChat": "Itzuli",
       "prevCita": "Aurreko ebazpena",
       "nextCita": "Hurrengo ebazpena",
-      "openFull": "Ikusi fitxa osoa"
+      "openFull": "Ikusi fitxa osoa",
+      "sourcesManual": "Eskuliburuan",
+      "skill_doctrina": "Doktrina",
+      "skill_ayuda": "Laguntza",
+      "skill_agente": "Datuak"
     }
   }
 }

@@ -4,11 +4,13 @@ import { useEffect, useState } from "react";
 import { MycoBotRail } from "./mycobot-rail";
 
 /**
- * MycoBot listo para montar en CUALQUIER app de mycolegal-app. Autodetecta la
- * disponibilidad: solo aparece si la org tiene Consultor entre sus apps
- * (`/api/auth/me`). El deep-link de citas usa la URL pública de Consultor que
- * devuelve ese endpoint. Las llamadas (ask, conversaciones, detalle) van por el
- * proxy `/api/resoluciones/[[...path]]` de la app → Consultor inter.
+ * MycoBot listo para montar en CUALQUIER app de mycolegal-app. Aparece para
+ * TODO usuario autenticado: la "ayuda de producto" (Manual de la app) NO está
+ * gateada por suscripción. Tener Consultor solo AÑADE la doctrina (resoluciones)
+ * y habilita el deep-link de citas a su página completa (`consultorUrl`). El
+ * gating por carril lo aplica el backend (ayuda ungated; doctrina con
+ * suscripción). Las llamadas (ask, conversaciones, detalle) van por el proxy
+ * `/api/resoluciones/[[...path]]` de la app → Consultor inter.
  *
  * Incluir MycoBot en una app nueva = montar `<MycoBot appSlug="..."/>` (de
  * @mycolegal-app/ui) en su app-shell + el catch-all
@@ -25,8 +27,12 @@ export function MycoBot({ appSlug }: { appSlug?: string }) {
     fetch("/api/auth/me")
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => {
-        const c = j?.data?.apps?.find((a: { slug: string }) => a.slug === "consultor");
-        if (c) setCfg({ available: true, consultorUrl: c.appUrl });
+        // Usuario autenticado → MycoBot disponible (ayuda de producto ungated).
+        // Si además la org tiene Consultor, guardamos su URL para el deep-link
+        // de las citas de doctrina.
+        if (!j?.data) return;
+        const c = j.data.apps?.find((a: { slug: string }) => a.slug === "consultor");
+        setCfg({ available: true, consultorUrl: c?.appUrl });
       })
       .catch(() => {});
   }, []);

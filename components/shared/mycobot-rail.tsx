@@ -9,6 +9,7 @@ import {
   Loader2,
   ExternalLink,
   Scale,
+  BookOpen,
   History,
   PlusCircle,
   ArrowLeft,
@@ -25,10 +26,22 @@ interface Cita {
   titulo: string | null;
 }
 
+// Cita al Manual / fichas de ayuda (AskResult.citasAyuda del carril de ayuda).
+interface AyudaCita {
+  appSlug: string;
+  section: string;
+  title: string | null;
+  source: string; // 'MANUAL' | 'KB'
+  href: string | null; // ruta relativa /manual/<section> (solo MANUAL)
+}
+
 interface Msg {
   role: "user" | "bot";
   text: string;
   citas?: Cita[];
+  citasAyuda?: AyudaCita[];
+  /** Skill que produjo la respuesta (badge): doctrina | ayuda | agente. */
+  skill?: "doctrina" | "ayuda" | "agente";
   sinResultado?: boolean;
   error?: boolean;
 }
@@ -169,7 +182,14 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
         if (data.conversacionId) setConversacionId(data.conversacionId);
         setMessages((m) => [
           ...m,
-          { role: "bot", text: data.respuesta ?? "", citas: data.citas ?? [], sinResultado: !!data.sinResultado },
+          {
+            role: "bot",
+            text: data.respuesta ?? "",
+            citas: data.citas ?? [],
+            citasAyuda: data.citasAyuda ?? [],
+            skill: data.skill,
+            sinResultado: !!data.sinResultado,
+          },
         ]);
       } catch {
         const msg = apiErrorMessage(t, { code: "NETWORK" }, t("ui.mycobot.error"));
@@ -497,7 +517,53 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
                           : `max-w-[92%] rounded-lg px-3 py-2 text-sm ${m.error ? "bg-red-50 text-red-700" : "bg-gray-100 text-gray-800"}`
                       }
                     >
+                      {m.role === "bot" && !m.error && m.skill && (
+                        <span className="mb-1 inline-block rounded bg-gray-200 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-gray-500">
+                          {t(`ui.mycobot.skill_${m.skill}`)}
+                        </span>
+                      )}
                       <p className="whitespace-pre-wrap leading-relaxed">{m.text}</p>
+                      {m.role === "bot" && m.citasAyuda && m.citasAyuda.length > 0 && (
+                        <div className="mt-2 border-t border-gray-200 pt-2">
+                          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                            {t("ui.mycobot.sourcesManual")}
+                          </p>
+                          <ul className="space-y-1">
+                            {m.citasAyuda.map((c, j) => {
+                              const sameApp = !!appSlug && c.appSlug === appSlug;
+                              const label = c.title || c.section;
+                              const inner = (
+                                <span className="flex items-start gap-1.5">
+                                  <BookOpen className="mt-0.5 h-3 w-3 shrink-0 text-cyan-600" />
+                                  <span className="min-w-0">
+                                    <span className="block truncate text-[11px] text-gray-700">{label}</span>
+                                    {!sameApp && (
+                                      <span className="block text-[10px] uppercase tracking-wide text-gray-400">
+                                        {c.appSlug}
+                                      </span>
+                                    )}
+                                  </span>
+                                  {sameApp && c.href && (
+                                    <ChevronRight className="ml-auto mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
+                                  )}
+                                </span>
+                              );
+                              const base = "block w-full rounded px-1 py-0.5 text-left";
+                              return (
+                                <li key={c.appSlug + c.section + j}>
+                                  {sameApp && c.href ? (
+                                    <a href={c.href} className={`${base} hover:bg-gray-200`}>
+                                      {inner}
+                                    </a>
+                                  ) : (
+                                    <span className={`${base} text-gray-500`}>{inner}</span>
+                                  )}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
+                      )}
                       {m.role === "bot" && m.citas && m.citas.length > 0 && (
                         <div className="mt-2 border-t border-gray-200 pt-2">
                           <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">

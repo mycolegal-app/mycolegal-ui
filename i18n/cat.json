@@ -773,7 +773,11 @@
       "backToChat": "Tornar",
       "prevCita": "Resolució anterior",
       "nextCita": "Resolució següent",
-      "openFull": "Veure la fitxa completa"
+      "openFull": "Veure la fitxa completa",
+      "sourcesManual": "Al manual",
+      "skill_doctrina": "Doctrina",
+      "skill_ayuda": "Ajuda",
+      "skill_agente": "Dades"
     }
   }
 }
