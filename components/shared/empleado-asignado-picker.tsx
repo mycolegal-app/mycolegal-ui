@@ -177,8 +177,12 @@ export function EmpleadoAsignadoPicker({
           </SelectItem>
         ))}
         {!loading && empleados.length === 0 && !allowEmpty && (
-          <div className="px-2 py-1.5 text-sm text-muted-foreground">
-            {t("ui.empleadoPicker.empty")}
+          // py-6 + block para que el popover no colapse a "unos milímetros"
+          // cuando no hay opciones (en modo popper el viewport toma la altura
+          // de una fila; un mensaje sin alto suficiente se veía como un sliver
+          // en blanco — incidencias #60/#42). El texto explica el porqué.
+          <div className="block whitespace-nowrap px-3 py-6 text-center text-sm text-muted-foreground">
+            {t("ui.empleadoPicker.empty") || "No hay empleados disponibles"}
           </div>
         )}
       </SelectContent>

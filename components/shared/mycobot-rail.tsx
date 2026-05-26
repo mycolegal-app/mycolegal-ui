@@ -14,8 +14,21 @@ import {
   PlusCircle,
   ArrowLeft,
 } from "lucide-react";
+import { marked } from "marked";
 import { useI18n } from "../i18n/i18n-context";
 import { apiErrorMessage } from "../../lib/api-error";
+
+marked.setOptions({ breaks: true, gfm: true });
+
+/**
+ * Renderiza el Markdown de la respuesta del bot a HTML. El texto viene del LLM:
+ * escapamos `<` para neutralizar cualquier etiqueta HTML cruda (no puede haber
+ * tag sin `<`), conservando `>` (citas markdown) y toda la sintaxis markdown
+ * (negritas, listas, encabezados…), que no usa ángulos de apertura.
+ */
+function renderMarkdown(text: string): string {
+  return marked.parse(text.replace(/</g, "&lt;"), { async: false }) as string;
+}
 
 // Cita devuelta por el backend (AskResult.citas de consultor).
 interface Cita {
@@ -522,7 +535,15 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
                           {t(`ui.mycobot.skill_${m.skill}`)}
                         </span>
                       )}
-                      <p className="whitespace-pre-wrap leading-relaxed">{m.text}</p>
+                      {m.role === "bot" && !m.error ? (
+                        // Respuesta del bot: Markdown (negritas, listas, encabezados…).
+                        <div
+                          className="leading-relaxed [&_a]:text-cyan-700 [&_a]:underline [&_code]:rounded [&_code]:bg-gray-200 [&_code]:px-1 [&_h1]:text-sm [&_h1]:font-bold [&_h2]:font-semibold [&_h3]:font-semibold [&_li]:mt-0.5 [&_ol]:my-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-4"
+                          dangerouslySetInnerHTML={{ __html: renderMarkdown(m.text) }}
+                        />
+                      ) : (
+                        <p className="whitespace-pre-wrap leading-relaxed">{m.text}</p>
+                      )}
                       {m.role === "bot" && m.citasAyuda && m.citasAyuda.length > 0 && (
                         <div className="mt-2 border-t border-gray-200 pt-2">
                           <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">

@@ -165,7 +165,10 @@ export function UsersAdminPanel(props: UsersAdminPanelProps) {
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(apiBase);
+      // no-store: tras suspender/reactivar/borrar volvemos a pedir la lista;
+      // sin esto el GET se servía de caché y mostraba el estado anterior hasta
+      // re-loguear (incidencia #43).
+      const res = await fetch(apiBase, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         setUsers(data.data || data);
