@@ -47,6 +47,18 @@
       "bannerExiting": "Irteten…",
       "toastError": "Ezin izan da ordezkapena hasi"
     },
+    "legal": {
+      "gateTitle": "Baldintza eguneratuak",
+      "gateIntro": "Jarraitzeko, berrikusi eta onartu hurrengo dokumentuak.",
+      "gateAcceptLabel": "Aurreko dokumentuak irakurri eta onartzen ditut.",
+      "gateContinue": "Onartu eta jarraitu",
+      "gateSubmitting": "Gordetzen…",
+      "gateError": "Ezin izan da onarpena erregistratu. Saiatu berriro.",
+      "appTosTitle": "Aplikazioaren baldintzak",
+      "appTosIntro": "{app} kontratatu aurretik, berrikusi eta onartu bere baldintzak.",
+      "appTosAcceptLabel": "{app} aplikazioaren baldintzak irakurri eta onartzen ditut.",
+      "gateCancel": "Utzi"
+    },
     "userAccount": {
       "title": "Nire kontua",
       "description": "Kudeatu zure datuak, aldatu pasahitza eta berrikusi aplikazio honi loturiko gertakariak.",

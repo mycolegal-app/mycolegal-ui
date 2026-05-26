@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertCircle, CreditCard, ExternalLink, Gift, Loader2 } from "lucide-react";
+import { marked } from "marked";
 import { useI18n } from "../i18n/i18n-context";
 import { apiErrorMessage } from "../../lib/api-error";
 import { useIsOrgAdmin } from "../../hooks/use-is-org-admin";
@@ -51,6 +52,10 @@ export function BillingPanel({ currentApp }: BillingPanelProps) {
   const [items, setItems] = useState<BillingItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  // Modal de condiciones de app (APP_TOS) antes de la contratación.
+  const [terms, setTerms] = useState<{ app: string; name: string; title: string; body: string } | null>(null);
+  const [termsChecked, setTermsChecked] = useState(false);
+  const [termsBusy, setTermsBusy] = useState(false);
 
   const locale = language === "CAT" || language === "VAL" ? "ca-ES" : language === "GAL" ? "gl-ES" : language === "EUS" ? "eu-ES" : "es-ES";
 
@@ -123,6 +128,56 @@ export function BillingPanel({ currentApp }: BillingPanelProps) {
       setBusy(null);
     }
   }, [t]);
+
+  /**
+   * Inicia la contratación. Si la app tiene condiciones (`APP_TOS`) publicadas,
+   * abre primero el modal de aceptación; si no, va directo al checkout. Auth es
+   * la fuente de la versión vigente; el proxy `/api/legal/*` la sirve.
+   */
+  const startCheckout = useCallback(
+    async (app: string, name: string) => {
+      setBusy(app);
+      try {
+        const res = await fetch(`/api/legal/current?kind=APP_TOS&appSlug=${encodeURIComponent(app)}&language=${language}`);
+        if (res.ok) {
+          const doc = await res.json();
+          setTermsChecked(false);
+          setTerms({ app, name, title: doc.title, body: doc.body });
+          return; // el checkout continúa al aceptar (confirmTermsAndCheckout)
+        }
+      } catch {
+        // si no se puede comprobar las condiciones, no bloqueamos el checkout
+      } finally {
+        setBusy(null);
+      }
+      void action(app, "checkout");
+    },
+    [language, action],
+  );
+
+  /** Registra la aceptación del APP_TOS y continúa al checkout de Stripe. */
+  const confirmTermsAndCheckout = useCallback(async () => {
+    if (!terms) return;
+    setTermsBusy(true);
+    try {
+      const res = await fetch("/api/legal/accept-app-tos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ appSlug: terms.app }),
+      });
+      if (!res.ok) {
+        setError(t("ui.legal.gateError"));
+        return;
+      }
+      const app = terms.app;
+      setTerms(null);
+      void action(app, "checkout");
+    } catch {
+      setError(t("ui.legal.gateError"));
+    } finally {
+      setTermsBusy(false);
+    }
+  }, [terms, t, action]);
 
   const ordered = useMemo(() => {
     if (!items) return [];
@@ -226,7 +281,7 @@ export function BillingPanel({ currentApp }: BillingPanelProps) {
                     {t("ui.billing.manage")}
                   </Button>
                 ) : (
-                  <Button size="sm" disabled={busy === it.app} onClick={() => action(it.app, "checkout")}>
+                  <Button size="sm" disabled={busy === it.app} onClick={() => startCheckout(it.app, it.name)}>
                     {busy === it.app ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : it.courtesy ? <Gift className="mr-2 h-4 w-4" /> : <CreditCard className="mr-2 h-4 w-4" />}
                     {t("ui.billing.subscribe")}
                   </Button>
@@ -236,6 +291,44 @@ export function BillingPanel({ currentApp }: BillingPanelProps) {
           </Card>
         );
       })}
+
+      {terms && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4 print:hidden"
+        >
+          <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="shrink-0 border-b border-mc-neutral-200 px-6 py-4">
+              <h2 className="text-lg font-bold text-mc-slate-900">{t("ui.legal.appTosTitle")}</h2>
+              <p className="mt-1 text-sm text-mc-slate-500">{t("ui.legal.appTosIntro", { app: terms.name })}</p>
+            </div>
+            <div className="flex-1 overflow-y-auto px-6 py-5">
+              <div className="legal-prose" dangerouslySetInnerHTML={{ __html: marked.parse(terms.body || "") as string }} />
+            </div>
+            <div className="shrink-0 space-y-3 border-t border-mc-neutral-200 px-6 py-4">
+              <label className="flex items-start gap-2.5 text-sm text-mc-slate-700">
+                <input
+                  type="checkbox"
+                  checked={termsChecked}
+                  onChange={(e) => setTermsChecked(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0"
+                />
+                <span>{t("ui.legal.appTosAcceptLabel", { app: terms.name })}</span>
+              </label>
+              <div className="flex items-center justify-end gap-3">
+                <Button variant="outline" size="sm" disabled={termsBusy} onClick={() => setTerms(null)}>
+                  {t("ui.legal.gateCancel")}
+                </Button>
+                <Button size="sm" disabled={!termsChecked || termsBusy} onClick={confirmTermsAndCheckout}>
+                  {termsBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  {termsBusy ? t("ui.legal.gateSubmitting") : t("ui.legal.gateContinue")}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

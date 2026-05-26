@@ -47,6 +47,18 @@
       "bannerExiting": "Saíndo…",
       "toastError": "Non se puido iniciar a suplantación"
     },
+    "legal": {
+      "gateTitle": "Termos actualizados",
+      "gateIntro": "Para continuar, revisa e acepta os seguintes documentos.",
+      "gateAcceptLabel": "Lin e acepto os documentos anteriores.",
+      "gateContinue": "Aceptar e continuar",
+      "gateSubmitting": "Gardando…",
+      "gateError": "Non se puido rexistrar a aceptación. Téntao de novo.",
+      "appTosTitle": "Condicións da aplicación",
+      "appTosIntro": "Antes de contratar {app}, revisa e acepta as súas condicións.",
+      "appTosAcceptLabel": "Lin e acepto as condicións de {app}.",
+      "gateCancel": "Cancelar"
+    },
     "userAccount": {
       "title": "A miña conta",
       "description": "Xestiona os teus datos, cambia a túa contrasinal e revisa as incidencias relacionadas con esta aplicación.",

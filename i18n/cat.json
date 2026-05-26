@@ -47,6 +47,18 @@
       "bannerExiting": "Sortint…",
       "toastError": "No s'ha pogut iniciar la suplantació"
     },
+    "legal": {
+      "gateTitle": "Termes actualitzats",
+      "gateIntro": "Per continuar, revisa i accepta els documents següents.",
+      "gateAcceptLabel": "He llegit i accepto els documents anteriors.",
+      "gateContinue": "Acceptar i continuar",
+      "gateSubmitting": "Desant…",
+      "gateError": "No s'ha pogut registrar l'acceptació. Torna-ho a provar.",
+      "appTosTitle": "Condicions de l'aplicació",
+      "appTosIntro": "Abans de contractar {app}, revisa i accepta les seves condicions.",
+      "appTosAcceptLabel": "He llegit i accepto les condicions de {app}.",
+      "gateCancel": "Cancel·lar"
+    },
     "userAccount": {
       "title": "El meu compte",
       "description": "Gestiona les teves dades, canvia la contrasenya i revisa les incidències relacionades amb aquesta aplicació.",

@@ -47,6 +47,18 @@
       "bannerExiting": "Saliendo…",
       "toastError": "No se pudo iniciar la impersonación"
     },
+    "legal": {
+      "gateTitle": "Términos actualizados",
+      "gateIntro": "Para continuar, revisa y acepta los siguientes documentos.",
+      "gateAcceptLabel": "He leído y acepto los documentos anteriores.",
+      "gateContinue": "Aceptar y continuar",
+      "gateSubmitting": "Guardando…",
+      "gateError": "No se ha podido registrar la aceptación. Inténtalo de nuevo.",
+      "appTosTitle": "Condiciones de la aplicación",
+      "appTosIntro": "Antes de contratar {app}, revisa y acepta sus condiciones.",
+      "appTosAcceptLabel": "He leído y acepto las condiciones de {app}.",
+      "gateCancel": "Cancelar"
+    },
     "userAccount": {
       "title": "Mi cuenta",
       "description": "Gestiona tus datos, cambia tu contraseña y revisa las incidencias relacionadas con esta aplicación.",

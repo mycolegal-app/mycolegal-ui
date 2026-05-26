@@ -8,6 +8,7 @@ import { IdleTimeout } from "./idle-timeout";
 import { AppSwitcherBar } from "./app-switcher-bar";
 import { AppInfoButton } from "../shared/app-info-button";
 import { ImpersonationBanner } from "../shared/impersonation-banner";
+import { LegalGate } from "../shared/legal-gate";
 import {
   DefaultHelpButton,
   DefaultSearchButton,
@@ -241,6 +242,9 @@ export default function AppShell({
         </AppShellInner>
       </div>
       {overlays}
+      {/* Gate de re-aceptación de términos: se superpone si hay documentos
+          legales vigentes sin aceptar. Fail-safe (no bloquea si no hay proxy). */}
+      <LegalGate />
       <IdleTimeout
         timeoutMinutes={inactivityTimeout}
         onContinue={async () => {

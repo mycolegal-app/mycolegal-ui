@@ -101,3 +101,19 @@
     }
   }
 }
+
+/* Markdown legal text (LegalGate, legal pages). No dependemos de
+   @tailwindcss/typography; estilos mínimos y legibles. */
+.legal-prose { color: #334155; font-size: 0.875rem; line-height: 1.7; }
+.legal-prose h1 { font-size: 1.5rem; font-weight: 700; color: #0f172a; margin: 0 0 0.75rem; line-height: 1.25; }
+.legal-prose h2 { font-size: 1.125rem; font-weight: 700; color: #0f172a; margin: 1.5rem 0 0.5rem; }
+.legal-prose h3 { font-size: 1rem; font-weight: 600; color: #1e293b; margin: 1.25rem 0 0.4rem; }
+.legal-prose p { margin: 0 0 0.85rem; }
+.legal-prose ul, .legal-prose ol { margin: 0 0 0.85rem 1.25rem; list-style: revert; }
+.legal-prose li { margin-bottom: 0.3rem; }
+.legal-prose a { color: #b09a6e; text-decoration: underline; }
+.legal-prose strong { font-weight: 600; color: #0f172a; }
+.legal-prose table { width: 100%; border-collapse: collapse; margin: 0.85rem 0; font-size: 0.8rem; }
+.legal-prose th, .legal-prose td { border: 1px solid #e2e8f0; padding: 0.4rem 0.6rem; text-align: left; }
+.legal-prose th { background: #f8fafc; font-weight: 600; }
+.legal-prose hr { margin: 1.5rem 0; border: 0; border-top: 1px solid #e2e8f0; }
