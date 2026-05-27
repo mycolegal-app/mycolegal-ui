@@ -5,6 +5,17 @@
 
 ---
 
+## 1.87.0 — Factory de rutas /api/auth/* (2026-05-27)
+
+`server/auth-routes.ts`: `createAuthRoutes(config)` — hermano de
+`createIncidentsRoutes`/`createNotificationsRoutes`. Empaqueta los handlers de
+`/api/auth/*` que son funcionalmente idénticos en las 10 apps de usuario:
+`changePassword`, `impersonate`, `impersonateStop`, `profile` (GET/PATCH),
+`refresh`, `sessionTimeout`, `logout`. Reusa `auth-proxy`/`impersonation`/`language`.
+Cada app instancia una vez en `src/lib/auth-server.ts` y re-exporta `POST`/`GET`/`PATCH`
+desde cada `route.ts`. `login`/`login/select-org` (org-select) y `me`
+(ROLE_PERMISSIONS) se quedan in-app por ser específicos de cada app.
+
 ## 1.76.0 — Conector vía daemon loopback (transporte A) (2026-05-22)
 
 `lib/local-integration.ts`: el transporte del conector pasa de extensión +
