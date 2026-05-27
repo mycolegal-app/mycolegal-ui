@@ -172,7 +172,15 @@ export function IncidentThread({
   const [files, setFiles] = useState<IncidentThreadAttachment[]>([]);
   const [uploadingFile, setUploadingFile] = useState(false);
   const docInputRef = useRef<HTMLInputElement>(null);
-  const canAttach = viewerRole === "superadmin";
+  // Subir archivos (a GCS) lo puede hacer soporte y también el reporter
+  // (usuario) al responder; el guard `!readOnly` evita que un gestor que solo
+  // observa el hilo de otro suba archivos.
+  const canAttachFiles = viewerRole === "superadmin" || viewerRole === "user";
+  // La captura/imagen INLINE de la respuesta solo se persiste para soporte (el
+  // backend ignora el screenshot inline en mensajes de usuario), así que ese
+  // control sigue siendo superadmin-only. El usuario adjunta imágenes como
+  // archivo (sección de adjuntos), no inline.
+  const canInlineScreenshot = viewerRole === "superadmin";
 
   const fetchMessages = useCallback(async () => {
     setError(null);
@@ -218,7 +226,7 @@ export function IncidentThread({
     setError(null);
     try {
       const payload: { body: string; screenshot?: string } = { body };
-      if (canAttach && attachment) payload.screenshot = attachment;
+      if (canInlineScreenshot && attachment) payload.screenshot = attachment;
       const res = await fetch(`${apiBase}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -238,7 +246,7 @@ export function IncidentThread({
     } finally {
       setPosting(false);
     }
-  }, [apiBase, attachment, canAttach, draft, fetchMessages, onRefresh, t]);
+  }, [apiBase, attachment, canInlineScreenshot, draft, fetchMessages, onRefresh, t]);
 
   const ingestImageBlob = useCallback(
     async (blob: Blob) => {
@@ -271,13 +279,13 @@ export function IncidentThread({
 
   const handlePaste = useCallback(
     (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
-      if (!canAttach) return;
+      if (!canInlineScreenshot) return;
       const blob = imageBlobFromPaste(e.nativeEvent);
       if (!blob) return;
       e.preventDefault();
       void ingestImageBlob(blob);
     },
-    [canAttach, ingestImageBlob],
+    [canInlineScreenshot, ingestImageBlob],
   );
 
   const handleFileChange = useCallback(
@@ -504,15 +512,16 @@ export function IncidentThread({
       </div>
 
       {/* Archivos adjuntos (documentos en GCS): distintos del JPEG inline.
-          Visible para todos los que pueden leer el hilo; subida solo soporte. */}
-      {(files.length > 0 || (canAttach && !readOnly)) && (
+          Visible para todos los que pueden leer el hilo; suben soporte y el
+          propio reporter (no un gestor que solo observa). */}
+      {(files.length > 0 || (canAttachFiles && !readOnly)) && (
         <div className="rounded-lg border border-gray-200 bg-white px-4 py-3">
           <div className="mb-2 flex items-center justify-between gap-2">
             <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-gray-500">
               <Paperclip className="h-3.5 w-3.5" />
               {t("ui.incidentThread.filesHeading")}
             </p>
-            {canAttach && !readOnly && (
+            {canAttachFiles && !readOnly && (
               <>
                 <input
                   ref={docInputRef}
@@ -622,7 +631,7 @@ export function IncidentThread({
             }
             disabled={posting}
           />
-          {canAttach && attachment && (
+          {canInlineScreenshot && attachment && (
             <div className="flex items-center gap-3 rounded-md border border-gray-200 bg-gray-50 p-2">
               <img
                 src={attachment}
@@ -644,7 +653,7 @@ export function IncidentThread({
             </div>
           )}
           <div className="flex flex-wrap items-center justify-end gap-2">
-            {canAttach && (
+            {canInlineScreenshot && (
               <>
                 <input
                   ref={fileInputRef}

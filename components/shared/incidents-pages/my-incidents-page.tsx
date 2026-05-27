@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { NavLink as Link } from "../nav-link";
-import { Loader2, Inbox, Plus } from "lucide-react";
+import { Loader2, Inbox, Plus, ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react";
 import { cn } from "../../../lib/utils";
 import { PageTitle } from "../../layout/page-title";
 import { useI18n } from "../../i18n/i18n-context";
@@ -46,6 +46,40 @@ function formatWhen(iso: string): string {
   });
 }
 
+/** Columnas ordenables (servidor). Se mapean 1:1 con el enum del backend. */
+type SortField = "number" | "appSlug" | "status" | "lastActivityAt";
+
+/** Cabecera clicable con indicador de orden (↕ inactiva, ↑/↓ activa). */
+function SortableTh({
+  field,
+  label,
+  sortBy,
+  sortOrder,
+  onSort,
+}: {
+  field: SortField;
+  label: string;
+  sortBy: SortField;
+  sortOrder: "asc" | "desc";
+  onSort: (field: SortField) => void;
+}) {
+  const active = sortBy === field;
+  const Icon = !active ? ChevronsUpDown : sortOrder === "asc" ? ArrowUp : ArrowDown;
+  return (
+    <th className="px-4 py-2">
+      <button
+        type="button"
+        onClick={() => onSort(field)}
+        className="inline-flex items-center gap-1 uppercase tracking-wide hover:text-gray-800"
+        aria-label={label}
+      >
+        {label}
+        <Icon className={cn("h-3.5 w-3.5", active ? "text-gray-700" : "text-gray-300")} />
+      </button>
+    </th>
+  );
+}
+
 /**
  * User-facing list of incidents. A plain user sees their own; an org manager
  * (superadmin / org_admin / admin:users) defaults to the org-wide view (all
@@ -69,14 +103,17 @@ export function MyIncidentsPage({ onReport }: MyIncidentsPageProps = {}) {
   const [canManage, setCanManage] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Orden por defecto = el del backend (actividad más reciente primero).
+  const [sortBy, setSortBy] = useState<SortField>("lastActivityAt");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   const loadScope = useCallback(
-    async (s: Scope) => {
+    async (s: Scope, sBy: SortField, sOrder: "asc" | "desc") => {
       setLoading(true);
       setError(null);
       try {
         const ep = s === "org" ? "/api/incidents/org" : "/api/incidents/mine";
-        const res = await fetch(`${ep}?limit=100`, { credentials: "include" });
+        const res = await fetch(`${ep}?limit=100&sortBy=${sBy}&sortOrder=${sOrder}`, { credentials: "include" });
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
           throw new Error(
@@ -143,9 +180,22 @@ export function MyIncidentsPage({ onReport }: MyIncidentsPageProps = {}) {
   const onScope = useCallback(
     (s: Scope) => {
       setScope(s);
-      void loadScope(s);
+      void loadScope(s, sortBy, sortOrder);
     },
-    [loadScope],
+    [loadScope, sortBy, sortOrder],
+  );
+
+  // Al pulsar una cabecera: si ya es la columna activa alterna asc/desc; si es
+  // otra, arranca ascendente. Recarga el scope actual con el nuevo orden.
+  const onSort = useCallback(
+    (field: SortField) => {
+      const nextOrder: "asc" | "desc" =
+        field === sortBy ? (sortOrder === "asc" ? "desc" : "asc") : "asc";
+      setSortBy(field);
+      setSortOrder(nextOrder);
+      void loadScope(scope, field, nextOrder);
+    },
+    [scope, sortBy, sortOrder, loadScope],
   );
 
   const isOrg = scope === "org";
@@ -212,12 +262,12 @@ export function MyIncidentsPage({ onReport }: MyIncidentsPageProps = {}) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 text-left text-xs uppercase tracking-wide text-gray-500">
-                <th className="px-4 py-2">#</th>
+                <SortableTh field="number" label="#" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
                 <th className="px-4 py-2">{t("ui.myIncidents.colDescription")}</th>
                 {isOrg && <th className="px-4 py-2">{t("ui.myIncidents.colReporter")}</th>}
-                <th className="px-4 py-2">{t("ui.myIncidents.colApp")}</th>
-                <th className="px-4 py-2">{t("ui.myIncidents.colStatus")}</th>
-                <th className="px-4 py-2">{t("ui.myIncidents.colLastActivity")}</th>
+                <SortableTh field="appSlug" label={t("ui.myIncidents.colApp")} sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
+                <SortableTh field="status" label={t("ui.myIncidents.colStatus")} sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
+                <SortableTh field="lastActivityAt" label={t("ui.myIncidents.colLastActivity")} sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
               </tr>
             </thead>
             <tbody>
