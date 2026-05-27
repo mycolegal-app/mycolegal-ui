@@ -54,7 +54,7 @@ interface Msg {
   citas?: Cita[];
   citasAyuda?: AyudaCita[];
   /** Skill que produjo la respuesta (badge): doctrina | ayuda | agente. */
-  skill?: "doctrina" | "ayuda" | "agente";
+  skill?: "doctrina" | "ayuda" | "agente" | "fuera";
   sinResultado?: boolean;
   error?: boolean;
 }
@@ -142,10 +142,35 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
   const [conversaciones, setConversaciones] = useState<ConversacionResumen[] | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [viewer, setViewer] = useState<ViewerState | null>(null);
+  const [corpus, setCorpus] = useState<{ total: number; hasDoctrina: boolean; hasDatos: boolean } | null>(
+    null,
+  );
   const threadRef = useRef<HTMLDivElement>(null);
 
   // Base de los endpoints de resoluciones (quita el sufijo `/ask`).
   const baseUrl = askUrl.replace(/\/ask$/, "");
+
+  // Capacidades de MycoBot en esta app/org (welcome + chip): total del corpus,
+  // hasDoctrina (org con Consultor) y hasDatos (app con tools del despacho).
+  // Cacheado en el server; `appSlug` viaja también vía el proxy de otras apps.
+  useEffect(() => {
+    let alive = true;
+    fetch(`${baseUrl}/stats?appSlug=${encodeURIComponent(appSlug ?? "")}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (alive && j?.data) {
+          setCorpus({
+            total: Number(j.data.resolucionesTotal) || 0,
+            hasDoctrina: !!j.data.hasDoctrina,
+            hasDatos: !!j.data.hasDatos,
+          });
+        }
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [baseUrl, appSlug]);
 
   // Hidrata el estado abierto/colapsado (por defecto colapsado).
   useEffect(() => {
@@ -170,6 +195,27 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
       const q = pregunta.trim();
       if (!q || loading) return;
       setView("chat");
+
+      // Comando especial /help (alias /ayuda): ayuda sobre el propio MycoBot.
+      // Se resuelve EN CLIENTE (i18n, sin llamar al backend ni gastar tokens).
+      if (q === "/help" || q === "/ayuda") {
+        setInput("");
+        const caps: string[] = [];
+        if (corpus?.hasDoctrina) caps.push(`- ${t("ui.mycobot.capDoctrina", { count: corpus.total.toLocaleString() })}`);
+        caps.push(`- ${t("ui.mycobot.capAyuda")}`);
+        if (corpus?.hasDatos) caps.push(`- ${t("ui.mycobot.capDatos")}`);
+        const md = [
+          `**${t("ui.mycobot.title")}**`,
+          t("ui.mycobot.welcomeIntro"),
+          caps.join("\n"),
+          t("ui.mycobot.helpScope"),
+          t("ui.mycobot.helpCite"),
+          t("ui.mycobot.helpCommands"),
+        ].join("\n\n");
+        setMessages((m) => [...m, { role: "bot", text: md }]);
+        return;
+      }
+
       setInput("");
       setMessages((m) => [...m, { role: "user", text: q }]);
       setLoading(true);
@@ -211,7 +257,7 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
         setLoading(false);
       }
     },
-    [askUrl, conversacionId, loading, t],
+    [askUrl, conversacionId, loading, t, corpus],
   );
 
   // Empieza un hilo nuevo (no borra el historial persistido en el servidor).
@@ -334,6 +380,15 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
   // se mantiene el visor in-rail (con su enlace "abrir ficha completa" a Consultor).
   const inConsultor = consultorUrl === "";
 
+  // Ejemplos clicables del welcome (rellenan + lanzan). Dependen de las
+  // capacidades de la app/org: doctrina (corpus), ayuda (siempre) y datos del
+  // despacho (solo apps agénticas, con su pregunta específica por slug).
+  const welcomeChips: string[] = [];
+  if (corpus?.hasDoctrina) welcomeChips.push(t("ui.mycobot.chipDoctrina"));
+  welcomeChips.push(t("ui.mycobot.chipAyuda"));
+  if (corpus?.hasDatos && appSlug === "notaria") welcomeChips.push(t("ui.mycobot.chipDatosNotaria"));
+  else if (corpus?.hasDatos && appSlug === "legifirma") welcomeChips.push(t("ui.mycobot.chipDatosLegifirma"));
+
   return (
     <>
       {/* Handle colapsado: borde derecho, vertical */}
@@ -385,6 +440,14 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
               <ChevronRight className="h-5 w-5" />
             </button>
           </header>
+
+          {/* Chip persistente: base de doctrina disponible (solo si la org tiene Consultor). */}
+          {corpus?.hasDoctrina && (
+            <div className="flex items-center gap-1.5 border-b bg-cyan-50 px-4 py-1.5 text-[11px] text-cyan-800">
+              <Scale className="h-3.5 w-3.5 shrink-0 text-cyan-600" />
+              <span>{t("ui.mycobot.corpusBadge", { count: corpus.total.toLocaleString() })}</span>
+            </div>
+          )}
 
           {/* ── Historial de conversaciones ─────────────────────────── */}
           {view === "history" && (
@@ -519,7 +582,50 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
             <>
               <div ref={threadRef} className="flex-1 space-y-3 overflow-y-auto p-4">
                 {messages.length === 0 && (
-                  <p className="px-1 py-6 text-center text-sm text-gray-500">{t("ui.mycobot.emptyHint")}</p>
+                  <div className="px-1 py-4 text-sm text-gray-600">
+                    <p className="font-semibold text-gray-800">{t("ui.mycobot.welcomeTitle")}</p>
+                    <p className="mt-1.5 text-[13px] leading-relaxed text-gray-500">
+                      {t("ui.mycobot.welcomeIntro")}
+                    </p>
+                    <ul className="mt-2.5 space-y-1.5 text-[13px] text-gray-700">
+                      {corpus?.hasDoctrina && (
+                        <li className="flex items-start gap-1.5">
+                          <Scale className="mt-0.5 h-3.5 w-3.5 shrink-0 text-cyan-600" />
+                          <span>{t("ui.mycobot.capDoctrina", { count: corpus.total.toLocaleString() })}</span>
+                        </li>
+                      )}
+                      <li className="flex items-start gap-1.5">
+                        <BookOpen className="mt-0.5 h-3.5 w-3.5 shrink-0 text-cyan-600" />
+                        <span>{t("ui.mycobot.capAyuda")}</span>
+                      </li>
+                      {corpus?.hasDatos && (
+                        <li className="flex items-start gap-1.5">
+                          <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-cyan-600" />
+                          <span>{t("ui.mycobot.capDatos")}</span>
+                        </li>
+                      )}
+                    </ul>
+                    {welcomeChips.length > 0 && (
+                      <>
+                        <p className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                          {t("ui.mycobot.welcomeTry")}
+                        </p>
+                        <div className="mt-1.5 flex flex-wrap gap-1.5">
+                          {welcomeChips.map((chip, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() => void ask(chip)}
+                              className="rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-left text-[12px] text-cyan-800 hover:bg-cyan-100"
+                            >
+                              {chip}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                    <p className="mt-3 text-[11px] text-gray-400">{t("ui.mycobot.helpHint")}</p>
+                  </div>
                 )}
                 {messages.map((m, i) => (
                   <div key={i} className={m.role === "user" ? "flex justify-end" : "flex justify-start"}>
@@ -530,16 +636,19 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
                           : `max-w-[92%] rounded-lg px-3 py-2 text-sm ${m.error ? "bg-red-50 text-red-700" : "bg-gray-100 text-gray-800"}`
                       }
                     >
-                      {m.role === "bot" && !m.error && m.skill && (
+                      {m.role === "bot" && !m.error && m.skill && m.skill !== "fuera" && (
                         <span className="mb-1 inline-block rounded bg-gray-200 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-gray-500">
                           {t(`ui.mycobot.skill_${m.skill}`)}
                         </span>
                       )}
                       {m.role === "bot" && !m.error ? (
-                        // Respuesta del bot: Markdown (negritas, listas, encabezados…).
+                        // Respuesta del bot: Markdown. Si está fuera de ámbito (skill="fuera"),
+                        // se muestra el mensaje i18n fijo en vez del texto del backend.
                         <div
                           className="leading-relaxed [&_a]:text-cyan-700 [&_a]:underline [&_code]:rounded [&_code]:bg-gray-200 [&_code]:px-1 [&_h1]:text-sm [&_h1]:font-bold [&_h2]:font-semibold [&_h3]:font-semibold [&_li]:mt-0.5 [&_ol]:my-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-4"
-                          dangerouslySetInnerHTML={{ __html: renderMarkdown(m.text) }}
+                          dangerouslySetInnerHTML={{
+                            __html: renderMarkdown(m.skill === "fuera" ? t("ui.mycobot.outOfScope") : m.text),
+                          }}
                         />
                       ) : (
                         <p className="whitespace-pre-wrap leading-relaxed">{m.text}</p>

@@ -777,7 +777,6 @@
       "title": "MycoBot",
       "subtitle": "Ebazpenen laguntzailea",
       "collapse": "Itxi panela",
-      "emptyHint": "Galdetu DGRNren ebazpenei, doktrinari edo jurisprudentziari buruz. Beti aipatuko dut iturria.",
       "sources": "Iturriak",
       "thinking": "Pentsatzen…",
       "placeholder": "Galdetu ebazpenei, doktrinari buruz…",
@@ -796,7 +795,23 @@
       "sourcesManual": "Eskuliburuan",
       "skill_doctrina": "Doktrina",
       "skill_ayuda": "Laguntza",
-      "skill_agente": "Datuak"
+      "skill_agente": "Datuak",
+      "outOfScope": "Notariotza-, erregistro- edo zerga-doktrinan eta MyCoLegal aplikazioen erabileran baino ezin dizut lagundu.",
+      "corpusBadge": "{count} ebazpen doktrina-basean",
+      "welcomeTitle": "Kaixo, MycoBot naiz 👋",
+      "welcomeIntro": "Hauetan lagun diezazuket:",
+      "capDoctrina": "Doktrina: DGRN/DGSJFPren {count} ebazpenen artean bilatzen dut eta iturriak aipatuz erantzuten dut.",
+      "capAyuda": "MyCoLegal aplikazioen erabilera: nola funtzionatzen duten eta gauza bakoitza non dagoen.",
+      "capDatos": "Zure bulegoaren datuak: aplikazio honetako zure espedienteak eta jardunak kontsultatzen ditut.",
+      "welcomeTry": "Saiatu galdetzen:",
+      "helpHint": "Idatzi /help edonoiz laguntza hau berriro ikusteko.",
+      "helpScope": "Gai hauetara mugatzen naiz; ez naiz erabilera orokorreko laguntzailea.",
+      "helpCite": "Doktrina erabiltzen dudanean, erantzun bakoitzak aipatutako ebazpenak ditu: sakatu bat fitxa irekitzeko.",
+      "helpCommands": "Komando erabilgarria: /help laguntza hau ikusteko.",
+      "chipDoctrina": "Onartu gabeko hipoteka unilaterala inskribagarria al da?",
+      "chipAyuda": "Nola funtzionatzen du aplikazio honek?",
+      "chipDatosNotaria": "Zenbat espediente ditut iraungita?",
+      "chipDatosLegifirma": "Zenbat jardun ditut kobratzeke?"
     }
   }
 }

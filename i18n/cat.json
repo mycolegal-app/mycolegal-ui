@@ -777,7 +777,6 @@
       "title": "MycoBot",
       "subtitle": "Assistent de resolucions",
       "collapse": "Tancar el panell",
-      "emptyHint": "Pregunta'm sobre resolucions de la DGRN, doctrina o jurisprudència. Citaré sempre la font.",
       "sources": "Fonts",
       "thinking": "Pensant…",
       "placeholder": "Pregunta sobre resolucions, doctrina…",
@@ -796,7 +795,23 @@
       "sourcesManual": "Al manual",
       "skill_doctrina": "Doctrina",
       "skill_ayuda": "Ajuda",
-      "skill_agente": "Dades"
+      "skill_agente": "Dades",
+      "outOfScope": "Només puc ajudar-te amb doctrina notarial, registral o fiscal i amb l'ús de les aplicacions de MyCoLegal.",
+      "corpusBadge": "{count} resolucions a la base de doctrina",
+      "welcomeTitle": "Hola, soc en MycoBot 👋",
+      "welcomeIntro": "Això és en el que et puc ajudar:",
+      "capDoctrina": "Doctrina: cerco entre {count} resolucions de la DGRN/DGSJFP i responc citant les fonts.",
+      "capAyuda": "Ús de les aplicacions MyCoLegal: com funcionen i on és cada cosa.",
+      "capDatos": "Dades del teu despatx: consulto els teus expedients i actuacions en aquesta aplicació.",
+      "welcomeTry": "Prova de preguntar:",
+      "helpHint": "Escriu /help en qualsevol moment per tornar a veure aquesta ajuda.",
+      "helpScope": "Em limito a aquests temes; no soc un assistent d'ús general.",
+      "helpCite": "Quan faig servir doctrina, cada resposta inclou les resolucions citades: prem-ne una per obrir-ne la fitxa.",
+      "helpCommands": "Comanda disponible: /help per veure aquesta ajuda.",
+      "chipDoctrina": "És inscriptible una hipoteca unilateral no acceptada?",
+      "chipAyuda": "Com funciona aquesta aplicació?",
+      "chipDatosNotaria": "Quants expedients tinc vençuts?",
+      "chipDatosLegifirma": "Quantes actuacions pendents de cobrament?"
     }
   }
 }

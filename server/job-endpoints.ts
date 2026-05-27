@@ -38,12 +38,27 @@ export function jobEndpointInvokeUrl(selfUrl: string, key: string): string {
 }
 
 export interface JobHandlerCtx {
-  /** Cuerpo JSON de la invocación (defaultParams + override del schedule/run). */
+  /** Params de la invocación (defaultParams + override del schedule/run). */
   params: Record<string, unknown>;
+  /** Punto de reanudación del run troceado (null en el primer trozo). */
+  cursor: string | null;
   request: NextRequest;
 }
 
-/** Devuelve métricas (objeto JSON) que auth guarda en job_run.metrics. */
+/**
+ * Resultado de un trozo. Para tareas largas, devuelve este objeto: el motor
+ * reinvoca con el `cursor` hasta `done:true`, mostrando `progress` en vivo y
+ * acumulando `metrics` (delta por trozo). Para tareas cortas (one-shot), basta
+ * devolver un objeto plano de métricas (sin `done`): el motor lo trata como
+ * `done` en un solo trozo.
+ */
+export interface JobChunkResult {
+  done: boolean;
+  cursor?: string;
+  progress?: { message?: string; current?: number; total?: number };
+  metrics?: Record<string, unknown>;
+}
+
 export type JobHandler = (ctx: JobHandlerCtx) => Promise<unknown> | unknown;
 
 export interface JobEndpointDef {
@@ -92,6 +107,12 @@ export function createJobEndpointRoutes(config: JobEndpointsConfig) {
       });
       const payload = ticket.getPayload();
       if (!payload?.email || !payload.email_verified || !allowedSAs.has(payload.email)) {
+        // Log diagnóstico (servidor): qué SA llegó vs la(s) esperada(s). Sin esto,
+        // "Caller not authorized" no dice qué email poner en JOBS_CALLER_SA.
+        console.warn(
+          `[job-endpoints] caller rechazado: email=${payload?.email ?? '∅'} ` +
+            `verified=${payload?.email_verified ?? false} esperadas=[${[...allowedSAs].join(', ') || '∅ (JOBS_CALLER_SA vacío)'}]`,
+        );
         return { ok: false, status: 403, error: 'Caller not authorized' };
       }
       return { ok: true };
@@ -123,18 +144,27 @@ export function createJobEndpointRoutes(config: JobEndpointsConfig) {
     const auth = await verifyCaller(request, key);
     if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
+    // El motor invoca con envoltorio { params, cursor }. Compat: un cuerpo plano
+    // (sin esas claves) se trata como `params` directamente.
     let params: Record<string, unknown> = {};
+    let cursor: string | null = null;
     try {
       const body = (await request.json()) as unknown;
       if (body && typeof body === 'object' && !Array.isArray(body)) {
-        params = body as Record<string, unknown>;
+        const b = body as Record<string, unknown>;
+        if ('params' in b || 'cursor' in b) {
+          params = b.params && typeof b.params === 'object' && !Array.isArray(b.params) ? (b.params as Record<string, unknown>) : {};
+          cursor = typeof b.cursor === 'string' ? b.cursor : null;
+        } else {
+          params = b;
+        }
       }
     } catch {
       /* sin cuerpo / no-JSON: params vacíos */
     }
 
     try {
-      const result = await def.handler({ params, request });
+      const result = await def.handler({ params, cursor, request });
       return NextResponse.json(result ?? { ok: true });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
