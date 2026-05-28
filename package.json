@@ -1,6 +1,6 @@
 {
   "name": "@mycolegal-app/ui",
-  "version": "1.87.0",
+  "version": "1.88.0",
   "type": "module",
   "main": "./index.ts",
   "publishConfig": {
@@ -64,6 +64,7 @@
     "@tiptap/extension-link": "^2.10.3",
     "@tiptap/react": "^2.10.3",
     "@tiptap/starter-kit": "^2.10.3",
+    "@types/turndown": "^5.0.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -71,7 +72,8 @@
     "lucide-react": "^0.468.0",
     "marked": "^12.0.2",
     "tailwind-merge": "^2.6.0",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "turndown": "^7.2.4"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",

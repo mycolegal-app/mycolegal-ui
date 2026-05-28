@@ -551,9 +551,10 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
                       </h2>
                     )}
                     {viewer.detalle.resumen && (
-                      <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-gray-700">
-                        {viewer.detalle.resumen}
-                      </p>
+                      <div
+                        className="prose prose-sm max-w-none text-[13px] leading-relaxed text-gray-700 prose-p:my-1.5 prose-li:my-0"
+                        dangerouslySetInnerHTML={{ __html: renderMarkdown(viewer.detalle.resumen) }}
+                      />
                     )}
                     {viewer.detalle.body && (
                       <p className="whitespace-pre-wrap border-t pt-3 text-[13px] leading-relaxed text-gray-600">
