@@ -317,20 +317,28 @@ export function DataTable<TData, TValue>({
 
   function handlePageSizeChange(newSize: number) {
     setCurrentPageSize(newSize);
-    if (usingSource) {
-      remote.setPageSize(newSize);
-    } else if (manualPagination) {
-      onPaginationChange?.(0, newSize);
+    // Dispatch by who actually owns the pagination state, not by whether a
+    // remote source is configured. With a remote source under the threshold
+    // we run in client mode (TanStack owns the slice), so updating
+    // `remote.state.pageSize` is invisible — drive `table.setPageSize` instead.
+    if (manualPagination) {
+      if (usingSource) {
+        remote.setPageSize(newSize);
+      } else {
+        onPaginationChange?.(0, newSize);
+      }
     } else {
       table.setPageSize(newSize);
     }
   }
 
   function handlePageChange(nextIndex: number) {
-    if (usingSource) {
-      remote.setPageIndex(nextIndex);
-    } else if (manualPagination) {
-      onPaginationChange?.(nextIndex, currentPageSize);
+    if (manualPagination) {
+      if (usingSource) {
+        remote.setPageIndex(nextIndex);
+      } else {
+        onPaginationChange?.(nextIndex, currentPageSize);
+      }
     } else {
       table.setPageIndex(nextIndex);
     }
