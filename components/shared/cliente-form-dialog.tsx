@@ -44,6 +44,8 @@ export interface ClienteFormData {
   ciudad?: string | null;
   provincia?: string | null;
   notas?: string | null;
+  /** C7 — flag tri-estado retención IRPF (consumido por Legifirma). */
+  sujetoRetencion?: boolean | null;
 }
 
 interface ClienteFormDialogProps {
@@ -65,6 +67,8 @@ interface ClienteFormDialogProps {
   canDelete?: boolean;
   /** Optional NIF normalizer applied before POST/PATCH. */
   formatNif?: (nif: string) => string;
+  /** C7 — show the "Sujeto a retención IRPF" tri-state. Off by default. */
+  showSujetoRetencion?: boolean;
   onCreated?: (cliente: ClienteFormData) => void;
   onUpdated?: (cliente: ClienteFormData) => void;
   onDeleted?: (id: string) => void;
@@ -83,6 +87,8 @@ interface FormState {
   ciudad: string;
   provincia: string;
   notas: string;
+  /** C7 — "" = auto (derivar del tipo), "true" / "false" = override. */
+  sujetoRetencion: "" | "true" | "false";
 }
 
 const EMPTY: FormState = {
@@ -98,6 +104,7 @@ const EMPTY: FormState = {
   ciudad: "",
   provincia: "",
   notas: "",
+  sujetoRetencion: "",
 };
 
 export function ClienteFormDialog({
@@ -110,6 +117,7 @@ export function ClienteFormDialog({
   initialNif,
   canDelete,
   formatNif,
+  showSujetoRetencion,
   onCreated,
   onUpdated,
   onDeleted,
@@ -150,6 +158,8 @@ export function ClienteFormDialog({
             ciudad: c.ciudad ?? "",
             provincia: c.provincia ?? "",
             notas: c.notas ?? "",
+            sujetoRetencion:
+              c.sujetoRetencion === true ? "true" : c.sujetoRetencion === false ? "false" : "",
           });
         })
         .catch(() => setError(t("ui.clienteForm.errLoad")))
@@ -169,7 +179,7 @@ export function ClienteFormDialog({
   }
 
   function buildPayload() {
-    return {
+    const base: Record<string, unknown> = {
       tipo: form.tipo,
       nombre: form.nombre.trim(),
       apellidos: form.apellidos.trim() || null,
@@ -183,6 +193,11 @@ export function ClienteFormDialog({
       provincia: form.provincia.trim() || null,
       notas: form.notas.trim() || null,
     };
+    if (showSujetoRetencion) {
+      base.sujetoRetencion =
+        form.sujetoRetencion === "true" ? true : form.sujetoRetencion === "false" ? false : null;
+    }
+    return base;
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -388,6 +403,29 @@ export function ClienteFormDialog({
                   className="mt-1 w-full rounded-md border px-2 py-1.5 text-sm"
                 />
               </div>
+
+              {showSujetoRetencion && (
+                <div className="col-span-12">
+                  <Label htmlFor="sujetoRetencion">
+                    {t("ui.clienteForm.sujetoRetencion")}
+                  </Label>
+                  <select
+                    id="sujetoRetencion"
+                    value={form.sujetoRetencion}
+                    onChange={(e) =>
+                      update("sujetoRetencion", e.target.value as "" | "true" | "false")
+                    }
+                    className="mt-1 h-9 w-full rounded-md border px-2 text-sm"
+                  >
+                    <option value="">{t("ui.clienteForm.sujetoRetencionAuto")}</option>
+                    <option value="true">{t("ui.clienteForm.sujetoRetencionYes")}</option>
+                    <option value="false">{t("ui.clienteForm.sujetoRetencionNo")}</option>
+                  </select>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {t("ui.clienteForm.sujetoRetencionHint")}
+                  </p>
+                </div>
+              )}
             </div>
 
             <DialogFooter className="flex-row items-center justify-between gap-3 sm:justify-between">
