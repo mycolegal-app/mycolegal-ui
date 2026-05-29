@@ -490,6 +490,12 @@
       "kbdOpen": "obrir",
       "kbdClose": "tancar"
     },
+    "notarioPicker": {
+      "placeholder": "Cercar notari per nom, població o província...",
+      "searching": "Cercant…",
+      "noResults": "Cap notari del catàleg coincideix",
+      "noResultsAllowCustom": "No és al catàleg — es desarà el text tal qual"
+    },
     "clientPicker": {
       "placeholder": "Cercar client per nom o NIF...",
       "searching": "Cercant…",

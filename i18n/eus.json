@@ -490,6 +490,12 @@
       "kbdOpen": "ireki",
       "kbdClose": "itxi"
     },
+    "notarioPicker": {
+      "placeholder": "Bilatu notarioa izenez, herriz edo probintziaz...",
+      "searching": "Bilatzen…",
+      "noResults": "Katalogoko notariorik ez dator bat",
+      "noResultsAllowCustom": "Ez dago katalogoan — testua bere horretan gordeko da"
+    },
     "clientPicker": {
       "placeholder": "Bilatu bezeroa izenez edo NIF zenbakiz...",
       "searching": "Bilatzen…",

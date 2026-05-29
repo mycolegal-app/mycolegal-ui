@@ -499,6 +499,12 @@
       "createNew": "+ Crear nuevo cliente",
       "createInline": "Alta"
     },
+    "notarioPicker": {
+      "placeholder": "Buscar notario por nombre, población o provincia...",
+      "searching": "Buscando…",
+      "noResults": "Ningún notario en el catálogo coincide",
+      "noResultsAllowCustom": "No está en el catálogo — se guardará el texto tal cual"
+    },
     "clienteForm": {
       "titleCreate": "Nuevo cliente",
       "titleEdit": "Editar cliente",
