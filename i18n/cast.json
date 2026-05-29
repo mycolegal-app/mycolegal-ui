@@ -503,7 +503,9 @@
       "placeholder": "Buscar notario por nombre, población o provincia...",
       "searching": "Buscando…",
       "noResults": "Ningún notario en el catálogo coincide",
-      "noResultsAllowCustom": "No está en el catálogo — se guardará el texto tal cual"
+      "noResultsAllowCustom": "No está en el catálogo — se guardará el texto tal cual",
+      "obsoleto": "obsoleto",
+      "obsoletoWarning": "Este notario ya no figura en el censo actual del Notariado"
     },
     "clienteForm": {
       "titleCreate": "Nuevo cliente",

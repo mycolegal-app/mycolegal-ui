@@ -14,6 +14,8 @@ import { useEffect, useRef, useState } from "react";
 import { Search } from "lucide-react";
 import { useI18n } from "../i18n/i18n-context";
 
+export type NotarioFuente = "LEGACY" | "PORTAL_NOTARIADO" | "AMBOS" | "MANUAL";
+
 export interface NotarioOption {
   id: string;
   legacyIdNotari: string | null;
@@ -21,6 +23,14 @@ export interface NotarioOption {
   nombreCompleto: string | null;
   cg1: string | null;
   cg2: string | null;
+  correoCorporativo: string | null;
+  correoSecundario: string | null;
+  telefono: string | null;
+  fax: string | null;
+  direccionCompleta: string | null;
+  idiomas: string | null;
+  fuente: NotarioFuente;
+  ultimaSincPortalAt: string | null;
   provincia: { id: string; codigo: string | null; nombre: string } | null;
   poblacion: { id: string; nombre: string } | null;
 }
@@ -47,6 +57,12 @@ interface NotarioPickerProps {
   allowCustom?: boolean;
   /** Variante visual. `md` (default) para forms, `sm` para toolbars. */
   size?: "sm" | "md";
+  /**
+   * Fuente del notario actualmente seleccionado (si el caller la conoce).
+   * Si es "LEGACY", el picker pinta un aviso amarillo "no figura en el
+   * censo actual del portal notariado.org".
+   */
+  selectedFuente?: NotarioFuente | null;
 }
 
 const DEBOUNCE_MS = 300;
@@ -74,6 +90,7 @@ export function NotarioPicker({
   disabled,
   allowCustom = true,
   size = "md",
+  selectedFuente,
 }: NotarioPickerProps) {
   const { t } = useI18n();
   const resolvedPlaceholder = placeholder ?? t("ui.notarioPicker.placeholder");
@@ -171,6 +188,12 @@ export function NotarioPicker({
         />
       </div>
 
+      {selectedFuente === "LEGACY" && (
+        <p className="mt-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] text-amber-800">
+          ⚠ {t("ui.notarioPicker.obsoletoWarning")}
+        </p>
+      )}
+
       {open && (loading || options.length > 0 || searchedEmpty) && (
         <ul className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg">
           {loading && (
@@ -180,6 +203,7 @@ export function NotarioPicker({
           )}
           {!loading && options.map((n) => {
             const subtitle = getSubtitle(n);
+            const obsoleto = n.fuente === "LEGACY";
             return (
               <li key={n.id}>
                 <button
@@ -187,7 +211,16 @@ export function NotarioPicker({
                   onClick={() => handlePick(n)}
                   className="block w-full px-3 py-2 text-left text-xs hover:bg-gray-50"
                 >
-                  <div className="font-medium text-gray-900">{getDisplayName(n)}</div>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`font-medium ${obsoleto ? "text-amber-800" : "text-gray-900"}`}>
+                      {getDisplayName(n)}
+                    </span>
+                    {obsoleto && (
+                      <span className="rounded bg-amber-100 px-1 py-0.5 text-[9px] uppercase text-amber-800">
+                        {t("ui.notarioPicker.obsoleto")}
+                      </span>
+                    )}
+                  </div>
                   {subtitle && (
                     <div className="text-[10px] text-muted-foreground">{subtitle}</div>
                   )}

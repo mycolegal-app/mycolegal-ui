@@ -494,7 +494,9 @@
       "placeholder": "Bilatu notarioa izenez, herriz edo probintziaz...",
       "searching": "Bilatzen…",
       "noResults": "Katalogoko notariorik ez dator bat",
-      "noResultsAllowCustom": "Ez dago katalogoan — testua bere horretan gordeko da"
+      "noResultsAllowCustom": "Ez dago katalogoan — testua bere horretan gordeko da",
+      "obsoleto": "zaharkitua",
+      "obsoletoWarning": "Notario hau jada ez dago Notariadoaren egungo erroldan"
     },
     "clientPicker": {
       "placeholder": "Bilatu bezeroa izenez edo NIF zenbakiz...",
