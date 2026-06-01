@@ -606,7 +606,9 @@
       "settings": "Konfigurazioa",
       "manual": "Eskuliburua",
       "signOut": "Saioa itxi",
-      "openAccount": "Nire kontua ireki"
+      "openAccount": "Nire kontua ireki",
+      "collapse": "Menua tolestu",
+      "expand": "Menua zabaldu"
     },
     "idleTimeout": {
       "title": "Saioa iraungitzear",

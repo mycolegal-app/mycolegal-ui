@@ -606,7 +606,9 @@
       "settings": "Configuració",
       "manual": "Manual",
       "signOut": "Tancar sessió",
-      "openAccount": "Obrir el meu compte"
+      "openAccount": "Obrir el meu compte",
+      "collapse": "Replegar menú",
+      "expand": "Desplegar menú"
     },
     "idleTimeout": {
       "title": "Sessió a punt d'expirar",

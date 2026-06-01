@@ -606,7 +606,9 @@
       "settings": "Configuración",
       "manual": "Manual",
       "signOut": "Pechar sesión",
-      "openAccount": "Abrir a miña conta"
+      "openAccount": "Abrir a miña conta",
+      "collapse": "Contraer menú",
+      "expand": "Expandir menú"
     },
     "idleTimeout": {
       "title": "Sesión a piques de expirar",

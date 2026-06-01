@@ -164,6 +164,7 @@ export function MyAppsSection({ apps, currentSlug, label }: MyAppsSectionProps) 
         ariaLabel={resolvedLabel}
         open={open}
         onOpenChange={setOpen}
+        icon={<LayoutGrid className="h-4 w-4 shrink-0" />}
         trigger={
           <>
             <LayoutGrid className="h-4 w-4 shrink-0" />

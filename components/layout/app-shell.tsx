@@ -15,6 +15,11 @@ import {
 } from "../shared/header-default-buttons";
 import { useAuthFetchGuard } from "../../hooks/use-auth-fetch-guard";
 import { useI18n } from "../i18n/i18n-context";
+import { cn } from "../../lib/utils";
+import {
+  SidebarCollapseProvider,
+  useSidebarCollapse,
+} from "./sidebar-collapse-context";
 
 interface UserInfo {
   displayName: string;
@@ -83,13 +88,21 @@ function AppShellInner({
 }) {
   const { t } = useI18n();
   const { header, registerActionsSlot } = usePageHeader();
+  const { collapsed } = useSidebarCollapse();
 
   return (
     // h-screen (no min-h-screen) so the column has a bounded height. Together
     // with the outer wrapper's overflow-hidden, this is what makes <main>'s
     // own overflow-y-auto kick in instead of the body scrolling. Project rule:
     // pages must never scroll vertically — the inner element owns the scroll.
-    <div className="lg:ml-[220px] flex flex-1 flex-col h-screen min-h-0">
+    // El margen izquierdo sigue el ancho del sidebar (220px ↔ 64px en compacto);
+    // la transición lo mantiene sincronizado con el aside al plegar/desplegar.
+    <div
+      className={cn(
+        "flex flex-1 flex-col h-screen min-h-0 transition-[margin] duration-200",
+        collapsed ? "lg:ml-[64px]" : "lg:ml-[220px]",
+      )}
+    >
       {impersonationBanner}
       {appSwitcherBar}
       {header && (
@@ -209,6 +222,7 @@ export default function AppShell({
   }, []);
 
   const content = (
+    <SidebarCollapseProvider>
     <PageHeaderProvider>
       {/* h-screen + overflow-hidden cierra la altura del shell entero. Sin
           esto, el scroll cae en <body> y la regla "página sin scroll, hijo
@@ -274,6 +288,7 @@ export default function AppShell({
         }}
       />
     </PageHeaderProvider>
+    </SidebarCollapseProvider>
   );
 
   return providers ? providers(content) : content;
