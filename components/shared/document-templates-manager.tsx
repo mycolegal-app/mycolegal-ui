@@ -262,10 +262,18 @@ export function DocumentTemplatesManager({
       }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
+      // Rev 2026-05-30: abre directamente en pestaña nueva en lugar de
+      // embeber en iframe. El iframe + blob URL queda bloqueado por
+      // CSP/sandbox en algunos navegadores ("This content is blocked").
+      // Abrir el blob en una ventana propia evita el problema y es lo que
+      // espera el usuario al pulsar "Vista previa".
       setPreviewBlobUrl((prev) => {
         if (prev) URL.revokeObjectURL(prev);
         return url;
       });
+      // El blob URL se revoca cuando el componente cambia de plantilla o se
+      // desmonta; window.open lo conserva mientras la pestaña esté abierta.
+      window.open(url, "_blank", "noopener,noreferrer");
     } catch {
       onToast?.(t("ui.documentTemplates.errPreview"), "error");
     } finally {
@@ -510,29 +518,20 @@ export function DocumentTemplatesManager({
             </button>
           </div>
 
-          {/* Preview iframe */}
+          {/* Vista previa: se abre en pestaña nueva (rev 2026-05-30); se
+              mantiene un enlace "Reabrir" por si la pestaña se cerró. */}
           {previewBlobUrl && (
-            <div className="rounded border border-gray-200 overflow-hidden">
-              <div className="flex items-center justify-between bg-gray-50 border-b border-gray-200 px-2 py-1">
-                <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">
-                  {t("ui.documentTemplates.previewTitle")}
-                </span>
-                <a
-                  href={previewBlobUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-[10px] text-gray-600 hover:text-gray-900 underline"
-                >
-                  <ExternalLink className="h-3 w-3" />
-                  {t("ui.documentTemplates.openInNewTab")}
-                </a>
-              </div>
-              <iframe
-                src={previewBlobUrl}
-                title={t("ui.documentTemplates.previewTitle")}
-                className="w-full bg-white"
-                style={{ height: 560 }}
-              />
+            <div className="rounded border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600 flex items-center justify-between">
+              <span>{t("ui.documentTemplates.previewOpenedHint")}</span>
+              <a
+                href={previewBlobUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-gray-700 hover:text-gray-900 underline"
+              >
+                <ExternalLink className="h-3 w-3" />
+                {t("ui.documentTemplates.openInNewTab")}
+              </a>
             </div>
           )}
         </div>

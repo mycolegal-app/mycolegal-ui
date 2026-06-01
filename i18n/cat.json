@@ -459,6 +459,7 @@
       "previewLoading": "Generant vista prèvia...",
       "previewTitle": "Vista prèvia del PDF",
       "openInNewTab": "Obrir en una pestanya nova",
+      "previewOpenedHint": "La vista prèvia s'ha obert en una altra pestanya.",
       "saveBtn": "Desar",
       "saving": "Desant...",
       "resetBtn": "Restaurar per defecte",

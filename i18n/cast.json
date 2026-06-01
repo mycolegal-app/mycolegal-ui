@@ -459,6 +459,7 @@
       "previewLoading": "Generando preview...",
       "previewTitle": "Vista previa del PDF",
       "openInNewTab": "Abrir en nueva pestaña",
+      "previewOpenedHint": "La vista previa se ha abierto en otra pestaña.",
       "saveBtn": "Guardar",
       "saving": "Guardando...",
       "resetBtn": "Restaurar por defecto",

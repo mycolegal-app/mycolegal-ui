@@ -459,6 +459,7 @@
       "previewLoading": "Xerando vista previa...",
       "previewTitle": "Vista previa do PDF",
       "openInNewTab": "Abrir nunha nova lapela",
+      "previewOpenedHint": "A vista previa abriuse noutra lapela.",
       "saveBtn": "Gardar",
       "saving": "Gardando...",
       "resetBtn": "Restaurar por defecto",
