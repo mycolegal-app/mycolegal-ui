@@ -12,7 +12,7 @@ import { useI18n } from "../i18n/i18n-context";
 
 export interface RegistradorOption {
   id: string;
-  tipo: "MERCANTIL" | "PROPIEDAD";
+  tipo: "MERCANTIL" | "PROPIEDAD" | "BIENES_MUEBLES";
   codigo: string | null;
   nombre: string;
   poblacion: string | null;
@@ -23,7 +23,7 @@ interface RegistradorPickerProps {
   value: string;
   onChange: (registradorId: string, match: RegistradorOption | null) => void;
   /** Filtra el catálogo por tipo de registro. */
-  tipo?: "MERCANTIL" | "PROPIEDAD";
+  tipo?: "MERCANTIL" | "PROPIEDAD" | "BIENES_MUEBLES";
   /** Endpoint base. Default `/api/registradores`. */
   apiBase?: string;
   placeholder?: string;
