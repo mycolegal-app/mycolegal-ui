@@ -826,6 +826,12 @@
       "chipAyuda": "Nola funtzionatzen du aplikazio honek?",
       "chipDatosNotaria": "Zenbat espediente ditut iraungita?",
       "chipDatosLegifirma": "Zenbat jardun ditut kobratzeke?"
+    },
+    "registradorPicker": {
+      "placeholder": "Bilatu erregistroa izenez edo herriz…",
+      "searching": "Bilatzen…",
+      "noResults": "Ez da erregistrorik aurkitu",
+      "clearAria": "Kendu hautaketa"
     }
   }
 }

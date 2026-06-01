@@ -826,6 +826,12 @@
       "chipAyuda": "Com funciona aquesta aplicació?",
       "chipDatosNotaria": "Quants expedients tinc vençuts?",
       "chipDatosLegifirma": "Quantes actuacions pendents de cobrament?"
+    },
+    "registradorPicker": {
+      "placeholder": "Cercar registre per nom o població…",
+      "searching": "Cercant…",
+      "noResults": "No s'han trobat registres",
+      "clearAria": "Treure selecció"
     }
   }
 }

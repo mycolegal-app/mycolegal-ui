@@ -826,6 +826,12 @@
       "chipAyuda": "Como funciona esta aplicación?",
       "chipDatosNotaria": "Cantos expedientes teño vencidos?",
       "chipDatosLegifirma": "Cantas actuacións pendentes de cobramento?"
+    },
+    "registradorPicker": {
+      "placeholder": "Buscar rexistro por nome ou poboación…",
+      "searching": "Buscando…",
+      "noResults": "Non se atoparon rexistros",
+      "clearAria": "Quitar selección"
     }
   }
 }
