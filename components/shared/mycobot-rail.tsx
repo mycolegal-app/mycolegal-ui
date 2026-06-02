@@ -106,6 +106,12 @@ interface MycoBotRailProps {
 }
 
 const OPEN_STORAGE_KEY = "mycolegal:mycobot:open";
+// Hilo activo persistido SOLO en Consultor: al pinchar una cita se navega
+// full-page a `/resoluciones/[id]` (output: 'standalone' fuerza recarga), lo que
+// desmontaría el rail y perdería la conversación. Lo guardamos en sessionStorage
+// (vive en la pestaña/sesión, no entre días) para rehidratarlo tras la recarga y
+// poder saltar de una referencia a otra sin reiniciar el hilo.
+const THREAD_STORAGE_KEY = "mycolegal:mycobot:thread";
 
 type View = "chat" | "history" | "resolucion";
 
@@ -180,6 +186,40 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
       /* localStorage bloqueado: queda colapsado */
     }
   }, []);
+
+  // Rehidrata el hilo activo tras una navegación full-page (solo Consultor).
+  // Restaura mensajes + conversacionId desde sessionStorage, así el usuario puede
+  // colapsar el rail al abrir una resolución y luego volver a la conversación
+  // intacta para saltar a otra referencia citada.
+  useEffect(() => {
+    if (consultorUrl !== "") return;
+    try {
+      const raw = window.sessionStorage.getItem(THREAD_STORAGE_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as { messages?: Msg[]; conversacionId?: string | null };
+      if (Array.isArray(saved.messages) && saved.messages.length) {
+        setMessages(saved.messages);
+        setConversacionId(saved.conversacionId ?? null);
+      }
+    } catch {
+      /* sessionStorage bloqueado o JSON corrupto: empieza hilo limpio */
+    }
+  }, [consultorUrl]);
+
+  // Persiste el hilo activo en cada cambio (solo Consultor). Solo escribe: el
+  // borrado es explícito en newConversation(), para no limpiar la clave en el
+  // primer render (messages=[]) justo después de rehidratarla.
+  useEffect(() => {
+    if (consultorUrl !== "" || !messages.length) return;
+    try {
+      window.sessionStorage.setItem(
+        THREAD_STORAGE_KEY,
+        JSON.stringify({ messages, conversacionId }),
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [consultorUrl, messages, conversacionId]);
 
   const setOpenPersisted = useCallback((next: boolean) => {
     setOpen(next);
@@ -266,6 +306,11 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
     setConversacionId(null);
     setViewer(null);
     setView("chat");
+    try {
+      window.sessionStorage.removeItem(THREAD_STORAGE_KEY);
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   // Abre el panel de historial y carga la lista de conversaciones.
@@ -721,8 +766,15 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
                               return (
                                 <li key={c.resolucionId + j}>
                                   {inConsultor ? (
-                                    // Dentro de Consultor: navega a la sección de Resoluciones.
-                                    <a href={`/resoluciones/${c.resolucionId}`} className={cls}>
+                                    // Dentro de Consultor: navega a la sección de Resoluciones y
+                                    // colapsa el rail (el hilo queda persistido en sessionStorage y
+                                    // se rehidrata tras la recarga). `setOpenPersisted(false)` corre
+                                    // síncrono antes de la navegación full-page.
+                                    <a
+                                      href={`/resoluciones/${c.resolucionId}`}
+                                      className={cls}
+                                      onClick={() => setOpenPersisted(false)}
+                                    >
                                       {inner}
                                     </a>
                                   ) : (
