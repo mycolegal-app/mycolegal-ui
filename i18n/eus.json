@@ -768,6 +768,7 @@
       "profileSaveButton": "Profila gorde",
       "profileSavingButton": "Gordetzen…",
       "profileNoChanges": "Ez dago aldaketarik gordetzeko",
+      "permsNoChanges": "Ez dago baimen-aldaketarik gordetzeko",
       "toastProfileSaved": "Profila eguneratu da",
       "toastProfileError": "Errorea profila gordetzean",
       "resendInvitationDisabledHint": "Erabiltzailea aktibatzeko zain dagoenean bakarrik dago erabilgarri.",

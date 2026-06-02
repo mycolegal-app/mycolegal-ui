@@ -768,6 +768,7 @@
       "profileSaveButton": "Gardar perfil",
       "profileSavingButton": "Gardando…",
       "profileNoChanges": "Non hai cambios que gardar",
+      "permsNoChanges": "Non hai cambios de permisos que gardar",
       "toastProfileSaved": "Perfil actualizado",
       "toastProfileError": "Erro ao gardar o perfil",
       "resendInvitationDisabledHint": "Só dispoñible mentres o usuario está pendente de activar.",

@@ -768,6 +768,7 @@
       "profileSaveButton": "Desar perfil",
       "profileSavingButton": "Desant…",
       "profileNoChanges": "No hi ha canvis per desar",
+      "permsNoChanges": "No hi ha canvis de permisos per desar",
       "toastProfileSaved": "Perfil actualitzat",
       "toastProfileError": "Error en desar el perfil",
       "resendInvitationDisabledHint": "Només disponible mentre l'usuari està pendent d'activar.",

@@ -216,7 +216,11 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
     }
 
     if (grants.length === 0 && removeApps.length === 0) {
-      onClose();
+      // Sin diff no se llamaba a la API y se cerraba en silencio, lo que se
+      // percibía como "Guardar no hace nada". Mostramos feedback y mantenemos
+      // el modal abierto (igual que el tab de perfil) para que el admin pueda
+      // hacer el cambio que pretendía.
+      toast({ title: t('ui.usersAdmin.permsNoChanges') });
       return;
     }
 
