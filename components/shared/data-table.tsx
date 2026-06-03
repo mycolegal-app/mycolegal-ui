@@ -35,6 +35,21 @@ export interface RemoteDataSource {
   refreshKey?: string | number;
   /** Query param name for the search term. Default `search`. */
   searchParam?: string;
+  /**
+   * Server-side sorting (only relevant when the dataset is large enough to run
+   * in server mode). List the column ids the endpoint knows how to sort by;
+   * only those headers become clickable in server mode, and clicking one sends
+   * `sort=<columnId>&order=asc|desc` to the API (param names overridable below)
+   * plus resets to page 1. In client mode (under `threshold`) TanStack keeps
+   * sorting the fully-loaded set, so this is ignored. When omitted, server-mode
+   * headers are not sortable — avoids the misleading "sorts only this page"
+   * behaviour you'd otherwise get from client-side sorting over a server slice.
+   */
+  sortableColumns?: string[];
+  /** Query param name for the sort column. Default `sort`. */
+  sortParam?: string;
+  /** Query param name for the sort direction (`asc`/`desc`). Default `order`. */
+  orderParam?: string;
 }
 
 interface DataTableProps<TData, TValue> {
@@ -113,6 +128,8 @@ interface SourceState<T> {
   pageSize: number;
   searchInput: string;
   searchDebounced: string;
+  /** `<columnId>:<asc|desc>` when sorting server-side, else null. */
+  serverSort: string | null;
 }
 
 function useRemoteSource<T>(
@@ -124,9 +141,12 @@ function useRemoteSource<T>(
   setSearchInput: (v: string) => void;
   setPageIndex: (idx: number) => void;
   setPageSize: (size: number) => void;
+  setServerSort: (v: string | null) => void;
 } {
   const threshold = source?.threshold ?? 200;
   const searchParam = source?.searchParam ?? "search";
+  const sortParam = source?.sortParam ?? "sort";
+  const orderParam = source?.orderParam ?? "order";
   const extraParams = source?.extraParams;
   const extraParamsKey = useMemo(() => JSON.stringify(extraParams ?? {}), [extraParams]);
   const refreshKey = source?.refreshKey;
@@ -140,6 +160,15 @@ function useRemoteSource<T>(
   const [pageSize, setPageSizeState] = useState(initialPageSize);
   const [searchInput, setSearchInputState] = useState("");
   const [searchDebounced, setSearchDebounced] = useState("");
+  const [serverSort, setServerSortState] = useState<string | null>(null);
+  // Ref so the (memoised) fetcher always reads the current sort without being
+  // re-created on every sort change.
+  const serverSortRef = useRef<string | null>(null);
+  const setServerSort = useCallback((v: string | null) => {
+    if (serverSortRef.current === v) return;
+    serverSortRef.current = v;
+    setServerSortState(v);
+  }, []);
   const reqCounter = useRef(0);
 
   // Debounce search input → searchDebounced (sent to server in server mode,
@@ -150,11 +179,11 @@ function useRemoteSource<T>(
     return () => clearTimeout(h);
   }, [searchInput, source]);
 
-  // Reset to page 1 when filters change.
+  // Reset to page 1 when filters or sort change.
   useEffect(() => {
     if (!source) return;
     setPageIndexState(0);
-  }, [extraParamsKey, searchDebounced, source]);
+  }, [extraParamsKey, searchDebounced, serverSort, source]);
 
   const fetcher = useCallback(
     async (params: { page: number; size: number; search: string; isProbe: boolean }) => {
@@ -166,6 +195,15 @@ function useRemoteSource<T>(
         qs.set("page", String(params.page));
         qs.set("pageSize", String(params.size));
         if (params.search) qs.set(searchParam, params.search);
+        if (serverSortRef.current) {
+          const sep = serverSortRef.current.lastIndexOf(":");
+          const sid = serverSortRef.current.slice(0, sep);
+          const sdir = serverSortRef.current.slice(sep + 1);
+          if (sid) {
+            qs.set(sortParam, sid);
+            qs.set(orderParam, sdir === "desc" ? "desc" : "asc");
+          }
+        }
         if (extraParams) {
           for (const [k, v] of Object.entries(extraParams)) {
             if (v === null || v === undefined || v === "") continue;
@@ -187,7 +225,7 @@ function useRemoteSource<T>(
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [endpoint, extraParamsKey, searchParam, threshold],
+    [endpoint, extraParamsKey, searchParam, sortParam, orderParam, threshold],
   );
 
   // Probe fetch on mount / when filters/search/refreshKey change.
@@ -198,23 +236,24 @@ function useRemoteSource<T>(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [extraParamsKey, searchDebounced, refreshKey, threshold, endpoint]);
 
-  // In server mode, refetch when pageIndex or pageSize change.
+  // In server mode, refetch when pageIndex, pageSize or sort change.
   useEffect(() => {
     if (!source) return;
     if (mode !== "server") return;
     fetcher({ page: pageIndex + 1, size: pageSize, search: searchDebounced, isProbe: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageIndex, pageSize, mode]);
+  }, [pageIndex, pageSize, mode, serverSort]);
 
   return {
     enabled: Boolean(source),
-    state: { data, total, mode, loading, pageIndex, pageSize, searchInput, searchDebounced },
+    state: { data, total, mode, loading, pageIndex, pageSize, searchInput, searchDebounced, serverSort },
     setSearchInput: setSearchInputState,
     setPageIndex: setPageIndexState,
     setPageSize: (size: number) => {
       setPageSizeState(size);
       setPageIndexState(0);
     },
+    setServerSort,
   };
 }
 
@@ -262,6 +301,23 @@ export function DataTable<TData, TValue>({
   const effectiveControlledTotalRows = usingSource ? remote.state.total : controlledTotalRows;
   const effectiveInitialPageSize = usingSource ? remote.state.pageSize : initialPageSize;
 
+  // Server-side sorting only kicks in when a remote source runs in server mode.
+  const serverSortMode = usingSource && remote.state.mode === "server";
+  const sortableColumnsKey = JSON.stringify(source?.sortableColumns ?? null);
+  // In server mode, restrict clickable sort headers to the columns the endpoint
+  // can actually sort (declared via `source.sortableColumns`). Without that
+  // allow-list, server-mode headers stay non-sortable so we never show the
+  // misleading "sorts just this page" behaviour. Client mode is untouched.
+  const resolvedColumns = useMemo(() => {
+    if (!serverSortMode) return columns;
+    const allow = new Set(source?.sortableColumns ?? []);
+    return columns.map((c) => {
+      const id = (c.id ?? (c as { accessorKey?: string }).accessorKey) as string | undefined;
+      return { ...c, enableSorting: id ? allow.has(id) : false };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [columns, serverSortMode, sortableColumnsKey]);
+
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -273,6 +329,14 @@ export function DataTable<TData, TValue>({
   useEffect(() => {
     setCurrentPageSize(effectiveInitialPageSize);
   }, [effectiveInitialPageSize]);
+
+  // Push the active sort to the remote source when in server mode so the
+  // server re-queries the full population (not just the current page slice).
+  useEffect(() => {
+    if (!serverSortMode) return;
+    const s = sorting[0];
+    remote.setServerSort(s ? `${s.id}:${s.desc ? "desc" : "asc"}` : null);
+  }, [sorting, serverSortMode, remote.setServerSort]);
 
   const effectivePageIndex = manualPagination ? (effectiveControlledPageIndex ?? 0) : undefined;
 
@@ -286,7 +350,7 @@ export function DataTable<TData, TValue>({
 
   const table = useReactTable({
     data,
-    columns,
+    columns: resolvedColumns,
     getCoreRowModel: getCoreRowModel(),
     // When the parent owns pagination we skip the TanStack row model — we
     // already receive the correct page slice from the server and must not
@@ -299,6 +363,7 @@ export function DataTable<TData, TValue>({
     onColumnVisibilityChange: setColumnVisibility,
     onGlobalFilterChange: () => {},
     manualPagination,
+    manualSorting: serverSortMode,
     manualFiltering: usingSource && remote.state.mode === "server",
     pageCount: manualPagination ? (effectiveControlledPageCount ?? -1) : undefined,
     state: {
