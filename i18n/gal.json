@@ -1,5 +1,11 @@
 {
   "ui": {
+    "documentPreview": {
+      "title": "Vista previa",
+      "loading": "Cargando documento…",
+      "download": "Descargar",
+      "notPreviewable": "Este tipo de ficheiro non se pode previsualizar."
+    },
     "errors": {
       "generic": "Non se puido completar a acción. Téntao de novo.",
       "NETWORK": "Non se puido conectar. Comproba a túa conexión e téntao de novo.",

@@ -1,5 +1,11 @@
 {
   "ui": {
+    "documentPreview": {
+      "title": "Aurrebista",
+      "loading": "Dokumentua kargatzen…",
+      "download": "Deskargatu",
+      "notPreviewable": "Fitxategi mota hau ezin da aurreikusi."
+    },
     "errors": {
       "generic": "Ezin izan da ekintza osatu. Saiatu berriro.",
       "NETWORK": "Ezin izan da konektatu. Egiaztatu konexioa eta saiatu berriro.",

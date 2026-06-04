@@ -113,6 +113,10 @@ export { useIsOrgAdmin } from './hooks/use-is-org-admin';
 // i18n defaults (used by consumer apps' I18nProvider#defaults)
 export { uiMessages, getUiDefaults } from './i18n';
 
+// Document preview (modal reutilizable de vista previa de PDF/imágenes)
+export { DocumentPreviewModal, isPreviewable } from './components/shared/document-preview-modal';
+export type { DocumentPreviewModalProps } from './components/shared/document-preview-modal';
+
 // DocFilling integration
 export { DocFillingModal } from './components/docfilling/DocFillingModal';
 

@@ -1,5 +1,11 @@
 {
   "ui": {
+    "documentPreview": {
+      "title": "Vista prèvia",
+      "loading": "Carregant document…",
+      "download": "Descarregar",
+      "notPreviewable": "Aquest tipus de fitxer no es pot previsualitzar."
+    },
     "errors": {
       "generic": "No s'ha pogut completar l'acció. Torna-ho a provar.",
       "NETWORK": "No s'ha pogut connectar. Comprova la connexió i torna-ho a provar.",
