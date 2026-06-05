@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useI18n } from "../i18n/i18n-context";
 
 export interface PickedDriveNode {
@@ -35,6 +36,12 @@ export interface DriveLauncherProps {
 export function DriveLauncher({ archivoUrl, onPick, children, className }: DriveLauncherProps) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
+  // Montado en cliente: el modal va por portal a `document.body`, así escapa de
+  // cualquier ancestro con `transform` (p.ej. el AppSidebar usa `translate-x`
+  // para el drawer), que de otro modo se vuelve el bloque contenedor del
+  // `position: fixed` y recorta el modal dentro de la zona del sidebar.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const base = archivoUrl.replace(/\/$/, "");
 
   useEffect(() => {
@@ -70,7 +77,7 @@ export function DriveLauncher({ archivoUrl, onPick, children, className }: Drive
         {children ?? t("ui.driveLauncher.open")}
       </button>
 
-      {open && (
+      {open && mounted && createPortal(
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
           onClick={() => setOpen(false)}
@@ -96,7 +103,8 @@ export function DriveLauncher({ archivoUrl, onPick, children, className }: Drive
               className="flex-1 border-0"
             />
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );
