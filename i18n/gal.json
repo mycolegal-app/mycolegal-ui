@@ -1,5 +1,10 @@
 {
   "ui": {
+    "driveLauncher": {
+      "open": "Unidade de rede",
+      "title": "Unidade de rede",
+      "close": "Pechar"
+    },
     "documentPreview": {
       "title": "Vista previa",
       "loading": "Cargando documento…",

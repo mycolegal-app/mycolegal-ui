@@ -1,5 +1,10 @@
 {
   "ui": {
+    "driveLauncher": {
+      "open": "Sareko unitatea",
+      "title": "Sareko unitatea",
+      "close": "Itxi"
+    },
     "documentPreview": {
       "title": "Aurrebista",
       "loading": "Dokumentua kargatzen…",

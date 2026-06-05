@@ -1,5 +1,10 @@
 {
   "ui": {
+    "driveLauncher": {
+      "open": "Unitat de xarxa",
+      "title": "Unitat de xarxa",
+      "close": "Tanca"
+    },
     "documentPreview": {
       "title": "Vista prèvia",
       "loading": "Carregant document…",
