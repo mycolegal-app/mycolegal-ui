@@ -73,6 +73,13 @@ export interface AppCatalogEntry {
   roles: Array<{ key: string; label: string; isDefault: boolean; permissions: string[] }>;
 }
 
+interface PermissionCatalogEntry {
+  key: string;
+  label: string;
+  description?: string | null;
+  group?: string | null;
+}
+
 export interface UserPermissionsModalProps {
   open: boolean;
   user: UserRow | null;
@@ -158,6 +165,38 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
     language: string;
   }>({ displayName: '', email: '', phoneNumber: '', language: 'CAST' });
   const [savingProfile, setSavingProfile] = useState(false);
+  // "¿Qué puede hacer este rol?" — desglose en claro de los permisos del rol
+  // seleccionado por app (incidencia #78). El catálogo de permisos por app se
+  // carga bajo demanda al expandir y se cachea por slug.
+  const [roleInfoOpen, setRoleInfoOpen] = useState<Set<string>>(new Set());
+  const [permCatalog, setPermCatalog] = useState<Record<string, PermissionCatalogEntry[]>>({});
+  const [permCatalogLoading, setPermCatalogLoading] = useState<Set<string>>(new Set());
+
+  function toggleRoleInfo(slug: string) {
+    setRoleInfoOpen((prev) => {
+      const next = new Set(prev);
+      if (next.has(slug)) next.delete(slug);
+      else next.add(slug);
+      return next;
+    });
+    if (!permCatalog[slug] && !permCatalogLoading.has(slug)) {
+      setPermCatalogLoading((prev) => new Set(prev).add(slug));
+      fetch(`${apiBase}/apps-catalog/${slug}/permissions`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          const cat: PermissionCatalogEntry[] = d?.data?.permissions ?? d?.permissions ?? [];
+          setPermCatalog((prev) => ({ ...prev, [slug]: cat }));
+        })
+        .catch(() => undefined)
+        .finally(() =>
+          setPermCatalogLoading((prev) => {
+            const n = new Set(prev);
+            n.delete(slug);
+            return n;
+          }),
+        );
+    }
+  }
 
   useEffect(() => {
     if (open) {
@@ -749,6 +788,25 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
                           )}
                         </div>
                       )}
+                      {access && (
+                        <div>
+                          <button
+                            type="button"
+                            onClick={() => toggleRoleInfo(app.slug)}
+                            className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2"
+                          >
+                            {t('ui.usersAdmin.roleWhatItDoes')}
+                          </button>
+                          {roleInfoOpen.has(app.slug) && (
+                            <RolePermsList
+                              perms={app.roles.find((r) => r.key === role)?.permissions ?? []}
+                              catalog={permCatalog[app.slug] ?? []}
+                              loading={permCatalogLoading.has(app.slug)}
+                              t={t}
+                            />
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -849,5 +907,61 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
         onSaved={() => onSaved()}
       />
     </>
+  );
+}
+
+/**
+ * Desglose en claro de los permisos que otorga el rol seleccionado en una app
+ * (incidencia #78: "¿dónde consulto qué permisos tiene cada rol?"). Traduce las
+ * claves de permiso a sus etiquetas del catálogo de la app, agrupadas por grupo.
+ */
+function RolePermsList({
+  perms,
+  catalog,
+  loading,
+  t,
+}: {
+  perms: string[];
+  catalog: PermissionCatalogEntry[];
+  loading: boolean;
+  t: (key: string) => string;
+}) {
+  if (loading) {
+    return (
+      <p className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
+        <Loader2 className="h-3 w-3 animate-spin" />
+        {t('ui.usersAdmin.roleLoadingPerms')}
+      </p>
+    );
+  }
+  if (perms.includes('*')) {
+    return <p className="mt-1 text-[11px] text-muted-foreground">{t('ui.usersAdmin.roleFullAccess')}</p>;
+  }
+  if (perms.length === 0) {
+    return <p className="mt-1 text-[11px] text-muted-foreground">{t('ui.usersAdmin.roleNoPerms')}</p>;
+  }
+
+  const byKey = new Map(catalog.map((c) => [c.key, c]));
+  const groups = new Map<string, string[]>();
+  for (const k of perms) {
+    const def = byKey.get(k);
+    const group = def?.group || 'General';
+    if (!groups.has(group)) groups.set(group, []);
+    groups.get(group)!.push(def?.label || k);
+  }
+
+  return (
+    <div className="mt-1 space-y-1">
+      {[...groups.entries()].map(([group, labels]) => (
+        <div key={group}>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{group}</p>
+          <ul className="list-disc pl-4 text-[11px] text-muted-foreground">
+            {labels.map((l, i) => (
+              <li key={i}>{l}</li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
   );
 }
