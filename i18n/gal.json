@@ -576,7 +576,11 @@
       "showing": "Mostrando {start}-{end} de {total}",
       "rowsPerPage": "Filas por páxina",
       "perPage": "{size} / páx",
-      "all": "Todos"
+      "all": "Todos",
+      "loading": "Cargando…",
+      "empty": "Non hai datos para amosar",
+      "errorForbidden": "Non tes permiso para ver estes datos",
+      "errorGeneric": "Non se puideron cargar os datos. Téntao de novo."
     },
     "sortableList": {
       "lockedTitle": "Elemento bloqueado",

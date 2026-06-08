@@ -124,6 +124,13 @@ interface SourceState<T> {
   total: number;
   mode: Mode;
   loading: boolean;
+  /**
+   * Fetch error: `"forbidden"` for HTTP 403 (no permission), `"error"` for any
+   * other non-2xx / network failure, `null` when the last fetch succeeded.
+   * Without this a 403 left `data:[]` and rendered as "no data" — a silent 403
+   * indistinguishable from an empty list.
+   */
+  error: "forbidden" | "error" | null;
   pageIndex: number;
   pageSize: number;
   searchInput: string;
@@ -156,6 +163,7 @@ function useRemoteSource<T>(
   const [total, setTotal] = useState(0);
   const [mode, setMode] = useState<Mode>("init");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<"forbidden" | "error" | null>(null);
   const [pageIndex, setPageIndexState] = useState(0);
   const [pageSize, setPageSizeState] = useState(initialPageSize);
   const [searchInput, setSearchInputState] = useState("");
@@ -211,8 +219,19 @@ function useRemoteSource<T>(
           }
         }
         const res = await fetch(`${endpoint}?${qs.toString()}`);
+        if (myReq !== reqCounter.current) return; // stale
+        if (!res.ok) {
+          // Surface the failure instead of rendering an empty table: a 403
+          // (no permission) otherwise looked identical to "no data".
+          setError(res.status === 403 ? "forbidden" : "error");
+          setData([]);
+          setTotal(0);
+          if (params.isProbe) setMode("client");
+          return;
+        }
         const json = await res.json();
         if (myReq !== reqCounter.current) return; // stale
+        setError(null);
         const rows: T[] = json.data ?? [];
         const totalRows: number = json.meta?.total ?? rows.length;
         setData(rows);
@@ -220,6 +239,12 @@ function useRemoteSource<T>(
         if (params.isProbe) {
           setMode(totalRows <= threshold ? "client" : "server");
         }
+      } catch {
+        if (myReq !== reqCounter.current) return; // stale
+        setError("error");
+        setData([]);
+        setTotal(0);
+        if (params.isProbe) setMode("client");
       } finally {
         if (myReq === reqCounter.current) setLoading(false);
       }
@@ -246,7 +271,7 @@ function useRemoteSource<T>(
 
   return {
     enabled: Boolean(source),
-    state: { data, total, mode, loading, pageIndex, pageSize, searchInput, searchDebounced, serverSort },
+    state: { data, total, mode, loading, error, pageIndex, pageSize, searchInput, searchDebounced, serverSort },
     setSearchInput: setSearchInputState,
     setPageIndex: setPageIndexState,
     setPageSize: (size: number) => {
@@ -570,11 +595,15 @@ export function DataTable<TData, TValue>({
               <tr>
                 <td
                   colSpan={columns.length}
-                  className="h-24 text-center text-foreground-muted"
+                  className={`h-24 text-center ${usingSource && remote.state.error ? "text-red-600" : "text-foreground-muted"}`}
                 >
                   {usingSource && remote.state.loading
-                    ? "Cargando…"
-                    : "No hay datos para mostrar"}
+                    ? t("ui.dataTable.loading")
+                    : usingSource && remote.state.error === "forbidden"
+                      ? t("ui.dataTable.errorForbidden")
+                      : usingSource && remote.state.error
+                        ? t("ui.dataTable.errorGeneric")
+                        : t("ui.dataTable.empty")}
                 </td>
               </tr>
             )}

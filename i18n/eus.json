@@ -576,7 +576,11 @@
       "showing": "Erakusten {start}-{end} ({total}-tik)",
       "rowsPerPage": "Errenkadak orriko",
       "perPage": "{size} / orr.",
-      "all": "Denak"
+      "all": "Denak",
+      "loading": "Kargatzen…",
+      "empty": "Ez dago daturik erakusteko",
+      "errorForbidden": "Ez duzu baimenik datu hauek ikusteko",
+      "errorGeneric": "Ezin izan dira datuak kargatu. Saiatu berriro."
     },
     "sortableList": {
       "lockedTitle": "Elementu blokeatua",

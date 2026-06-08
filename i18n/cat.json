@@ -576,7 +576,11 @@
       "showing": "Mostrant {start}-{end} de {total}",
       "rowsPerPage": "Files per pàgina",
       "perPage": "{size} / pàg",
-      "all": "Tots"
+      "all": "Tots",
+      "loading": "Carregant…",
+      "empty": "No hi ha dades per mostrar",
+      "errorForbidden": "No tens permís per veure aquestes dades",
+      "errorGeneric": "No s'han pogut carregar les dades. Torna-ho a provar."
     },
     "sortableList": {
       "lockedTitle": "Element bloquejat",
