@@ -39,6 +39,12 @@ interface IdleTimeoutProps {
 const ACTIVITY_EVENTS: (keyof DocumentEventMap)[] = [
   "mousemove",
   "keydown",
+  // `input` (besides `keydown`) guarantees that typing into ANY field always
+  // counts as activity and refreshes the session — it fires for paste, IME
+  // composition, autofill and mobile/virtual keyboards that `keydown` misses.
+  // Without it, a user writing a long incident report could be silently logged
+  // out mid-sentence on those input paths.
+  "input",
   "click",
   "scroll",
   "touchstart",

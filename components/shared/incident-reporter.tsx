@@ -31,6 +31,11 @@ interface IncidentReporterProps {
 const DEFAULT_SHORTCUT = { key: "B", shift: true };
 const MAX_CONSOLE_ERRORS = 5;
 const VISIBILITY_STORAGE_KEY = "mycolegal:incident-reporter:visible";
+// Prefix for the persisted, not-yet-sent report text. Keyed by appSlug so a
+// draft started in one app never bleeds into another. Persisting on every
+// keystroke means a session expiry / redirect to /login mid-typing no longer
+// loses the text — reopening the reporter rehydrates it.
+const DRAFT_STORAGE_PREFIX = "mycolegal:incident-reporter:draft:";
 
 function formatShortcut(s: { key: string; shift?: boolean; alt?: boolean }): string {
   const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
@@ -110,6 +115,24 @@ export function IncidentReporter({
 
   const consoleErrors = useConsoleErrorCapture();
 
+  const draftKey = `${DRAFT_STORAGE_PREFIX}${appSlug}`;
+
+  // Persist the in-progress report text so it survives a session expiry,
+  // redirect to /login, or accidental dialog close. Cleared only on a
+  // successful send. localStorage may be blocked (private mode) — ignore.
+  const updateDescription = useCallback(
+    (text: string) => {
+      setDescription(text);
+      try {
+        if (text) window.localStorage.setItem(draftKey, text);
+        else window.localStorage.removeItem(draftKey);
+      } catch {
+        // localStorage unavailable — the draft just won't survive a reload.
+      }
+    },
+    [draftKey],
+  );
+
   const captureScreenshot = useCallback(async () => {
     setCapturing(true);
     setCaptureError(null);
@@ -143,13 +166,22 @@ export function IncidentReporter({
   const openReporter = useCallback(async () => {
     setResult(null);
     setErrorMessage("");
-    setDescription("");
+    // Rehydrate any unsent draft (e.g. the previous attempt was interrupted by
+    // a session expiry) instead of starting blank, so the user never loses
+    // what they had already written.
+    let draft = "";
+    try {
+      draft = window.localStorage.getItem(draftKey) ?? "";
+    } catch {
+      // localStorage blocked — start empty.
+    }
+    setDescription(draft);
     setScreenshot(null);
     // Capture BEFORE opening the dialog so the overlay + modal don't end up
     // in the screenshot. captureScreenshot manages its own capturing state.
     await captureScreenshot();
     setOpen(true);
-  }, [captureScreenshot]);
+  }, [captureScreenshot, draftKey]);
 
   // Hydrate the persisted visibility once on mount. We default to visible
   // (so a fresh session still shows the bug) and only flip when a previous
@@ -226,6 +258,13 @@ export function IncidentReporter({
         );
       }
       setResult("ok");
+      // Sent successfully — discard the persisted draft so the next open
+      // starts blank.
+      try {
+        window.localStorage.removeItem(draftKey);
+      } catch {
+        // ignore
+      }
       // Auto-close after short success flash
       setTimeout(() => setOpen(false), 1200);
     } catch (err: any) {
@@ -234,7 +273,7 @@ export function IncidentReporter({
     } finally {
       setSubmitting(false);
     }
-  }, [appSlug, captureError, consoleErrors, description, screenshot, submitUrl, t]);
+  }, [appSlug, captureError, consoleErrors, description, draftKey, screenshot, submitUrl, t]);
 
   const shortcutLabel = formatShortcut(shortcut);
 
@@ -305,7 +344,7 @@ export function IncidentReporter({
               <Textarea
                 id="incident-description"
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e) => updateDescription(e.target.value)}
                 placeholder={t("ui.incidentReporter.descriptionPlaceholder")}
                 rows={5}
                 autoFocus
