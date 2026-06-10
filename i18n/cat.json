@@ -406,7 +406,13 @@
       "descriptionPlaceholder": "Què estaves fent quan va passar, què esperaves que passés, i què ha passat realment.",
       "privacyHint": "La captura inclou el que estàs veient ara. Si conté dades sensibles, edita la descripció per indicar-ho o cancel·la l'enviament.",
       "sentOk": "Incidència enviada. Gràcies.",
-      "btnSend": "Enviar"
+      "btnSend": "Enviar",
+      "attachmentsLabel": "Adjunts",
+      "attachBtn": "Adjuntar",
+      "attachHint": "Fins a {max} fitxers (imatges, PDF…), màx. 5 MB cadascun.",
+      "attachTooBig": "«{name}» supera els 5 MB i no s'ha afegit.",
+      "attachTooMany": "Màxim {max} fitxers.",
+      "attachReadError": "No s'ha pogut llegir «{name}»."
     },
     "appInfo": {
       "btnAria": "Quant a l'aplicació",

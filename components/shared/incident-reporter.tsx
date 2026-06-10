@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bug, Camera, Send, Loader2, X } from "lucide-react";
+import { Bug, Camera, Send, Loader2, X, Paperclip, Upload } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -36,6 +36,28 @@ const VISIBILITY_STORAGE_KEY = "mycolegal:incident-reporter:visible";
 // keystroke means a session expiry / redirect to /login mid-typing no longer
 // loses the text — reopening the reporter rehydrates it.
 const DRAFT_STORAGE_PREFIX = "mycolegal:incident-reporter:draft:";
+// #162 — adjuntos que el usuario puede añadir al CREAR la incidencia. El
+// backend (storeAttachment) corta a 5 MB por fichero; aquí validamos antes de
+// subir para dar feedback inmediato. Tope de nº alineado con el schema de auth.
+const MAX_ATTACHMENTS = 5;
+const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
+
+interface PendingAttachment {
+  filename: string;
+  mimeType: string;
+  dataBase64: string;
+  sizeBytes: number;
+}
+
+/** Reads a File into a base64 data URL (same shape the thread upload uses). */
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
 
 function formatShortcut(s: { key: string; shift?: boolean; alt?: boolean }): string {
   const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
@@ -112,8 +134,50 @@ export function IncidentReporter({
   // The button is visible by default; the shortcut flips it, and the
   // preference is persisted to localStorage so it survives reloads.
   const [visible, setVisible] = useState(true);
+  // #162 — user-provided attachments for the new incident.
+  const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
+  const [attachError, setAttachError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const consoleErrors = useConsoleErrorCapture();
+
+  const addFiles = useCallback(
+    async (fileList: FileList | null) => {
+      if (!fileList || fileList.length === 0) return;
+      setAttachError(null);
+      const incoming = Array.from(fileList);
+      const accepted: PendingAttachment[] = [];
+      for (const file of incoming) {
+        if (file.size > MAX_ATTACHMENT_BYTES) {
+          setAttachError(t("ui.incidentReporter.attachTooBig", { name: file.name }));
+          continue;
+        }
+        try {
+          const dataBase64 = await fileToDataUrl(file);
+          accepted.push({
+            filename: file.name,
+            mimeType: file.type || "application/octet-stream",
+            dataBase64,
+            sizeBytes: file.size,
+          });
+        } catch {
+          setAttachError(t("ui.incidentReporter.attachReadError", { name: file.name }));
+        }
+      }
+      setAttachments((prev) => {
+        const room = MAX_ATTACHMENTS - prev.length;
+        if (accepted.length > room) {
+          setAttachError(t("ui.incidentReporter.attachTooMany", { max: MAX_ATTACHMENTS }));
+        }
+        return [...prev, ...accepted.slice(0, Math.max(0, room))];
+      });
+    },
+    [t],
+  );
+
+  const removeAttachment = useCallback((idx: number) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== idx));
+  }, []);
 
   const draftKey = `${DRAFT_STORAGE_PREFIX}${appSlug}`;
 
@@ -177,6 +241,8 @@ export function IncidentReporter({
     }
     setDescription(draft);
     setScreenshot(null);
+    setAttachments([]);
+    setAttachError(null);
     // Capture BEFORE opening the dialog so the overlay + modal don't end up
     // in the screenshot. captureScreenshot manages its own capturing state.
     await captureScreenshot();
@@ -247,6 +313,10 @@ export function IncidentReporter({
             screenshotCaptureError: captureError,
             capturedAt: new Date().toISOString(),
           },
+          // #162 — adjuntos del usuario (sin sizeBytes, que es solo de UI).
+          attachments: attachments.length
+            ? attachments.map(({ filename, mimeType, dataBase64 }) => ({ filename, mimeType, dataBase64 }))
+            : undefined,
         }),
       });
       if (!res.ok) {
@@ -258,6 +328,7 @@ export function IncidentReporter({
         );
       }
       setResult("ok");
+      setAttachments([]);
       // Sent successfully — discard the persisted draft so the next open
       // starts blank.
       try {
@@ -273,7 +344,7 @@ export function IncidentReporter({
     } finally {
       setSubmitting(false);
     }
-  }, [appSlug, captureError, consoleErrors, description, draftKey, screenshot, submitUrl, t]);
+  }, [appSlug, attachments, captureError, consoleErrors, description, draftKey, screenshot, submitUrl, t]);
 
   const shortcutLabel = formatShortcut(shortcut);
 
@@ -349,6 +420,65 @@ export function IncidentReporter({
                 rows={5}
                 autoFocus
               />
+            </div>
+
+            {/* #162 — adjuntos aportados por el usuario (imágenes, PDF…). */}
+            <div>
+              <div className="mb-1 flex items-center justify-between">
+                <label className="block text-sm text-gray-700">
+                  {t("ui.incidentReporter.attachmentsLabel")}
+                </label>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={attachments.length >= MAX_ATTACHMENTS}
+                  className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  <Upload className="h-3.5 w-3.5" />
+                  {t("ui.incidentReporter.attachBtn")}
+                </button>
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  void addFiles(e.target.files);
+                  e.target.value = "";
+                }}
+              />
+              {attachments.length === 0 ? (
+                <p className="text-xs text-gray-400">{t("ui.incidentReporter.attachHint", { max: MAX_ATTACHMENTS })}</p>
+              ) : (
+                <ul className="space-y-1">
+                  {attachments.map((a, idx) => (
+                    <li
+                      key={`${a.filename}-${idx}`}
+                      className="flex items-center justify-between rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-xs"
+                    >
+                      <span className="flex min-w-0 items-center gap-1.5 text-gray-700">
+                        <Paperclip className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                        <span className="truncate">{a.filename}</span>
+                        <span className="shrink-0 text-gray-400">
+                          {a.sizeBytes < 1024 * 1024
+                            ? `${(a.sizeBytes / 1024).toFixed(0)} KB`
+                            : `${(a.sizeBytes / (1024 * 1024)).toFixed(1)} MB`}
+                        </span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeAttachment(idx)}
+                        aria-label={t("ui.incidentThread.btnCancel")}
+                        className="ml-2 shrink-0 rounded p-0.5 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {attachError && <p className="mt-1 text-xs text-red-500">{attachError}</p>}
             </div>
 
             <p className="text-xs text-gray-500">

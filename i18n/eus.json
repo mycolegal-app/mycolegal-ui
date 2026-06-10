@@ -406,7 +406,13 @@
       "descriptionPlaceholder": "Zer egiten ari zinen gertatu zenean, zer espero zenuen, eta zer gertatu den benetan.",
       "privacyHint": "Kapturak orain ikusten ari zarena dauka. Datu sentikorrak baditu, deskribapenean adierazi edo bidalketa utzi.",
       "sentOk": "Gertakaria bidalita. Eskerrik asko.",
-      "btnSend": "Bidali"
+      "btnSend": "Bidali",
+      "attachmentsLabel": "Eranskinak",
+      "attachBtn": "Erantsi",
+      "attachHint": "Gehienez {max} fitxategi (irudiak, PDF…), 5 MB bakoitzeko.",
+      "attachTooBig": "«{name}» 5 MB baino handiagoa da eta ez da gehitu.",
+      "attachTooMany": "Gehienez {max} fitxategi.",
+      "attachReadError": "Ezin izan da «{name}» irakurri."
     },
     "appInfo": {
       "btnAria": "Aplikazioari buruz",

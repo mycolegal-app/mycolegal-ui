@@ -406,7 +406,13 @@
       "descriptionPlaceholder": "Qué estabas haciendo cuando ocurrió, qué esperabas que pasara, y qué pasó realmente.",
       "privacyHint": "La captura incluye lo que estás viendo ahora. Si contiene datos sensibles, edita la descripción para indicarlo o cancela el envío.",
       "sentOk": "Incidencia enviada. Gracias.",
-      "btnSend": "Enviar"
+      "btnSend": "Enviar",
+      "attachmentsLabel": "Adjuntos",
+      "attachBtn": "Adjuntar",
+      "attachHint": "Hasta {max} ficheros (imágenes, PDF…), máx. 5 MB cada uno.",
+      "attachTooBig": "«{name}» supera 5 MB y no se ha añadido.",
+      "attachTooMany": "Máximo {max} ficheros.",
+      "attachReadError": "No se pudo leer «{name}»."
     },
     "appInfo": {
       "btnAria": "Acerca de la aplicación",
