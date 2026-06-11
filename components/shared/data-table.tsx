@@ -106,6 +106,14 @@ interface DataTableProps<TData, TValue> {
   totalRows?: number;
   /** Total pages — server-reported. */
   pageCount?: number;
+  /**
+   * Orden inicial de la tabla. En modo cliente ordena el set cargado; en modo
+   * servidor se envía como `sort/order` (o los nombres de `source.sortParam/
+   * orderParam`) en la primera carga. Sustituye al patrón de pasar el orden por
+   * defecto en `extraParams`, que pisaba el orden por click. El usuario puede
+   * cambiarlo pulsando una cabecera ordenable.
+   */
+  initialSort?: { id: string; desc?: boolean };
   /** Called when the user changes page or page size. */
   onPaginationChange?: (pageIndex: number, pageSize: number) => void;
   /**
@@ -302,6 +310,7 @@ export function DataTable<TData, TValue>({
   pageIndex: controlledPageIndex,
   totalRows: controlledTotalRows,
   pageCount: controlledPageCount,
+  initialSort,
   onPaginationChange,
   paginatorExtras,
 }: DataTableProps<TData, TValue>) {
@@ -343,7 +352,9 @@ export function DataTable<TData, TValue>({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [columns, serverSortMode, sortableColumnsKey]);
 
-  const [sorting, setSorting] = useState<SortingState>([]);
+  const [sorting, setSorting] = useState<SortingState>(
+    initialSort ? [{ id: initialSort.id, desc: initialSort.desc ?? false }] : [],
+  );
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [currentPageSize, setCurrentPageSize] = useState(effectiveInitialPageSize);
