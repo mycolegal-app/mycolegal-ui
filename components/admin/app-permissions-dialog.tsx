@@ -39,6 +39,7 @@ import { apiErrorMessage } from '../../lib/api-error';
 import { toast } from '../../hooks/use-toast';
 import type { UserRow } from './users-admin-panel';
 import type { AppCatalogEntry } from './user-permissions-modal';
+import { isLegacyHiddenRole } from './role-catalog';
 
 interface PermissionCatalogEntry {
   key: string;
@@ -295,7 +296,9 @@ export function AppPermissionsDialog({
                     <SelectItem value={ROLE_NONE}>
                       {t('ui.usersAdmin.permsDialogRoleNone')}
                     </SelectItem>
-                    {app.roles.map((r) => (
+                    {app.roles
+                      .filter((r) => !isLegacyHiddenRole(r.key) || r.key === state.appRoleKey)
+                      .map((r) => (
                       <SelectItem key={r.key} value={r.key}>
                         {r.label}
                         {r.isDefault ? ' · default' : ''}

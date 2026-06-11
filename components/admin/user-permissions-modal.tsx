@@ -57,6 +57,7 @@ import { toast } from '../../hooks/use-toast';
 import type { UserRow } from './users-admin-panel';
 import { AppPermissionsDialog } from './app-permissions-dialog';
 import { UserAuditTimeline } from './user-audit-timeline';
+import { isLegacyHiddenRole } from './role-catalog';
 
 const LANGUAGE_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'CAST', label: 'Castellano' },
@@ -216,7 +217,11 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
   function defaultRoleFor(slug: string): string {
     const app = apps.find((a) => a.slug === slug);
     if (!app || app.roles.length === 0) return '';
-    return (app.roles.find((r) => r.isDefault) ?? app.roles[0]).key;
+    // Preferir roles del catálogo unificado; los legacy migrados no se ofrecen
+    // por defecto (#78). Si la app aún no tiene roles nuevos, caer a los que haya.
+    const visible = app.roles.filter((r) => !isLegacyHiddenRole(r.key));
+    const pool = visible.length ? visible : app.roles;
+    return (pool.find((r) => r.isDefault) ?? pool[0]).key;
   }
 
   function setAccess(slug: string, hasAccess: boolean) {
@@ -765,7 +770,9 @@ export function UserPermissionsModal(props: UserPermissionsModalProps) {
                               <SelectValue placeholder={t('ui.usersAdmin.pickRole')} />
                             </SelectTrigger>
                             <SelectContent>
-                              {app.roles.map((r) => (
+                              {app.roles
+                                .filter((r) => !isLegacyHiddenRole(r.key) || r.key === role)
+                                .map((r) => (
                                 <SelectItem key={r.key} value={r.key} className="text-xs">
                                   {r.label}
                                 </SelectItem>

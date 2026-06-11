@@ -24,6 +24,22 @@ export const ROLE_LABELS: Record<string, string> = {
   EDITOR: 'Editor',
   OPERADOR: 'Operador',
   VISOR: 'Visor',
+  // ── Catálogo unificado B2B (incidencia #78) ──
+  ADMINISTRADOR_NOTARIA: 'Administrador de notaría',
+  USUARIO_NOTARIA: 'Usuario de notaría',
+  OBSERVADOR_NOTARIA: 'Observador',
+  CONTABLE_NOTARIA: 'Contable',
+  ADMINISTRADOR_BANCO: 'Administrador de banco',
+  USUARIO_BANCO: 'Usuario de banco',
+  VALIDADOR_BANCO: 'Validador',
+  USUARIO_CENTRO_LIQUIDADOR: 'Usuario de centro liquidador',
+  OBSERVADOR: 'Observador',
+  OBSERVADOR_APP: 'Observador de aplicación',
+  ADMINISTRADOR_EXTERNO: 'Administrador externo',
+  VALIDADOR_EXTERNO: 'Validador externo',
+  USUARIO_EXTERNO: 'Usuario externo',
+  NOTARIO_EXTERNO: 'Notario externo',
+  USUARIO_NOTARIO_EXTERNO: 'Usuario de notario externo',
 };
 
 export const ROLE_COLORS: Record<string, string> = {
@@ -43,7 +59,41 @@ export const ROLE_COLORS: Record<string, string> = {
   EDITOR: 'bg-indigo-100 text-indigo-700 border-indigo-300',
   OPERADOR: 'bg-blue-100 text-blue-700 border-blue-300',
   VISOR: 'bg-slate-100 text-slate-700 border-slate-300',
+  // ── Catálogo unificado B2B (incidencia #78) ──
+  ADMINISTRADOR_NOTARIA: 'bg-purple-100 text-purple-700 border-purple-300',
+  USUARIO_NOTARIA: 'bg-blue-100 text-blue-700 border-blue-300',
+  OBSERVADOR_NOTARIA: 'bg-slate-100 text-slate-700 border-slate-300',
+  CONTABLE_NOTARIA: 'bg-emerald-100 text-emerald-700 border-emerald-300',
+  ADMINISTRADOR_BANCO: 'bg-purple-100 text-purple-700 border-purple-300',
+  USUARIO_BANCO: 'bg-teal-100 text-teal-700 border-teal-300',
+  VALIDADOR_BANCO: 'bg-amber-100 text-amber-700 border-amber-300',
+  USUARIO_CENTRO_LIQUIDADOR: 'bg-teal-50 text-teal-600 border-teal-200',
+  OBSERVADOR: 'bg-slate-100 text-slate-700 border-slate-300',
+  OBSERVADOR_APP: 'bg-slate-50 text-slate-600 border-slate-200',
+  ADMINISTRADOR_EXTERNO: 'bg-orange-100 text-orange-700 border-orange-300',
+  VALIDADOR_EXTERNO: 'bg-amber-100 text-amber-700 border-amber-300',
+  USUARIO_EXTERNO: 'bg-orange-100 text-orange-700 border-orange-300',
+  NOTARIO_EXTERNO: 'bg-sky-100 text-sky-700 border-sky-300',
+  USUARIO_NOTARIO_EXTERNO: 'bg-sky-50 text-sky-600 border-sky-200',
 };
+
+/**
+ * Roles INTERNOS legacy ya migrados al catálogo unificado (incidencia #78).
+ * Se ocultan del desplegable de asignación para que el admin solo vea la
+ * nomenclatura nueva. NO se borran de auth (siguen como red de seguridad /
+ * fallback). Los roles externos legacy (GESTOR, GESTORIA_EXTERNA, BANCO_EXTERNO,
+ * EXTERNO, CONSULTOR_EXTERNO…) NO se ocultan: aún no se han migrado (pase D4).
+ */
+export const LEGACY_HIDDEN_ROLE_KEYS = new Set<string>([
+  'NOTARIO', 'OFICIAL', 'TRAMITADOR', 'CONSULTOR',
+  'EDITOR', 'OPERADOR', 'VISOR',
+  'EDITOR_CATALOGO', 'CONTABILIDAD', 'AUXILIAR',
+]);
+
+/** ¿Debe ocultarse este rol del desplegable de asignación? */
+export function isLegacyHiddenRole(key: string): boolean {
+  return LEGACY_HIDDEN_ROLE_KEYS.has(key);
+}
 
 export function roleLabel(role: string): string {
   return ROLE_LABELS[role] ?? role;
