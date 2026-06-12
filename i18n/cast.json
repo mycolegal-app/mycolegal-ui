@@ -217,6 +217,7 @@
       "authorSupport": "Soporte MycoLegal",
       "authorUser": "Usuario",
       "replyToSupport": "Responde a soporte…",
+      "replyReopensHint": "Esta incidencia está cerrada. Si respondes, se reabrirá automáticamente.",
       "replyToUser": "Responde al usuario — pide más detalles o propón solución.",
       "btnClose": "Cerrar incidencia",
       "sending": "Enviando…",

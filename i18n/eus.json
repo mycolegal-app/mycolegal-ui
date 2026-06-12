@@ -217,6 +217,7 @@
       "authorSupport": "MycoLegal laguntza",
       "authorUser": "Erabiltzailea",
       "replyToSupport": "Erantzun laguntzari…",
+      "replyReopensHint": "Intzidentzia hau itxita dago. Erantzuten baduzu, automatikoki berrirekiko da.",
       "replyToUser": "Erantzun erabiltzaileari — eskatu xehetasun gehiago edo proposatu konponbidea.",
       "btnClose": "Gertakaria itxi",
       "sending": "Bidaltzen…",

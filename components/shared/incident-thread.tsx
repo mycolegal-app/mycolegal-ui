@@ -616,9 +616,16 @@ export function IncidentThread({
         </div>
       )}
 
-      {/* Actions */}
-      {!readOnly && !isClosed && !closeMode && (
+      {/* Actions. #233 — el reporter puede responder aunque esté cerrada; su
+          respuesta la reabre (lo gestiona el backend). Soporte sí debe usar el
+          botón Reabrir explícito. */}
+      {!readOnly && !closeMode && (!isClosed || viewerRole === "user") && (
         <div className="space-y-2">
+          {isClosed && (
+            <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              {t("ui.incidentThread.replyReopensHint")}
+            </p>
+          )}
           <Textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
@@ -692,14 +699,16 @@ export function IncidentThread({
                 </span>
               </>
             )}
-            <Button
-              variant="outline"
-              onClick={() => setCloseMode(true)}
-              disabled={posting}
-            >
-              <CheckCircle2 className="mr-1 h-4 w-4" />
-              {t("ui.incidentThread.btnClose")}
-            </Button>
+            {!isClosed && (
+              <Button
+                variant="outline"
+                onClick={() => setCloseMode(true)}
+                disabled={posting}
+              >
+                <CheckCircle2 className="mr-1 h-4 w-4" />
+                {t("ui.incidentThread.btnClose")}
+              </Button>
+            )}
             <Button onClick={postReply} disabled={posting || !draft.trim()}>
               {posting ? (
                 <><Loader2 className="mr-1 h-4 w-4 animate-spin" />{t("ui.incidentThread.sending")}</>
