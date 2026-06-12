@@ -34,11 +34,18 @@ export async function proxyToAuth(
   const method = options.method || request.method;
   const headers: Record<string, string> = {
     Authorization: `Bearer ${token}`,
-    'Content-Type': 'application/json',
   };
   const fetchOptions: RequestInit = { method, headers };
   if (method !== 'GET' && method !== 'HEAD') {
-    fetchOptions.body = options.body ?? (await request.text());
+    const body = options.body ?? (await request.text());
+    fetchOptions.body = body;
+    // #230/#231 — solo declaramos JSON si REALMENTE hay cuerpo. Enviar
+    // `Content-Type: application/json` con cuerpo vacío hace que Fastify
+    // rechace con "body cannot be empty" (le pasaba al botón Reabrir
+    // incidencia, que hace un POST sin body). Mismo criterio que fetchFromAuth.
+    if (typeof body === 'string' && body.length > 0) {
+      headers['Content-Type'] = 'application/json';
+    }
   }
 
   const authResponse = await fetch(`${config.authInternalUrl}${path}`, fetchOptions);
