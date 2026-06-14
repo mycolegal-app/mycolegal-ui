@@ -50,8 +50,8 @@ export interface BillingRoutesConfig {
 type BillingContext = { params: Promise<{ path?: string[] }>; auth: { orgId: string } };
 type BillingHandler = (request: NextRequest, context: BillingContext) => Promise<Response>;
 
-const SELF_SERVICE_GET = new Set(['overview']);
-const SELF_SERVICE_POST = new Set(['checkout', 'portal']);
+const SELF_SERVICE_GET = new Set(['overview', 'packs', 'credit-balance']);
+const SELF_SERVICE_POST = new Set(['checkout', 'portal', 'credit-checkout']);
 
 export function createBillingRoutes(config: BillingRoutesConfig) {
   const guard = config.withPermission(config.adminPermission ?? 'admin:users');
