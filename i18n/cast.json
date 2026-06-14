@@ -21,7 +21,8 @@
       "SUBSCRIPTION_REQUIRED": "Tu organización no tiene una suscripción activa. Suscríbete para usar esta función.",
       "NOT_AVAILABLE": "Esta función no está disponible en este momento.",
       "CONFLICT": "La operación entra en conflicto con el estado actual. Recarga la página e inténtalo de nuevo.",
-      "PAYLOAD_TOO_LARGE": "El contenido es demasiado grande."
+      "PAYLOAD_TOO_LARGE": "El contenido es demasiado grande.",
+      "INSUFFICIENT_CREDITS": "Sin créditos de IA. Compra un pack para continuar."
     },
     "billing": {
       "title": "Suscripciones",
@@ -45,7 +46,16 @@
         "trialing": "En prueba",
         "pastDue": "Pago pendiente",
         "none": "Sin suscripción"
-      }
+      },
+      "credits": "Créditos de IA",
+      "creditsBalance": "{n} créditos",
+      "creditsBreakdown": "{sub} de suscripción · {bought} comprados",
+      "creditsResets": "La dotación se renueva el {date}",
+      "buyCredits": "Comprar créditos",
+      "buy": "Comprar",
+      "packLabel": "{n} créditos · {amount}",
+      "creditsError": "No se pudieron cargar los créditos.",
+      "walletTitle": "Monedero de créditos de IA"
     },
     "impersonation": {
       "btn": "Impersonar usuario",

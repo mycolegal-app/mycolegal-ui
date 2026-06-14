@@ -48,6 +48,7 @@ export type {
 export { IncidentReporter } from './components/shared/incident-reporter';
 export { BillingPanel } from './components/shared/billing-panel';
 export type { BillingPanelProps } from './components/shared/billing-panel';
+export { CreditBalanceBadge } from './components/shared/credit-balance-badge';
 export { MycoBotRail } from './components/shared/mycobot-rail';
 export { MycoBot } from './components/shared/mycobot';
 export { UserAccountDialog } from './components/shared/user-account-dialog';

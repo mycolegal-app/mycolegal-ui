@@ -39,6 +39,21 @@ interface BillingItem {
   usage: { used: number; included: number; overage: number };
 }
 
+interface Wallet {
+  subscriptionBalance: number;
+  purchasedBalance: number;
+  total: number;
+  cycleResetAt: string | null;
+}
+
+interface CreditPack {
+  id: string;
+  name: string;
+  credits: number;
+  priceCents: number;
+  currency: string;
+}
+
 export interface BillingPanelProps {
   /** appSlug de la app desde la que se abre el panel (se resalta). */
   currentApp: string;
@@ -50,6 +65,8 @@ export function BillingPanel({ currentApp }: BillingPanelProps) {
   const { t, language } = useI18n();
   const isAdmin = useIsOrgAdmin();
   const [items, setItems] = useState<BillingItem[] | null>(null);
+  const [wallet, setWallet] = useState<Wallet | null>(null);
+  const [packs, setPacks] = useState<CreditPack[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   // Modal de condiciones de app (APP_TOS) antes de la contratación.
@@ -89,6 +106,17 @@ export function BillingPanel({ currentApp }: BillingPanelProps) {
     } catch {
       setError(t("ui.billing.loadError"));
       setItems([]);
+    }
+    // Monedero de créditos (único por org) + packs disponibles. No bloquea el panel.
+    try {
+      const [balRes, packsRes] = await Promise.all([
+        fetch("/api/billing/credit-balance"),
+        fetch("/api/billing/packs"),
+      ]);
+      if (balRes.ok) setWallet((await balRes.json()) as Wallet);
+      if (packsRes.ok) setPacks(((await packsRes.json())?.data ?? []) as CreditPack[]);
+    } catch {
+      /* el monedero es informativo: si falla, el panel de suscripciones sigue */
     }
   }, [t]);
 
@@ -179,6 +207,29 @@ export function BillingPanel({ currentApp }: BillingPanelProps) {
     }
   }, [terms, t, action]);
 
+  const buyPack = useCallback(async (packId: string) => {
+    setBusy(`pack:${packId}`);
+    try {
+      const here = window.location.href;
+      const res = await fetch("/api/billing/credit-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ packId, successUrl: here, cancelUrl: here }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(apiErrorMessage(t, { status: res.status, code: json?.error?.code, message: json?.error?.message }, t("ui.billing.actionError")));
+        return;
+      }
+      if (json?.url) { window.location.href = json.url as string; return; }
+      setError(t("ui.billing.actionError"));
+    } catch {
+      setError(t("ui.billing.actionError"));
+    } finally {
+      setBusy(null);
+    }
+  }, [t]);
+
   const ordered = useMemo(() => {
     if (!items) return [];
     return [...items].sort((a, b) => (a.app === currentApp ? -1 : b.app === currentApp ? 1 : a.name.localeCompare(b.name)));
@@ -224,6 +275,40 @@ export function BillingPanel({ currentApp }: BillingPanelProps) {
           <AlertCircle className="h-4 w-4 shrink-0" />
           <span>{error}</span>
         </div>
+      )}
+
+      {/* Monedero único de créditos de IA de la organización (mismo saldo en todas las apps). */}
+      {wallet && (
+        <Card className="border-mc-primary-200 bg-mc-primary-50/40">
+          <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
+            <div className="space-y-1">
+              <CardTitle className="text-base">{t("ui.billing.walletTitle")}</CardTitle>
+              <CardDescription>
+                {t("ui.billing.creditsBreakdown", { sub: String(wallet.subscriptionBalance), bought: String(wallet.purchasedBalance) })}
+                {wallet.cycleResetAt && <> {" · "} {t("ui.billing.creditsResets", { date: date(wallet.cycleResetAt) })}</>}
+              </CardDescription>
+            </div>
+            <div className="text-2xl font-semibold text-mc-primary-700">
+              {t("ui.billing.creditsBalance", { n: String(wallet.total) })}
+            </div>
+          </CardHeader>
+          {packs.length > 0 && (
+            <CardContent className="flex flex-wrap gap-2">
+              {packs.map((p) => (
+                <Button
+                  key={p.id}
+                  variant="outline"
+                  size="sm"
+                  disabled={busy === `pack:${p.id}`}
+                  onClick={() => buyPack(p.id)}
+                >
+                  {busy === `pack:${p.id}` ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CreditCard className="mr-2 h-4 w-4" />}
+                  {t("ui.billing.packLabel", { n: String(p.credits), amount: money(p.priceCents, p.currency) })}
+                </Button>
+              ))}
+            </CardContent>
+          )}
+        </Card>
       )}
 
       {ordered.map((it) => {

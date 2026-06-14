@@ -21,7 +21,8 @@
       "SUBSCRIPTION_REQUIRED": "La teva organització no té cap subscripció activa. Subscriu-te per utilitzar aquesta funció.",
       "NOT_AVAILABLE": "Aquesta funció no està disponible en aquest moment.",
       "CONFLICT": "L'operació entra en conflicte amb l'estat actual. Torna a carregar la pàgina i prova-ho de nou.",
-      "PAYLOAD_TOO_LARGE": "El contingut és massa gran."
+      "PAYLOAD_TOO_LARGE": "El contingut és massa gran.",
+      "INSUFFICIENT_CREDITS": "Sense crèdits d'IA. Compra un pack per continuar."
     },
     "billing": {
       "title": "Subscripcions",
@@ -45,7 +46,16 @@
         "trialing": "En prova",
         "pastDue": "Pagament pendent",
         "none": "Sense subscripció"
-      }
+      },
+      "credits": "Crèdits d'IA",
+      "creditsBalance": "{n} crèdits",
+      "creditsBreakdown": "{sub} de subscripció · {bought} comprats",
+      "creditsResets": "La dotació es renova el {date}",
+      "buyCredits": "Comprar crèdits",
+      "buy": "Comprar",
+      "packLabel": "{n} crèdits · {amount}",
+      "creditsError": "No s'han pogut carregar els crèdits.",
+      "walletTitle": "Moneder de crèdits d'IA"
     },
     "impersonation": {
       "btn": "Suplantar usuari",

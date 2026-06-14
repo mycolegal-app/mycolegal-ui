@@ -21,7 +21,8 @@
       "SUBSCRIPTION_REQUIRED": "Zure erakundeak ez du harpidetza aktiborik. Harpidetu funtzio hau erabiltzeko.",
       "NOT_AVAILABLE": "Funtzio hau ez dago erabilgarri une honetan.",
       "CONFLICT": "Eragiketak uneko egoerarekin gatazka du. Birkargatu orria eta saiatu berriro.",
-      "PAYLOAD_TOO_LARGE": "Edukia handiegia da."
+      "PAYLOAD_TOO_LARGE": "Edukia handiegia da.",
+      "INSUFFICIENT_CREDITS": "IA krediturik gabe. Erosi pack bat jarraitzeko."
     },
     "billing": {
       "title": "Harpidetzak",
@@ -45,7 +46,16 @@
         "trialing": "Probaldian",
         "pastDue": "Ordainketa zain",
         "none": "Harpidetzarik gabe"
-      }
+      },
+      "credits": "IAren kredituak",
+      "creditsBalance": "{n} kreditu",
+      "creditsBreakdown": "{sub} harpidetzakoak · {bought} erosiak",
+      "creditsResets": "Zuzkidura {date}(e)an berritzen da",
+      "buyCredits": "Kredituak erosi",
+      "buy": "Erosi",
+      "packLabel": "{n} kreditu · {amount}",
+      "creditsError": "Ezin izan dira kredituak kargatu.",
+      "walletTitle": "IAren kredituen diru-zorroa"
     },
     "impersonation": {
       "btn": "Erabiltzailea ordezkatu",

@@ -51,6 +51,8 @@ interface AppShellProps {
   /** Optional slots for the header right section */
   commandPalette?: ReactNode;
   helpButton?: ReactNode;
+  /** Optional indicador del monedero de créditos de IA (p.ej. <CreditBalanceBadge/>). */
+  creditBalance?: ReactNode;
   /** Optional breadcrumbs below header */
   breadcrumbs?: ReactNode;
   /** Optional overlays (help overlay, keyboard shortcuts, etc.) */
@@ -70,6 +72,7 @@ function AppShellInner({
   org,
   commandPalette,
   helpButton,
+  creditBalance,
   breadcrumbs,
   appSwitcherBar,
   impersonationBanner,
@@ -81,6 +84,7 @@ function AppShellInner({
   org?: OrgInfo;
   commandPalette?: ReactNode;
   helpButton?: ReactNode;
+  creditBalance?: ReactNode;
   breadcrumbs?: ReactNode;
   appSwitcherBar?: ReactNode;
   impersonationBanner?: ReactNode;
@@ -132,6 +136,7 @@ function AppShellInner({
               ref={registerActionsSlot}
               className="flex items-center gap-2 print:hidden empty:hidden"
             />
+            {creditBalance}
             {commandPalette ?? <DefaultSearchButton />}
             {helpButton ?? <DefaultHelpButton />}
             <AppInfoButton appName={appName} appLogoUrl={appLogoUrl} />
@@ -177,6 +182,7 @@ export default function AppShell({
   sidebar,
   commandPalette,
   helpButton,
+  creditBalance,
   breadcrumbs,
   overlays,
   providers,
@@ -241,6 +247,7 @@ export default function AppShell({
           org={org}
           commandPalette={commandPalette}
           helpButton={helpButton}
+          creditBalance={creditBalance}
           breadcrumbs={breadcrumbs}
           appSwitcherBar={
             showAppSwitcherBar ? (
