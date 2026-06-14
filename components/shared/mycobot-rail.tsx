@@ -13,6 +13,7 @@ import {
   History,
   PlusCircle,
   ArrowLeft,
+  Coins,
 } from "lucide-react";
 import { marked } from "marked";
 import { useI18n } from "../i18n/i18n-context";
@@ -151,10 +152,30 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
   const [corpus, setCorpus] = useState<{ total: number; hasDoctrina: boolean; hasDatos: boolean } | null>(
     null,
   );
+  const [wallet, setWallet] = useState<{ total: number; blocked: boolean } | null>(null);
   const threadRef = useRef<HTMLDivElement>(null);
 
   // Base de los endpoints de resoluciones (quita el sufijo `/ask`).
   const baseUrl = askUrl.replace(/\/ask$/, "");
+
+  // Saldo del monedero único de créditos de IA de la org (mismo canal que el
+  // resto del rail: en Consultor lo sirve /api/resoluciones/credit-balance y en
+  // otras apps su proxy lo reenvía a /api/inter/resoluciones/credit-balance).
+  const refreshBalance = useCallback(async () => {
+    try {
+      const r = await fetch(`${baseUrl}/credit-balance`);
+      if (!r.ok) return;
+      const d = await r.json();
+      if (typeof d?.total === "number") setWallet({ total: d.total, blocked: !!d.blocked });
+    } catch {
+      /* el indicador es opcional */
+    }
+  }, [baseUrl]);
+
+  // Refresca el saldo al abrir el rail.
+  useEffect(() => {
+    if (open) void refreshBalance();
+  }, [open, refreshBalance]);
 
   // Capacidades de MycoBot en esta app/org (welcome + chip): total del corpus,
   // hasDoctrina (org con Consultor) y hasDatos (app con tools del despacho).
@@ -295,9 +316,10 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
         setMessages((m) => [...m, { role: "bot", text: msg, error: true }]);
       } finally {
         setLoading(false);
+        void refreshBalance(); // la consulta puede haber gastado créditos
       }
     },
-    [askUrl, conversacionId, loading, t, corpus],
+    [askUrl, conversacionId, loading, t, corpus, refreshBalance],
   );
 
   // Empieza un hilo nuevo (no borra el historial persistido en el servidor).
@@ -485,6 +507,20 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
               <ChevronRight className="h-5 w-5" />
             </button>
           </header>
+
+          {/* Saldo del monedero de créditos de IA. Solo si la org tiene doctrina
+              (Consultor): es lo que consume créditos. Sin doctrina, MycoBot solo
+              da ayuda de producto (gratis) → no tiene sentido mostrar saldo. */}
+          {wallet && corpus?.hasDoctrina && (
+            <div
+              className={`flex items-center gap-1.5 border-b px-4 py-1.5 text-xs font-medium ${
+                wallet.blocked ? "bg-red-50 text-red-700" : "bg-cyan-50 text-cyan-800"
+              }`}
+            >
+              <Coins className="h-3.5 w-3.5" />
+              <span>{t("ui.billing.creditsBalance", { n: String(wallet.total) })}</span>
+            </div>
+          )}
 
           {/* Chip persistente: base de doctrina disponible (solo si la org tiene Consultor). */}
           {corpus?.hasDoctrina && (
