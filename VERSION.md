@@ -5,6 +5,13 @@
 
 ---
 
+##  — Reserva de números de protocolo (2026-06-14)
+
+Type: **minor**
+
+
+
+
 ## 1.87.0 — Factory de rutas /api/auth/* (2026-05-27)
 
 `server/auth-routes.ts`: `createAuthRoutes(config)` — hermano de
