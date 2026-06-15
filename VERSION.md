@@ -5,6 +5,18 @@
 
 ---
 
+## 1.95.0 — Auto-provisioning resiliente a drift de roles (2026-06-15)
+
+Type: **minor**
+
+`provisionUserRole` ya no revienta (y echa al usuario al login) cuando el
+`app_role_key` centralizado del catálogo global B2B (#78) no es un valor del
+enum de rol local de la app: degrada a `defaultRole` y, opcionalmente, valida
+contra `validRoles`. Fix transversal a todas las apps del patrón que afectó a
+Consultor (incidencia CGN-test / `USUARIO_NOTARIA`).
+
+---
+
 ##  — Reserva de números de protocolo (2026-06-14)
 
 Type: **minor**

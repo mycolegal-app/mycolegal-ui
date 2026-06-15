@@ -75,6 +75,16 @@ export interface ProvisionUserRoleArgs<TRole extends string> {
    */
   centralizedRole?: TRole | null;
   /**
+   * The app's valid local role enum values (e.g. `Object.values(MyRole)`).
+   * When provided, a `centralizedRole` that is NOT one of these is ignored
+   * and `defaultRole` is used instead — this guards against drift between
+   * the global B2B role catalog (#78) and a given app's narrower Prisma
+   * enum, which would otherwise make the create throw and kick the user to
+   * login. Even when omitted, the create degrades to `defaultRole` on
+   * failure (see below), so this is a proactive optimization, not required.
+   */
+  validRoles?: readonly TRole[];
+  /**
    * Optional logger override. When omitted, falls back to `console.warn`
    * for FK violations. Intentional: never throw.
    */
@@ -94,7 +104,8 @@ export interface ProvisionUserRoleArgs<TRole extends string> {
 export async function provisionUserRole<TRole extends string>(
   args: ProvisionUserRoleArgs<TRole>,
 ): Promise<UserRoleRow<TRole> | null> {
-  const { userRoleDelegate, authUserId, orgId, email, defaultRole, centralizedRole } = args;
+  const { userRoleDelegate, authUserId, orgId, email, defaultRole, centralizedRole, validRoles } =
+    args;
 
   let userRole = await userRoleDelegate.findUnique({
     where: { authUserId_orgId: { authUserId, orgId } },
@@ -107,26 +118,48 @@ export async function provisionUserRole<TRole extends string>(
   }
 
   if (!userRole) {
-    const role = centralizedRole ?? defaultRole;
-    try {
-      userRole = await userRoleDelegate.upsert({
-        where: { authUserId_orgId: { authUserId, orgId } },
-        update: {},
-        create: {
-          authUserId,
-          orgId,
-          role,
-          displayName: email,
-          email,
-          active: true,
-        },
-      });
-    } catch (err) {
-      if (args.onError) args.onError(err);
+    // Prefer the centralized role, but only if it's a valid value of this
+    // app's local enum. A global B2B catalog role (#78) such as
+    // `USUARIO_NOTARIA` is not part of e.g. `ConsultorRole`, so writing it
+    // verbatim would make the enum column reject the insert.
+    const preferred =
+      centralizedRole && (!validRoles || validRoles.includes(centralizedRole))
+        ? centralizedRole
+        : defaultRole;
+    // Try the preferred role; if the DB still rejects it (enum drift not yet
+    // covered by `validRoles`, or a value the catalog knows but the enum
+    // doesn't), degrade to `defaultRole` rather than returning null and
+    // kicking the user back to login. The default is always a valid enum
+    // value, so this never masks an Organization-missing FK error: in that
+    // case both attempts fail and we surface null as before.
+    const candidates = preferred === defaultRole ? [defaultRole] : [preferred, defaultRole];
+    let lastErr: unknown;
+    for (const role of candidates) {
+      try {
+        userRole = await userRoleDelegate.upsert({
+          where: { authUserId_orgId: { authUserId, orgId } },
+          update: {},
+          create: {
+            authUserId,
+            orgId,
+            role,
+            displayName: email,
+            email,
+            active: true,
+          },
+        });
+        lastErr = undefined;
+        break;
+      } catch (err) {
+        lastErr = err;
+      }
+    }
+    if (!userRole) {
+      if (args.onError) args.onError(lastErr);
       else
         console.warn(
           '[auth-provision] No se pudo auto-provisionar UserRole (¿Organization no existe?):',
-          err,
+          lastErr,
         );
       return null;
     }
