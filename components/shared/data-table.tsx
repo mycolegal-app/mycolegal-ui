@@ -68,6 +68,14 @@ interface DataTableProps<TData, TValue> {
   pageSizeOptions?: number[];
   rowClassName?: (row: TData) => string;
   enableColumnVisibility?: boolean;
+  /**
+   * Visibilidad inicial por columna (id → visible). Permite arrancar con
+   * columnas ocultas que el usuario puede revelar desde el selector "Cols."
+   * (requiere `enableColumnVisibility`). Ej. `{ solicitante: false }` deja la
+   * columna definida pero oculta por defecto. Solo siembra el estado inicial;
+   * los cambios del usuario mandan a partir de ahí.
+   */
+  initialColumnVisibility?: VisibilityState;
   toolbar?: ReactNode;
   /**
    * When true, only the tbody scrolls (thead stays sticky) so the page
@@ -302,6 +310,7 @@ export function DataTable<TData, TValue>({
   pageSizeOptions,
   rowClassName,
   enableColumnVisibility = false,
+  initialColumnVisibility,
   toolbar,
   scrollable = false,
   fillParent = false,
@@ -356,7 +365,9 @@ export function DataTable<TData, TValue>({
     initialSort ? [{ id: initialSort.id, desc: initialSort.desc ?? false }] : [],
   );
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
+    initialColumnVisibility ?? {},
+  );
   const [currentPageSize, setCurrentPageSize] = useState(effectiveInitialPageSize);
   const [colMenuOpen, setColMenuOpen] = useState(false);
 
