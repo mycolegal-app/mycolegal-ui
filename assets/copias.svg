@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <radialGradient id="bg-cop" cx="0.32" cy="0.22" r="1">
+      <stop offset="0" stop-color="#F4F7FA"></stop>
+      <stop offset="0.45" stop-color="#AEB7C0"></stop>
+      <stop offset="1" stop-color="#454E57"></stop>
+    </radialGradient>
+    <linearGradient id="rim-cop" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.85"></stop>
+      <stop offset="0.5" stop-color="#6E7884" stop-opacity="0.5"></stop>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.7"></stop>
+    </linearGradient>
+    <linearGradient id="ink-cop" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2A3138"></stop>
+      <stop offset="0.5" stop-color="#161A1E"></stop>
+      <stop offset="1" stop-color="#0A0C0E"></stop>
+    </linearGradient>
+
+    <symbol id="cop-icon" viewBox="0 0 64 64">
+      <g fill-rule="evenodd">
+        <!-- Back sheet (the duplicate peeking behind, lighter) -->
+        <path fill="#6E7884" stroke="#EEF3F7" stroke-width="0.8" stroke-opacity="0.6"
+          d="M 20 12 Q 18 12 18 14 V 42 Q 18 44 20 44 H 38 Q 40 44 40 42 V 22 L 30 12 Z"></path>
+        <path fill="#8893A0" d="M 30 12 L 30 22 L 40 22 Z"></path>
+
+        <!-- Front sheet (inherits ink gradient from the <use>) -->
+        <path d="M 28 18 Q 26 18 26 20 V 50 Q 26 52 28 52 H 46 Q 48 52 48 50 V 28 L 38 18 Z"></path>
+        <path fill="#EEF3F7" d="M 38 18 L 38 28 L 48 28 Z"></path>
+        <path fill="#AEB7C0" opacity="0.4" d="M 38 22 L 38 28 L 44 28 Z"></path>
+
+        <!-- Copy lines on the front sheet -->
+        <g fill="none" stroke="#C2CCD4" stroke-linecap="round" stroke-width="2.2">
+          <line x1="30" y1="34" x2="41" y2="34"></line>
+          <line x1="30" y1="39" x2="44" y2="39"></line>
+          <line x1="30" y1="44" x2="44" y2="44"></line>
+        </g>
+      </g>
+    </symbol>
+  </defs>
+
+  <rect width="64" height="64" rx="14" fill="url(#bg-cop)"></rect>
+  <rect x="0.6" y="0.6" width="62.8" height="62.8" rx="13.4" fill="none" stroke="url(#rim-cop)" stroke-width="0.9"></rect>
+  <rect x="2.4" y="2.4" width="59.2" height="59.2" rx="11.6" fill="none" stroke="#EEF3F7" stroke-width="0.5" stroke-opacity="0.45"></rect>
+
+  <g opacity="0.7"><use href="#cop-icon" width="64" height="64" fill="#EAF1F6" transform="translate(0.5,0.9)"></use></g>
+  <use href="#cop-icon" width="64" height="64" fill="url(#ink-cop)"></use>
+</svg>
