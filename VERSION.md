@@ -5,6 +5,13 @@
 
 ---
 
+##  — Nuevos logos B2B (2026-06-15)
+
+Type: **revision**
+
+
+
+
 ## 1.95.0 — Auto-provisioning resiliente a drift de roles (2026-06-15)
 
 Type: **minor**
