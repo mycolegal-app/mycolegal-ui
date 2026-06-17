@@ -5,6 +5,13 @@
 
 ---
 
+##  — Primera versión de Polizas (2026-06-17)
+
+Type: **revision**
+
+
+
+
 ##  — Nuevos logos B2B (2026-06-15)
 
 Type: **revision**
