@@ -105,7 +105,19 @@ export function SetPasswordForm({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({} as Record<string, unknown>));
+        // El backend distingue por qué falla el token (caducado, sustituido por
+        // un reenvío posterior, ya usado, inexistente) vía `code`. Lo mapeamos a
+        // un mensaje concreto para que el usuario sepa qué hacer en vez de leer
+        // siempre "el enlace puede haber expirado".
+        const codeKey: Record<string, string> = {
+          token_superseded: "ui.setPassword.errSuperseded",
+          token_expired: "ui.setPassword.errExpired",
+          token_used: "ui.setPassword.errUsed",
+          token_not_found: "ui.setPassword.errNotFound",
+        };
+        const code = (data as { code?: string })?.code;
         const msg =
+          (code && codeKey[code] ? t(codeKey[code]) : undefined) ??
           (data as { error?: { message?: string }; message?: string })?.error?.message ??
           (data as { message?: string })?.message ??
           t("ui.setPassword.errSet");
