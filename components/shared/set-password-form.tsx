@@ -91,6 +91,14 @@ export function SetPasswordForm({
       setError(t("ui.setPassword.errMinLength", { min: String(minLength) }));
       return;
     }
+    // Espejo de `passwordSchema` en auth (≥8 + mayúscula + minúscula + dígito).
+    // Sin esto el form solo comprobaba la longitud y dejaba enviar contraseñas
+    // que el servidor rechazaba con un 400 genérico, dejando al usuario sin
+    // saber qué corregir.
+    if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+      setError(t("ui.setPassword.errComplexity"));
+      return;
+    }
     if (password !== confirm) {
       setError(t("ui.setPassword.errMismatch"));
       return;
@@ -116,8 +124,20 @@ export function SetPasswordForm({
           token_not_found: "ui.setPassword.errNotFound",
         };
         const code = (data as { code?: string })?.code;
+        // Auth devuelve los fallos de validación Zod como
+        // `{ error: "Validation error", details: [{ path, message }] }`, SIN
+        // `code` y con `error` como string (no objeto). En este form el único
+        // campo validado es la contraseña, así que un fallo de validación =
+        // no cumple los requisitos de complejidad. Lo mapeamos a un mensaje
+        // claro en el idioma del usuario en vez de exponer el texto del backend
+        // (que viene en inglés) o caer al genérico "el enlace puede haber
+        // expirado", que despista cuando el problema es la contraseña.
+        const hasValidationDetails =
+          Array.isArray((data as { details?: unknown })?.details) ||
+          (data as { error?: unknown })?.error === "Validation error";
         const msg =
           (code && codeKey[code] ? t(codeKey[code]) : undefined) ??
+          (hasValidationDetails ? t("ui.setPassword.errComplexity") : undefined) ??
           (data as { error?: { message?: string }; message?: string })?.error?.message ??
           (data as { message?: string })?.message ??
           t("ui.setPassword.errSet");
@@ -267,7 +287,7 @@ export function SetPasswordForm({
                     className="mt-1 block w-full rounded-lg border border-mc-neutral-300 bg-white px-3 py-2 text-sm text-mc-slate-900 focus:border-mc-primary-500 focus:outline-none focus:ring-1 focus:ring-mc-primary-500"
                   />
                   <p className="mt-1 text-xs text-mc-slate-500">
-                    {t("ui.userAccount.minCharsHint", { min: String(minLength) })}
+                    {t("ui.setPassword.reqHint", { min: String(minLength) })}
                   </p>
                 </div>
 

@@ -305,7 +305,9 @@
       "subtitleBefore": "Escolle unha contrasinal para a túa conta en",
       "subtitleAfter": ".",
       "fieldConfirm": "Confirma a contrasinal",
-      "btnSet": "Establecer contrasinal"
+      "btnSet": "Establecer contrasinal",
+      "errComplexity": "O contrasinal debe incluír polo menos unha maiúscula, unha minúscula e un número.",
+      "reqHint": "Mínimo {min} caracteres, con polo menos unha maiúscula, unha minúscula e un número."
     },
     "changePassword": {
       "title": "Cambia a túa contrasinal",

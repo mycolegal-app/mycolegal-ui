@@ -305,7 +305,9 @@
       "subtitleBefore": "Elige una contraseña para tu cuenta en",
       "subtitleAfter": ".",
       "fieldConfirm": "Confirma la contraseña",
-      "btnSet": "Establecer contraseña"
+      "btnSet": "Establecer contraseña",
+      "errComplexity": "La contraseña debe incluir al menos una mayúscula, una minúscula y un número.",
+      "reqHint": "Mínimo {min} caracteres, con al menos una mayúscula, una minúscula y un número."
     },
     "changePassword": {
       "title": "Cambia tu contraseña",

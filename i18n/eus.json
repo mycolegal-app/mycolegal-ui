@@ -305,7 +305,9 @@
       "subtitleBefore": "Aukeratu pasahitz bat zure konturako:",
       "subtitleAfter": ".",
       "fieldConfirm": "Berretsi pasahitza",
-      "btnSet": "Pasahitza ezarri"
+      "btnSet": "Pasahitza ezarri",
+      "errComplexity": "Pasahitzak gutxienez maiuskula bat, minuskula bat eta zenbaki bat izan behar ditu.",
+      "reqHint": "Gutxienez {min} karaktere, maiuskula bat, minuskula bat eta zenbaki batekin."
     },
     "changePassword": {
       "title": "Aldatu zure pasahitza",
