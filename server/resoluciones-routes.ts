@@ -60,7 +60,7 @@ export async function forwardResoluciones(p: ForwardResolucionesParams): Promise
   // AGENTE de MycoBot: Consultor lo usa para consultar la API de la app (p.ej.
   // Notaría) en nombre del usuario, respetando sus permisos. Servicio-a-servicio
   // por red interna; el navegador ya tiene esta cookie.
-  const userToken = p.request.cookies.get('mycolegal-token')?.value;
+  const userToken = p.request.cookies.get((process.env.COOKIE_PREFIX || '') + 'mycolegal-token')?.value;
   if (userToken) headers['X-User-Token'] = userToken;
   const init: RequestInit = { method, headers, signal: AbortSignal.timeout(30000) };
   if (method !== 'GET' && method !== 'HEAD') {
