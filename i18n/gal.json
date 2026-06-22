@@ -877,6 +877,23 @@
       "searching": "Buscando…",
       "noResults": "Non se atoparon rexistros",
       "clearAria": "Quitar selección"
+    },
+    "facturar": {
+      "titulo": "Facturar en Wordplex",
+      "descripcion": "Tentarase obter o número de factura de Wordplex; se non hai integración, introdúceo manualmente.",
+      "consultando": "Consultando integración…",
+      "autoListo": "Integración lista: executarase no teu equipo ao facturar.",
+      "sinConfig": "Sen integración configurada: introduce serie e número manualmente.",
+      "fallo": "A integración non se puido completar.",
+      "serie": "Serie",
+      "numero": "Número",
+      "numeroAuto": "Encherase automaticamente",
+      "total": "Total (€)",
+      "fecha": "Data",
+      "faltaNumero": "Introduce o número de factura.",
+      "btn": "Facturar",
+      "cancelar": "Cancelar",
+      "errGenerico": "Non se puido facturar."
     }
   }
 }

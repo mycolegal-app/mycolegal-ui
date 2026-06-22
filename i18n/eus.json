@@ -877,6 +877,23 @@
       "searching": "Bilatzen…",
       "noResults": "Ez da erregistrorik aurkitu",
       "clearAria": "Kendu hautaketa"
+    },
+    "facturar": {
+      "titulo": "Wordplex-en fakturatu",
+      "descripcion": "Wordplex-etik faktura-zenbakia lortzen saiatuko da; integraziorik ez badago, sartu eskuz.",
+      "consultando": "Integrazioa kontsultatzen…",
+      "autoListo": "Integrazioa prest: zure ekipoan exekutatuko da fakturatzean.",
+      "sinConfig": "Integraziorik konfiguratu gabe: sartu seriea eta zenbakia eskuz.",
+      "fallo": "Integrazioa ezin izan da osatu.",
+      "serie": "Seriea",
+      "numero": "Zenbakia",
+      "numeroAuto": "Automatikoki beteko da",
+      "total": "Guztira (€)",
+      "fecha": "Data",
+      "faltaNumero": "Sartu faktura-zenbakia.",
+      "btn": "Fakturatu",
+      "cancelar": "Utzi",
+      "errGenerico": "Ezin izan da fakturatu."
     }
   }
 }
