@@ -531,6 +531,7 @@
       "noResults": "Katalogoko notariorik ez dator bat",
       "noResultsAllowCustom": "Ez dago katalogoan — testua bere horretan gordeko da",
       "obsoleto": "zaharkitua",
+      "jubilado": "erretiratua",
       "obsoletoWarning": "Notario hau jada ez dago Notariadoaren egungo erroldan"
     },
     "clientPicker": {

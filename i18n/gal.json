@@ -531,6 +531,7 @@
       "noResults": "Ningún notario do catálogo coincide",
       "noResultsAllowCustom": "Non está no catálogo — gardarase o texto tal cal",
       "obsoleto": "obsoleto",
+      "jubilado": "xubilado",
       "obsoletoWarning": "Este notario xa non figura no censo actual do Notariado"
     },
     "clientPicker": {

@@ -31,6 +31,13 @@ export interface NotarioOption {
   idiomas: string | null;
   fuente: NotarioFuente;
   ultimaSincPortalAt: string | null;
+  /**
+   * Fecha de baja del notario (jubilado/fallecido). Opcional: solo algunas apps
+   * la devuelven (p.ej. Copias, cuyo picker es para el notario autorizante/
+   * custodio e incluye los no-activos). Si viene poblada, el picker pinta un
+   * badge "jubilado".
+   */
+  fechaBaja?: string | null;
   provincia: { id: string; codigo: string | null; nombre: string } | null;
   poblacion: { id: string; nombre: string } | null;
 }
@@ -204,6 +211,7 @@ export function NotarioPicker({
           {!loading && options.map((n) => {
             const subtitle = getSubtitle(n);
             const obsoleto = n.fuente === "LEGACY";
+            const jubilado = Boolean(n.fechaBaja);
             return (
               <li key={n.id}>
                 <button
@@ -212,9 +220,14 @@ export function NotarioPicker({
                   className="block w-full px-3 py-2 text-left text-xs hover:bg-gray-50"
                 >
                   <div className="flex items-center gap-1.5">
-                    <span className={`font-medium ${obsoleto ? "text-amber-800" : "text-gray-900"}`}>
+                    <span className={`font-medium ${jubilado ? "text-gray-500" : obsoleto ? "text-amber-800" : "text-gray-900"}`}>
                       {getDisplayName(n)}
                     </span>
+                    {jubilado && (
+                      <span className="rounded bg-gray-200 px-1 py-0.5 text-[9px] uppercase text-gray-600">
+                        {t("ui.notarioPicker.jubilado")}
+                      </span>
+                    )}
                     {obsoleto && (
                       <span className="rounded bg-amber-100 px-1 py-0.5 text-[9px] uppercase text-amber-800">
                         {t("ui.notarioPicker.obsoleto")}

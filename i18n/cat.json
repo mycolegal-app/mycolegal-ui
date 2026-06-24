@@ -531,6 +531,7 @@
       "noResults": "Cap notari del catàleg coincideix",
       "noResultsAllowCustom": "No és al catàleg — es desarà el text tal qual",
       "obsoleto": "obsolet",
+      "jubilado": "jubilat",
       "obsoletoWarning": "Aquest notari ja no figura al cens actual del Notariat"
     },
     "clientPicker": {
