@@ -5,6 +5,24 @@
 
 ---
 
+## 1.98.0 — Cookies host-aware (`Domain` por host) (2026-06-24)
+
+Type: **minor**
+
+Las cookies de sesión/idioma/impersonación de `server/*` (auth-routes,
+language, impersonation) ahora resuelven el atributo `Domain` por petición:
+si el host de la request NO es sufijo del dominio compartido configurado
+(`COOKIE_DOMAIN`, p.ej. `.mycolegal.app` / `.test.mycolegal.app`), se emite
+una cookie host-only (sin `Domain`) en lugar de una que el navegador
+descartaría. Sin esto, al servir la app en un host fuera de ese dominio —la
+URL `*.run.app` de Cloud Run que ataca el e2e— el `Set-Cookie` del proxy de
+idioma (`PATCH /api/auth/me/profile`) se perdía y el reload del toggle ES/CA
+volvía a leer el idioma viejo del JWT (rompía `peticiones/i18n-portal`). En
+prod/preprod reales el host sí pertenece al dominio compartido, así que se
+conserva el `Domain` y el SSO cross-subdominio funciona igual. Nuevo helper
+`server/cookie-domain.ts` (`effectiveCookieDomain`). Set y clear usan la
+misma resolución para que el borrado siga casando con el alta.
+
 ##  — Primera versión de Polizas (2026-06-17)
 
 Type: **revision**

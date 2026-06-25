@@ -6,6 +6,7 @@ import {
   type ImpersonationConfig,
 } from './impersonation';
 import { clearLanguageCookie, createProfileProxyHandlers } from './language';
+import { effectiveCookieDomain } from './cookie-domain';
 
 /**
  * Factory for the set of `/api/auth/*` route handlers that are functionally
@@ -71,14 +72,31 @@ export function createAuthRoutes(config: AuthRoutesConfig) {
 
   const langCookieOpts = { secure: config.secureCookies, domain: config.cookieDomain };
 
-  // Clear-cookie options shared by logout + session/timeout.
-  const clearOpts = {
-    httpOnly: true,
+  // The cookie `Domain` has to be resolved per-request: the configured shared
+  // domain (`.mycolegal.app`) only lands when the request host is a suffix of
+  // it. On hosts outside it (the `*.run.app` URL the e2e hits) the browser
+  // would drop the cookie, so we fall back to a host-only cookie. See
+  // effectiveCookieDomain. Clearing must use the SAME resolution that set the
+  // cookie, otherwise the Set-Cookie won't match and the cookie survives.
+  const domainFor = (request: NextRequest) =>
+    effectiveCookieDomain(request.headers.get('host'), config.cookieDomain);
+
+  const langCookieOptsFor = (request: NextRequest) => ({
     secure: config.secureCookies,
-    sameSite: 'lax' as const,
-    path: '/',
-    maxAge: 0,
-    ...(config.cookieDomain && { domain: config.cookieDomain }),
+    domain: domainFor(request),
+  });
+
+  // Clear-cookie options shared by logout + session/timeout.
+  const clearOptsFor = (request: NextRequest) => {
+    const domain = domainFor(request);
+    return {
+      httpOnly: true,
+      secure: config.secureCookies,
+      sameSite: 'lax' as const,
+      path: '/',
+      maxAge: 0,
+      ...(domain && { domain }),
+    };
   };
 
   return {
@@ -139,6 +157,7 @@ export function createAuthRoutes(config: AuthRoutesConfig) {
         };
 
         const response = NextResponse.json({ data: { accessToken: authData.accessToken } });
+        const domain = domainFor(request);
 
         response.cookies.set(config.jwtCookieName, authData.accessToken, {
           httpOnly: true,
@@ -146,7 +165,7 @@ export function createAuthRoutes(config: AuthRoutesConfig) {
           sameSite: 'lax',
           path: '/',
           maxAge: config.accessCookieMaxAge,
-          ...(config.cookieDomain && { domain: config.cookieDomain }),
+          ...(domain && { domain }),
         });
 
         if (authData.refreshToken) {
@@ -156,7 +175,7 @@ export function createAuthRoutes(config: AuthRoutesConfig) {
             sameSite: 'lax',
             path: '/',
             maxAge: config.refreshCookieMaxAge,
-            ...(config.cookieDomain && { domain: config.cookieDomain }),
+            ...(domain && { domain }),
           });
         }
 
@@ -191,6 +210,7 @@ export function createAuthRoutes(config: AuthRoutesConfig) {
           } catch {}
         }
         const response = NextResponse.json({ success: true });
+        const clearOpts = clearOptsFor(request);
         response.cookies.set(config.jwtCookieName, '', clearOpts);
         response.cookies.set(config.refreshCookieName, '', clearOpts);
         return response;
@@ -223,9 +243,10 @@ export function createAuthRoutes(config: AuthRoutesConfig) {
         }
 
         const response = NextResponse.json({ success: true });
+        const clearOpts = clearOptsFor(request);
         response.cookies.set(config.jwtCookieName, '', clearOpts);
         response.cookies.set(config.refreshCookieName, '', clearOpts);
-        clearLanguageCookie(response, langCookieOpts);
+        clearLanguageCookie(response, langCookieOptsFor(request));
         return response;
       },
     },

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { cookies } from 'next/headers';
 import { decodeJwt } from 'jose';
+import { effectiveCookieDomain } from './cookie-domain';
 
 // --------------------------------------------------------------------------
 // Constants and types
@@ -222,7 +223,19 @@ export function createProfileProxyHandlers(config: ProfileProxyConfig): {
         const lang = pickLanguage(
           (data as { data?: { language?: unknown } })?.data?.language,
         );
-        if (lang) setLanguageCookie(response, lang, config.cookieOpts);
+        if (lang) {
+          // Host-aware: drop the shared Domain when the request host isn't a
+          // suffix of it (e.g. the `*.run.app` URL the e2e suite hits), else
+          // the browser rejects the Set-Cookie and the reload reads the old
+          // language. See effectiveCookieDomain.
+          setLanguageCookie(response, lang, {
+            ...config.cookieOpts,
+            domain: effectiveCookieDomain(
+              request.headers.get('host'),
+              config.cookieOpts.domain,
+            ),
+          });
+        }
       }
 
       return response;

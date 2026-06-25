@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { effectiveCookieDomain } from './cookie-domain';
 
 /**
  * Server-side impersonation flow shared by all consumer apps (admin for
@@ -81,19 +82,23 @@ function resolveNames(config: ImpersonationConfig): ResolvedNames {
   };
 }
 
-function cookieOptions(config: ImpersonationConfig, maxAge: number) {
+// The cookie `Domain` is resolved per-request (see effectiveCookieDomain): the
+// shared `.mycolegal.app` domain only lands when the request host is a suffix
+// of it, else we fall back to a host-only cookie (`domain` undefined). Both
+// set and clear must use the same resolution so the clear matches the set.
+function cookieOptions(config: ImpersonationConfig, maxAge: number, domain: string | undefined) {
   return {
     httpOnly: true,
     secure: config.secureCookies,
     sameSite: config.sameSite ?? ('lax' as const),
     path: '/',
-    domain: config.cookieDomain,
+    domain,
     maxAge,
   };
 }
 
-function clearCookie(config: ImpersonationConfig, name: string) {
-  return { name, path: '/', domain: config.cookieDomain };
+function clearCookie(name: string, domain: string | undefined) {
+  return { name, path: '/', domain };
 }
 
 /**
@@ -107,6 +112,7 @@ export async function startImpersonation(
   request: NextRequest,
 ): Promise<NextResponse> {
   const names = resolveNames(config);
+  const domain = effectiveCookieDomain(request.headers.get('host'), config.cookieDomain);
   const actorToken = request.cookies.get(names.actorJwt)?.value;
   const actorRefresh = request.cookies.get(names.actorRefresh)?.value;
 
@@ -167,15 +173,15 @@ export async function startImpersonation(
 
   // Preserve the actor session for restore-on-stop. Retained for the
   // refresh-token lifetime so a long impersonation can still be exited.
-  response.cookies.set(names.savedActorJwt, actorToken, cookieOptions(config, config.refreshCookieMaxAge));
+  response.cookies.set(names.savedActorJwt, actorToken, cookieOptions(config, config.refreshCookieMaxAge, domain));
   if (actorRefresh) {
-    response.cookies.set(names.savedActorRefresh, actorRefresh, cookieOptions(config, config.refreshCookieMaxAge));
+    response.cookies.set(names.savedActorRefresh, actorRefresh, cookieOptions(config, config.refreshCookieMaxAge, domain));
   }
 
   // Write the impersonation session to the user-app session cookies.
-  response.cookies.set(names.sessionJwt, accessToken, cookieOptions(config, config.accessCookieMaxAge));
+  response.cookies.set(names.sessionJwt, accessToken, cookieOptions(config, config.accessCookieMaxAge, domain));
   if (refreshToken) {
-    response.cookies.set(names.sessionRefresh, refreshToken, cookieOptions(config, config.refreshCookieMaxAge));
+    response.cookies.set(names.sessionRefresh, refreshToken, cookieOptions(config, config.refreshCookieMaxAge, domain));
   }
 
   // Remember where to send the actor on exit (admin flow). Readable by the
@@ -186,7 +192,7 @@ export async function startImpersonation(
       secure: config.secureCookies,
       sameSite: config.sameSite ?? ('lax' as const),
       path: '/',
-      domain: config.cookieDomain,
+      domain,
       maxAge: config.refreshCookieMaxAge,
     });
   }
@@ -206,6 +212,7 @@ export async function stopImpersonation(
   request: NextRequest,
 ): Promise<NextResponse> {
   const names = resolveNames(config);
+  const domain = effectiveCookieDomain(request.headers.get('host'), config.cookieDomain);
 
   const impToken = request.cookies.get(names.sessionJwt)?.value;
   const impRefresh = request.cookies.get(names.sessionRefresh)?.value;
@@ -233,34 +240,34 @@ export async function stopImpersonation(
     // org_admin flow: impersonation occupies the actor's own cookie. Restore
     // overwrites it; clear only if there was nothing to restore.
     if (savedActorToken) {
-      response.cookies.set(names.actorJwt, savedActorToken, cookieOptions(config, config.accessCookieMaxAge));
+      response.cookies.set(names.actorJwt, savedActorToken, cookieOptions(config, config.accessCookieMaxAge, domain));
       if (savedActorRefresh) {
-        response.cookies.set(names.actorRefresh, savedActorRefresh, cookieOptions(config, config.refreshCookieMaxAge));
+        response.cookies.set(names.actorRefresh, savedActorRefresh, cookieOptions(config, config.refreshCookieMaxAge, domain));
       } else {
-        response.cookies.delete(clearCookie(config, names.actorRefresh));
+        response.cookies.delete(clearCookie(names.actorRefresh, domain));
       }
     } else {
-      response.cookies.delete(clearCookie(config, names.sessionJwt));
-      response.cookies.delete(clearCookie(config, names.sessionRefresh));
+      response.cookies.delete(clearCookie(names.sessionJwt, domain));
+      response.cookies.delete(clearCookie(names.sessionRefresh, domain));
     }
   } else {
     // admin flow: clear the impersonation (session) cookies; the actor's own
     // session lives in a different cookie and is left untouched (restored
     // defensively if a preserved copy exists).
-    response.cookies.delete(clearCookie(config, names.sessionJwt));
-    response.cookies.delete(clearCookie(config, names.sessionRefresh));
+    response.cookies.delete(clearCookie(names.sessionJwt, domain));
+    response.cookies.delete(clearCookie(names.sessionRefresh, domain));
     if (savedActorToken) {
-      response.cookies.set(names.actorJwt, savedActorToken, cookieOptions(config, config.accessCookieMaxAge));
+      response.cookies.set(names.actorJwt, savedActorToken, cookieOptions(config, config.accessCookieMaxAge, domain));
       if (savedActorRefresh) {
-        response.cookies.set(names.actorRefresh, savedActorRefresh, cookieOptions(config, config.refreshCookieMaxAge));
+        response.cookies.set(names.actorRefresh, savedActorRefresh, cookieOptions(config, config.refreshCookieMaxAge, domain));
       }
     }
   }
 
   // Drop the preserved-actor cookies and the return hint.
-  response.cookies.delete(clearCookie(config, names.savedActorJwt));
-  response.cookies.delete(clearCookie(config, names.savedActorRefresh));
-  response.cookies.delete(clearCookie(config, RETURN_COOKIE));
+  response.cookies.delete(clearCookie(names.savedActorJwt, domain));
+  response.cookies.delete(clearCookie(names.savedActorRefresh, domain));
+  response.cookies.delete(clearCookie(RETURN_COOKIE, domain));
 
   return response;
 }
