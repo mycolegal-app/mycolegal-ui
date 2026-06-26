@@ -258,7 +258,9 @@
       "attachFileHint": "Adjuntar un documento (PDF, Excel, …) al hilo. Máximo 5 MB.",
       "errAttachFile": "No se pudo subir el archivo",
       "downloadFile": "Descargar",
-      "uploaderAgent": "MycoLegal"
+      "uploaderAgent": "MycoLegal",
+      "replySent": "Respuesta enviada y guardada.",
+      "replySentReopened": "Respuesta enviada. La incidencia se ha reabierto y soporte la verá."
     },
     "login": {
       "errAuth": "Error de autenticación",
@@ -429,7 +431,10 @@
       "attachHint": "Hasta {max} ficheros (imágenes, PDF…), máx. 5 MB cada uno.",
       "attachTooBig": "«{name}» supera 5 MB y no se ha añadido.",
       "attachTooMany": "Máximo {max} ficheros.",
-      "attachReadError": "No se pudo leer «{name}»."
+      "attachReadError": "No se pudo leer «{name}».",
+      "minimizedLabel": "Reportar incidencia",
+      "minimize": "Minimizar",
+      "expand": "Expandir"
     },
     "appInfo": {
       "btnAria": "Acerca de la aplicación",

@@ -258,7 +258,9 @@
       "attachFileHint": "Anexar un documento (PDF, Excel, …) ao fío. Máximo 5 MB.",
       "errAttachFile": "Non se puido subir o ficheiro",
       "downloadFile": "Descargar",
-      "uploaderAgent": "MycoLegal"
+      "uploaderAgent": "MycoLegal",
+      "replySent": "Resposta enviada e gardada.",
+      "replySentReopened": "Resposta enviada. A incidencia reabriuse e soporte veraa."
     },
     "login": {
       "errAuth": "Erro de autenticación",
@@ -429,7 +431,10 @@
       "attachHint": "Ata {max} ficheiros (imaxes, PDF…), máx. 5 MB cada un.",
       "attachTooBig": "«{name}» supera os 5 MB e non se engadiu.",
       "attachTooMany": "Máximo {max} ficheiros.",
-      "attachReadError": "Non se puido ler «{name}»."
+      "attachReadError": "Non se puido ler «{name}».",
+      "minimizedLabel": "Reportar incidencia",
+      "minimize": "Minimizar",
+      "expand": "Expandir"
     },
     "appInfo": {
       "btnAria": "Acerca da aplicación",

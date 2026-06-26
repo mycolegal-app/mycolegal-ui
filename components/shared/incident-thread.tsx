@@ -157,6 +157,10 @@ export function IncidentThread({
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [posting, setPosting] = useState(false);
+  // #308/#309/#310 — confirmación visible tras enviar una respuesta (el usuario
+  // no estaba seguro de si se guardaba, sobre todo al reabrir una cerrada).
+  const [sentOk, setSentOk] = useState(false);
+  const [reopenedNotice, setReopenedNotice] = useState(false);
   const [closing, setClosing] = useState(false);
   const [closeMode, setCloseMode] = useState(false);
   const [closeDraft, setCloseDraft] = useState("");
@@ -219,11 +223,20 @@ export function IncidentThread({
     return () => clearInterval(id);
   }, [fetchMessages, fetchAttachments, pollIntervalMs]);
 
+  // #308/#309/#310 — la confirmación de "enviado" se autodescarta a los 6 s.
+  useEffect(() => {
+    if (!sentOk) return;
+    const id = setTimeout(() => setSentOk(false), 6000);
+    return () => clearTimeout(id);
+  }, [sentOk]);
+
   const postReply = useCallback(async () => {
     const body = draft.trim();
     if (!body) return;
+    const wasClosed = incident.status === "closed";
     setPosting(true);
     setError(null);
+    setSentOk(false);
     try {
       const payload: { body: string; screenshot?: string } = { body };
       if (canInlineScreenshot && attachment) payload.screenshot = attachment;
@@ -241,12 +254,16 @@ export function IncidentThread({
       setAttachment(null);
       await fetchMessages();
       onRefresh?.();
+      // #308/#309/#310 — confirmación explícita: el mensaje se guardó (y, si la
+      // incidencia estaba cerrada, se ha reabierto). Se autodescarta.
+      setSentOk(true);
+      setReopenedNotice(wasClosed);
     } catch (err) {
       setError((err as Error).message || t("ui.incidentThread.errSend"));
     } finally {
       setPosting(false);
     }
-  }, [apiBase, attachment, canInlineScreenshot, draft, fetchMessages, onRefresh, t]);
+  }, [apiBase, attachment, canInlineScreenshot, draft, fetchMessages, incident.status, onRefresh, t]);
 
   const ingestImageBlob = useCallback(
     async (blob: Blob) => {
@@ -613,6 +630,18 @@ export function IncidentThread({
         <div className="flex items-start gap-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
           <span>{error}</span>
+        </div>
+      )}
+
+      {/* #308/#309/#310 — confirmación de que la respuesta se ha guardado. */}
+      {sentOk && (
+        <div className="flex items-start gap-2 rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
+          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            {reopenedNotice
+              ? t("ui.incidentThread.replySentReopened")
+              : t("ui.incidentThread.replySent")}
+          </span>
         </div>
       )}
 

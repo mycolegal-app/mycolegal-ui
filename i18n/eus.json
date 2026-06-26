@@ -258,7 +258,9 @@
       "attachFileHint": "Dokumentu bat (PDF, Excel, …) harira erantsi. Gehienez 5 MB.",
       "errAttachFile": "Ezin izan da fitxategia igo",
       "downloadFile": "Deskargatu",
-      "uploaderAgent": "MycoLegal"
+      "uploaderAgent": "MycoLegal",
+      "replySent": "Erantzuna bidali eta gorde da.",
+      "replySentReopened": "Erantzuna bidali da. Intzidentzia berrireki da eta laguntzak ikusiko du."
     },
     "login": {
       "errAuth": "Autentifikazio errorea",
@@ -429,7 +431,10 @@
       "attachHint": "Gehienez {max} fitxategi (irudiak, PDF…), 5 MB bakoitzeko.",
       "attachTooBig": "«{name}» 5 MB baino handiagoa da eta ez da gehitu.",
       "attachTooMany": "Gehienez {max} fitxategi.",
-      "attachReadError": "Ezin izan da «{name}» irakurri."
+      "attachReadError": "Ezin izan da «{name}» irakurri.",
+      "minimizedLabel": "Intzidentzia jakinarazi",
+      "minimize": "Minimizatu",
+      "expand": "Zabaldu"
     },
     "appInfo": {
       "btnAria": "Aplikazioari buruz",

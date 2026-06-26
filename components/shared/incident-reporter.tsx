@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bug, Camera, Send, Loader2, X, Paperclip, Upload } from "lucide-react";
+import { Bug, Camera, Send, Loader2, X, Paperclip, Upload, Minus, Maximize2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -124,6 +124,11 @@ export function IncidentReporter({
 }: IncidentReporterProps) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
+  // #306 — el modal puede minimizarse a una barra para echar un vistazo a la
+  // pantalla sin perder lo escrito. `minimizeRef` evita que el cierre del Dialog
+  // (al ocultarse por minimizar) se interprete como cerrar del todo.
+  const [minimized, setMinimized] = useState(false);
+  const minimizeRef = useRef(false);
   const [capturing, setCapturing] = useState(false);
   const [screenshot, setScreenshot] = useState<string | null>(null);
   const [description, setDescription] = useState("");
@@ -246,8 +251,20 @@ export function IncidentReporter({
     // Capture BEFORE opening the dialog so the overlay + modal don't end up
     // in the screenshot. captureScreenshot manages its own capturing state.
     await captureScreenshot();
+    setMinimized(false);
     setOpen(true);
   }, [captureScreenshot, draftKey]);
+
+  // #306 — cierre real del Dialog. Si el "cierre" viene de minimizar (Dialog se
+  // oculta), lo ignoramos para no cerrar del todo ni perder lo escrito.
+  const handleOpenChange = useCallback((v: boolean) => {
+    if (!v && minimizeRef.current) {
+      minimizeRef.current = false;
+      return;
+    }
+    setOpen(v);
+    if (!v) setMinimized(false);
+  }, []);
 
   // Hydrate the persisted visibility once on mount. We default to visible
   // (so a fresh session still shows the bug) and only flip when a previous
@@ -362,8 +379,46 @@ export function IncidentReporter({
         </button>
       )}
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      {/* #306 — barra minimizada: deja ver la pantalla sin perder el borrador. */}
+      {open && minimized && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-lg print:hidden">
+          <Bug className="h-4 w-4 shrink-0 text-navy" />
+          <span className="text-sm font-medium text-gray-800">
+            {t("ui.incidentReporter.minimizedLabel")}
+          </span>
+          <button
+            type="button"
+            onClick={() => setMinimized(false)}
+            title={t("ui.incidentReporter.expand")}
+            aria-label={t("ui.incidentReporter.expand")}
+            className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+          >
+            <Maximize2 className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => { setOpen(false); setMinimized(false); }}
+            title={t("ui.incidentThread.btnCancel")}
+            aria-label={t("ui.incidentThread.btnCancel")}
+            className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      <Dialog open={open && !minimized} onOpenChange={handleOpenChange}>
         <DialogContent className="max-w-2xl">
+          {/* #306 — minimizar a una barra para echar un vistazo a la pantalla. */}
+          <button
+            type="button"
+            onClick={() => { minimizeRef.current = true; setMinimized(true); }}
+            title={t("ui.incidentReporter.minimize")}
+            aria-label={t("ui.incidentReporter.minimize")}
+            className="absolute right-12 top-4 rounded-sm p-0.5 text-gray-500 opacity-70 transition-opacity hover:bg-gray-100 hover:opacity-100 focus:outline-none"
+          >
+            <Minus className="h-4 w-4" />
+          </button>
           <DialogHeader>
             <DialogTitle>{t("ui.incidentReporter.title")}</DialogTitle>
             <DialogDescription>

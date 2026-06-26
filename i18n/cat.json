@@ -258,7 +258,9 @@
       "attachFileHint": "Adjuntar un document (PDF, Excel, …) al fil. Màxim 5 MB.",
       "errAttachFile": "No s'ha pogut pujar el fitxer",
       "downloadFile": "Descarregar",
-      "uploaderAgent": "MycoLegal"
+      "uploaderAgent": "MycoLegal",
+      "replySent": "Resposta enviada i desada.",
+      "replySentReopened": "Resposta enviada. La incidència s'ha reobert i suport la veurà."
     },
     "login": {
       "errAuth": "Error d'autenticació",
@@ -429,7 +431,10 @@
       "attachHint": "Fins a {max} fitxers (imatges, PDF…), màx. 5 MB cadascun.",
       "attachTooBig": "«{name}» supera els 5 MB i no s'ha afegit.",
       "attachTooMany": "Màxim {max} fitxers.",
-      "attachReadError": "No s'ha pogut llegir «{name}»."
+      "attachReadError": "No s'ha pogut llegir «{name}».",
+      "minimizedLabel": "Reportar incidència",
+      "minimize": "Minimitzar",
+      "expand": "Expandir"
     },
     "appInfo": {
       "btnAria": "Quant a l'aplicació",
