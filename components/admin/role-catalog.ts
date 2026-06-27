@@ -78,16 +78,26 @@ export const ROLE_COLORS: Record<string, string> = {
 };
 
 /**
- * Roles INTERNOS legacy ya migrados al catálogo unificado (incidencia #78).
- * Se ocultan del desplegable de asignación para que el admin solo vea la
+ * Roles legacy ya cubiertos por el catálogo unificado (incidencia #78). Se
+ * ocultan del desplegable de asignación para que el admin solo vea la
  * nomenclatura nueva. NO se borran de auth (siguen como red de seguridad /
- * fallback). Los roles externos legacy (GESTOR, GESTORIA_EXTERNA, BANCO_EXTERNO,
- * EXTERNO, CONSULTOR_EXTERNO…) NO se ocultan: aún no se han migrado (pase D4).
+ * fallback).
+ *
+ * Externos: se ocultan también los legacy de externos (GESTOR/AYUDANTE_GESTOR/
+ * EXTERNO/GESTORIA_EXTERNA/BANCO_EXTERNO/CONSULTOR_EXTERNO). Es seguro porque
+ * NO hay todavía ningún usuario externo operando (confirmado), así que ocultarlos
+ * no deja a nadie sin rol asignable. NO se ocultan los roles funcionales de
+ * foundation B2B de Peticiones (ADMIN_DEPARTAMENTO, VALIDADOR_BANCO,
+ * PRE_VALIDADOR_GESTORIA): son funcionalidad activa, no nomenclatura legacy.
  */
 export const LEGACY_HIDDEN_ROLE_KEYS = new Set<string>([
+  // Internos
   'NOTARIO', 'OFICIAL', 'TRAMITADOR', 'CONSULTOR',
   'EDITOR', 'OPERADOR', 'VISOR',
   'EDITOR_CATALOGO', 'CONTABILIDAD', 'AUXILIAR',
+  // Externos legacy (sin usuarios externos operando aún)
+  'GESTOR', 'AYUDANTE_GESTOR', 'EXTERNO',
+  'GESTORIA_EXTERNA', 'BANCO_EXTERNO', 'CONSULTOR_EXTERNO',
 ]);
 
 /** ¿Debe ocultarse este rol del desplegable de asignación? */
