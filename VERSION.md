@@ -5,6 +5,13 @@
 
 ---
 
+##  — Fixes en TEST (2026-06-29)
+
+Type: **revision**
+
+
+
+
 ## 1.98.0 — Cookies host-aware (`Domain` por host) (2026-06-24)
 
 Type: **minor**
