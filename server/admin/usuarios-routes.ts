@@ -115,12 +115,13 @@ export function createUsuariosRoutes(deps: UsuariosRoutesDeps) {
         : [];
       const localByAuthId = new Map<string, any>(localUsers.map((u: any) => [u.authUserId, u]));
 
-      // mycolegal-admin (appSlug='admin') no es una app de usuario: todos los
-      // miembros de la org son visibles y el "rol" mostrado es el rol org-level
-      // (org_admin/user) — nadie tiene UserAppPermission[admin], pero eso no
-      // debe pintarse como "No Access". Para apps de usuario (notaria, etc.)
+      // Las consolas de plataforma (mycolegal-admin = superadmin; config =
+      // configuración del org_admin) no son apps de usuario: todos los miembros
+      // de la org son visibles y el "rol" mostrado es el rol org-level
+      // (org_admin/user) — nadie tiene UserAppPermission[admin|config], pero eso
+      // no debe pintarse como "No Access". Para apps de usuario (notaria, etc.)
       // hasAppAccess sigue derivándose de UserAppPermission.
-      const isAdminApp = appSlug === 'admin';
+      const isAdminApp = appSlug === 'admin' || appSlug === 'config';
       const result: any[] = [];
       for (const au of authUsers) {
         const local = localByAuthId.get(au.id);
