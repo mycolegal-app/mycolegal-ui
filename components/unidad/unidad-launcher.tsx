@@ -16,7 +16,7 @@ import { useI18n } from "../i18n/i18n-context";
  * del host actual por `archivo` (p.ej. `notaria.mycolegal.app` →
  * `archivo.mycolegal.app`), o usa `NEXT_PUBLIC_ARCHIVO_URL` si está definida.
  */
-export function UnidadLauncher() {
+export function UnidadLauncher({ context }: { context?: { protocolo?: string | number } } = {}) {
   const { t } = useI18n();
   const { collapsed } = useSidebarCollapse();
   const [archivoUrl, setArchivoUrl] = useState<string | null>(null);
@@ -42,6 +42,7 @@ export function UnidadLauncher() {
   return (
     <DriveLauncher
       archivoUrl={archivoUrl}
+      context={context}
       onPick={(_node, url) => {
         if (url) window.open(url, "_blank", "noopener,noreferrer");
       }}

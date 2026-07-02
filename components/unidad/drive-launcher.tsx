@@ -26,6 +26,12 @@ export interface DriveLauncherProps {
   /** Contenido del botón disparador (por defecto, texto i18n). */
   children?: ReactNode;
   className?: string;
+  /**
+   * Contexto opcional de la app que abre el explorador. Cuando se pasa (p.ej.
+   * desde la ficha de un protocolo), el picker arranca pre-buscando por ese nº
+   * de protocolo. Sin contexto → explorador completo.
+   */
+  context?: { protocolo?: string | number };
 }
 
 /**
@@ -33,7 +39,7 @@ export interface DriveLauncherProps {
  * `/unidad-embed` de Archivo en modo picker y escucha el `postMessage` con el
  * fichero elegido. Same-site (`*.mycolegal.app`) → la sesión viaja en el iframe.
  */
-export function DriveLauncher({ archivoUrl, onPick, children, className }: DriveLauncherProps) {
+export function DriveLauncher({ archivoUrl, onPick, children, className, context }: DriveLauncherProps) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   // Montado en cliente: el modal va por portal a `document.body`, así escapa de
@@ -98,7 +104,13 @@ export function DriveLauncher({ archivoUrl, onPick, children, className }: Drive
               </button>
             </div>
             <iframe
-              src={`${base}/unidad-embed?mode=picker`}
+              src={(() => {
+                const params = new URLSearchParams({ mode: "picker" });
+                if (context?.protocolo != null && String(context.protocolo).trim()) {
+                  params.set("q", String(context.protocolo).trim());
+                }
+                return `${base}/unidad-embed?${params.toString()}`;
+              })()}
               title={t("ui.driveLauncher.title")}
               className="flex-1 border-0"
             />
