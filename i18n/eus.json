@@ -633,7 +633,8 @@
       "ariaLabel": "Aplikazioa aldatu",
       "expand": "Aplikazioak erakutsi",
       "collapse": "Aplikazioak ezkutatu",
-      "loadingApp": "Aplikazioa kargatzen…"
+      "loadingApp": "Aplikazioa kargatzen…",
+      "unread": "{count} irakurri gabe"
     },
     "appShell": {
       "openMobileMenu": "Alboko menua ireki"

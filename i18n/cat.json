@@ -633,7 +633,8 @@
       "ariaLabel": "Canviar d'aplicació",
       "expand": "Mostra les aplicacions",
       "collapse": "Amaga les aplicacions",
-      "loadingApp": "Carregant aplicació…"
+      "loadingApp": "Carregant aplicació…",
+      "unread": "{count} sense llegir"
     },
     "appShell": {
       "openMobileMenu": "Obrir menú lateral"
