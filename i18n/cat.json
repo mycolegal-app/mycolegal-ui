@@ -652,7 +652,8 @@
       "signOut": "Tancar sessió",
       "openAccount": "Obrir el meu compte",
       "collapse": "Replegar menú",
-      "expand": "Desplegar menú"
+      "expand": "Desplegar menú",
+      "unidad": "Unitat de xarxa"
     },
     "idleTimeout": {
       "title": "Sessió a punt d'expirar",

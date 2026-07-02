@@ -117,6 +117,7 @@ export type { ReleaseNotesState } from './hooks/use-release-notes';
 export { useAuthFetchGuard } from './hooks/use-auth-fetch-guard';
 export { useOrgApps, useIsAppEnabled, invalidateOrgApps } from './hooks/use-org-apps';
 export { useIsOrgAdmin } from './hooks/use-is-org-admin';
+export { usePermissions, type UsePermissionsResult } from './hooks/use-permissions';
 
 // i18n defaults (used by consumer apps' I18nProvider#defaults)
 export { uiMessages, getUiDefaults } from './i18n';

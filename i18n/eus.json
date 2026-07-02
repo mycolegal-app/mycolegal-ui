@@ -652,7 +652,8 @@
       "signOut": "Saioa itxi",
       "openAccount": "Nire kontua ireki",
       "collapse": "Menua tolestu",
-      "expand": "Menua zabaldu"
+      "expand": "Menua zabaldu",
+      "unidad": "Sareko unitatea"
     },
     "idleTimeout": {
       "title": "Saioa iraungitzear",

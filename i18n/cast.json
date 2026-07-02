@@ -652,7 +652,8 @@
       "signOut": "Cerrar sesión",
       "openAccount": "Abrir mi cuenta",
       "collapse": "Contraer menú",
-      "expand": "Expandir menú"
+      "expand": "Expandir menú",
+      "unidad": "Unidad de red"
     },
     "idleTimeout": {
       "title": "Sesión a punto de expirar",
