@@ -345,7 +345,12 @@ export function IncidentReporter({
         );
       }
       setResult("ok");
+      // Limpiar el estado en memoria además del draft persistido: si no, al
+      // reabrir el reporter (creyendo que no se envió) el texto seguía ahí y
+      // un segundo submit generaba un duplicado idéntico (#361/#362).
       setAttachments([]);
+      setDescription("");
+      setScreenshot(null);
       // Sent successfully — discard the persisted draft so the next open
       // starts blank.
       try {
