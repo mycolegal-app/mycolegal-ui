@@ -158,6 +158,7 @@ interface SourceState<T> {
 function useRemoteSource<T>(
   source: RemoteDataSource | undefined,
   initialPageSize: number,
+  initialSort?: { id: string; desc?: boolean },
 ): {
   enabled: boolean;
   state: SourceState<T>;
@@ -184,16 +185,33 @@ function useRemoteSource<T>(
   const [pageSize, setPageSizeState] = useState(initialPageSize);
   const [searchInput, setSearchInputState] = useState("");
   const [searchDebounced, setSearchDebounced] = useState("");
-  const [serverSort, setServerSortState] = useState<string | null>(null);
+  // Seed the server sort from `initialSort` so the very first probe already
+  // carries it and no re-probe (e.g. an `extraParams` change right after mount)
+  // can lose it. Previously serverSort started null and only got the initial
+  // order via an effect that races the init→server mode transition; when
+  // `extraParams` flipped during mount (a common pattern, e.g. resolving the
+  // logged-in user then adjusting a filter) that race dropped the order and
+  // subsequent header clicks stopped emitting a server sort.
+  const initialServerSort =
+    initialSort ? `${initialSort.id}:${initialSort.desc ? "desc" : "asc"}` : null;
+  const [serverSort, setServerSortState] = useState<string | null>(initialServerSort);
   // Ref so the (memoised) fetcher always reads the current sort without being
   // re-created on every sort change.
-  const serverSortRef = useRef<string | null>(null);
+  const serverSortRef = useRef<string | null>(initialServerSort);
   const setServerSort = useCallback((v: string | null) => {
     if (serverSortRef.current === v) return;
     serverSortRef.current = v;
     setServerSortState(v);
   }, []);
   const reqCounter = useRef(0);
+  // Separate sequence for probes. The mode (client/server) decision must be
+  // driven by the *latest probe*, independently of the data-staleness check
+  // below: if a probe's response arrives after a newer request bumped
+  // `reqCounter`, skipping its `setMode` used to leave `mode` wedged at "init"
+  // (a re-probe sets "init" first), which in turn stalled server-side sorting
+  // and pagination (#339). Gating the mode decision on `probeSeq` instead
+  // guarantees mode always resolves.
+  const probeSeq = useRef(0);
 
   // Debounce search input → searchDebounced (sent to server in server mode,
   // used as globalFilter in client mode).
@@ -213,6 +231,8 @@ function useRemoteSource<T>(
     async (params: { page: number; size: number; search: string; isProbe: boolean }) => {
       if (!endpoint) return;
       const myReq = ++reqCounter.current;
+      const myProbe = params.isProbe ? ++probeSeq.current : 0;
+      const isLatestProbe = () => params.isProbe && myProbe === probeSeq.current;
       setLoading(true);
       try {
         const qs = new URLSearchParams();
@@ -235,32 +255,34 @@ function useRemoteSource<T>(
           }
         }
         const res = await fetch(`${endpoint}?${qs.toString()}`);
-        if (myReq !== reqCounter.current) return; // stale
         if (!res.ok) {
+          // The latest probe still decides the mode even if its data is stale,
+          // so a large-population table can't get stuck out of server mode.
+          if (isLatestProbe()) setMode("client");
+          if (myReq !== reqCounter.current) return; // stale data
           // Surface the failure instead of rendering an empty table: a 403
           // (no permission) otherwise looked identical to "no data".
           setError(res.status === 403 ? "forbidden" : "error");
           setData([]);
           setTotal(0);
-          if (params.isProbe) setMode("client");
           return;
         }
         const json = await res.json();
-        if (myReq !== reqCounter.current) return; // stale
-        setError(null);
         const rows: T[] = json.data ?? [];
         const totalRows: number = json.meta?.total ?? rows.length;
-        setData(rows);
-        setTotal(totalRows);
-        if (params.isProbe) {
+        if (isLatestProbe()) {
           setMode(totalRows <= threshold ? "client" : "server");
         }
+        if (myReq !== reqCounter.current) return; // stale data
+        setError(null);
+        setData(rows);
+        setTotal(totalRows);
       } catch {
-        if (myReq !== reqCounter.current) return; // stale
+        if (isLatestProbe()) setMode("client");
+        if (myReq !== reqCounter.current) return; // stale data
         setError("error");
         setData([]);
         setTotal(0);
-        if (params.isProbe) setMode("client");
       } finally {
         if (myReq === reqCounter.current) setLoading(false);
       }
@@ -327,7 +349,7 @@ export function DataTable<TData, TValue>({
   const resolvedSearchPlaceholder = searchPlaceholder ?? t("ui.dataTable.searchPlaceholder");
 
   // Remote source state (no-op when `source` is undefined).
-  const remote = useRemoteSource<TData>(source, initialPageSize);
+  const remote = useRemoteSource<TData>(source, initialPageSize, initialSort);
 
   // Resolve which data/pagination source the table actually uses.
   const usingSource = remote.enabled;
@@ -377,13 +399,19 @@ export function DataTable<TData, TValue>({
     setCurrentPageSize(effectiveInitialPageSize);
   }, [effectiveInitialPageSize]);
 
-  // Push the active sort to the remote source when in server mode so the
-  // server re-queries the full population (not just the current page slice).
+  // Record the active sort on the remote source whenever it changes, so the
+  // next server fetch re-queries the full population (not just the current page
+  // slice). We gate on `usingSource` — not `serverSortMode` — on purpose: if a
+  // re-probe momentarily drops us out of server mode, we must still capture the
+  // user's sort intent so it's already in place when server mode resumes. In
+  // client mode the recorded value is simply unused (TanStack sorts in memory),
+  // so this is harmless there. Gating on `serverSortMode` here previously lost
+  // clicks that landed during a mount-time re-probe (#339).
   useEffect(() => {
-    if (!serverSortMode) return;
+    if (!usingSource) return;
     const s = sorting[0];
     remote.setServerSort(s ? `${s.id}:${s.desc ? "desc" : "asc"}` : null);
-  }, [sorting, serverSortMode, remote.setServerSort]);
+  }, [sorting, usingSource, remote.setServerSort]);
 
   const effectivePageIndex = manualPagination ? (effectiveControlledPageIndex ?? 0) : undefined;
 
