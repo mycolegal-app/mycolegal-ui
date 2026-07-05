@@ -822,9 +822,40 @@ export function createUnidadRoutes(deps: UnidadDeps) {
     return successResponse({ resumen: r.resumen, cached: false });
   };
 
+  /**
+   * POST /api/unidad/search { query } → nodos cuyo nombre contiene `query`,
+   * acotados a la org y a la visibilidad del usuario (MISMO filtro que el explorer
+   * vía `visibilityWhere`). Es la superficie de la tool `unidad_buscar` de MycoBot.
+   * Búsqueda por nombre (contenido = Fase 2 con `FileText`). Solo lectura.
+   */
+  const searchHandler: UnidadHandler = async (request, { auth }) => {
+    const body = await request.json().catch(() => null);
+    const query = typeof body?.query === 'string' ? body.query.trim() : '';
+    if (query.length < 2) {
+      return errorResponse('BAD_REQUEST', 'La búsqueda necesita al menos 2 caracteres', 400);
+    }
+    const nodes = await prisma.driveNode.findMany({
+      where: {
+        orgId: auth.orgId,
+        name: { contains: query, mode: 'insensitive' },
+        ...visibilityWhere(auth),
+      },
+      orderBy: [{ type: 'desc' }, { name: 'asc' }],
+      take: 20,
+    });
+    return successResponse({
+      total: nodes.length,
+      items: nodes.map((n: DriveNodeRow) => {
+        const s = serializeNode(n, auth);
+        return { id: s.id, name: s.name, type: s.type, mimeType: s.mimeType, sizeBytes: s.sizeBytes };
+      }),
+    });
+  };
+
   // Handlers ya envueltos por el wrapper de permisos del host.
   const wrapped = {
     list: withPermission('unidad:read')(listHandler),
+    search: withPermission('unidad:read')(searchHandler),
     read: withPermission('unidad:read')(readHandler),
     resumir: withPermission('unidad:read')(resumirHandler),
     folder: withPermission('unidad:write')(folderHandler),
@@ -868,6 +899,10 @@ export function createUnidadRoutes(deps: UnidadDeps) {
     // /trash
     if (segs.length === 1 && segs[0] === 'trash' && method === 'GET') {
       return { run: wrapped.trash, params: {} };
+    }
+    // /search
+    if (segs.length === 1 && segs[0] === 'search' && method === 'POST') {
+      return { run: wrapped.search, params: {} };
     }
     // /read
     if (segs.length === 1 && segs[0] === 'read' && method === 'POST') {
