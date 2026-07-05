@@ -9,7 +9,13 @@
       "title": "Aurrebista",
       "loading": "Dokumentua kargatzen…",
       "download": "Deskargatu",
-      "notPreviewable": "Fitxategi mota hau ezin da aurreikusi."
+      "notPreviewable": "Fitxategi mota hau ezin da aurreikusi.",
+      "summarize": "Laburtu IArekin",
+      "summarizing": "Laburtzen…",
+      "summaryTitle": "IA laburpena",
+      "summaryError": "Ezin izan da dokumentua laburtu",
+      "summaryNoCredits": "Ez duzu kreditu nahikorik laburtzeko",
+      "summaryNeedsOcr": "Eskaneatutako dokumentua testu-geruzarik gabe (OCR laster)"
     },
     "errors": {
       "generic": "Ezin izan da ekintza osatu. Saiatu berriro.",

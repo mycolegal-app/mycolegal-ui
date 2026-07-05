@@ -9,7 +9,13 @@
       "title": "Vista prèvia",
       "loading": "Carregant document…",
       "download": "Descarregar",
-      "notPreviewable": "Aquest tipus de fitxer no es pot previsualitzar."
+      "notPreviewable": "Aquest tipus de fitxer no es pot previsualitzar.",
+      "summarize": "Resumir amb IA",
+      "summarizing": "Resumint…",
+      "summaryTitle": "Resum IA",
+      "summaryError": "No s'ha pogut resumir el document",
+      "summaryNoCredits": "No tens prou crèdits per resumir",
+      "summaryNeedsOcr": "Document escanejat sense capa de text (OCR pròximament)"
     },
     "errors": {
       "generic": "No s'ha pogut completar l'acció. Torna-ho a provar.",

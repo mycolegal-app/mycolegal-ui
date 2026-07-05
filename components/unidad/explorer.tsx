@@ -713,6 +713,7 @@ export function UnidadExplorer({ mode = "browse", onPick }: UnidadExplorerProps 
         mimeType={preview.mimeType}
         loading={preview.loading}
         error={preview.error}
+        nodeId={preview.nodeId ?? undefined}
         onDownload={
           preview.nodeId
             ? () => {

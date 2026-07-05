@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { extractText } from '@mycolegal-app/sharedlib/text-extract';
 
 /**
  * Factory con TODA la lógica de la Unidad de Red (`DriveNode`) — dominio +
@@ -52,6 +53,12 @@ export interface UnidadStorage {
   listVersions(gcsPath: string): Promise<{ generation: string; size: number; updated?: string }[]>;
   restoreVersion(gcsPath: string, generation: string): Promise<{ ok: boolean; error?: string }>;
   /**
+   * Descarga los bytes del objeto (para extraer texto/OCR server-side, ver
+   * `POST /read`). Opcional: sin él, `read` degrada a 501. Devuelve `Uint8Array`
+   * (evita `@types/node` en ui; un `Buffer` es un `Uint8Array`).
+   */
+  readBytes?(gcsPath: string): Promise<Uint8Array | null>;
+  /**
    * Descarga el contenido de una generación concreta (para servirla por el
    * server; la signed URL firma siempre la versión viva). Opcional: sin él,
    * la descarga por `?generation=` degrada a 503.
@@ -79,6 +86,14 @@ export interface UnidadDeps {
   withPermission: (
     permission: string,
   ) => (handler: UnidadHandler) => (req: NextRequest, ctx: any) => Promise<Response>;
+  /**
+   * Resume un texto con IA. Lo inyecta la app (reenvía el texto + el JWT del
+   * usuario a Consultor, que cobra 1 crédito y llama a Gemini). Sin él, `resumir`
+   * degrada a 501. Ver PLAN_TECNICO_MYCOBOT_TOOLS.md §5.1.
+   */
+  summarize?: (
+    texto: string,
+  ) => Promise<{ ok: boolean; resumen?: string; status?: number; error?: string }>;
 }
 
 // --------------------------------------------------------------------------
@@ -134,7 +149,7 @@ export interface DriveNodeDTO {
 }
 
 export function createUnidadRoutes(deps: UnidadDeps) {
-  const { prisma, storage, withPermission } = deps;
+  const { prisma, storage, withPermission, summarize } = deps;
 
   // ------------------------------------------------------------------------
   // Dominio (cerrado sobre `deps`)
@@ -697,9 +712,121 @@ export function createUnidadRoutes(deps: UnidadDeps) {
     return successResponse({ id: node.id, restored: count });
   };
 
+  /**
+   * POST /api/unidad/read { nodeId } — extrae (o devuelve cacheado) el TEXTO del
+   * documento. v0.1: solo capa de texto (sin OCR; si es escaneo → `needsOcr:true`,
+   * Document AI = v0.2). Cachea en `FileText` → la biblioteca de texto se
+   * auto-construye por uso (semilla del buscador de contenido/vectorización,
+   * Fase 2). Backend de `unidad_leer` (MycoBot) y de "Resumir con IA". Ver
+   * PLAN_TECNICO_MYCOBOT_TOOLS.md §5.1.
+   */
+  const readHandler: UnidadHandler = async (request, { auth }) => {
+    const body = await request.json().catch(() => null);
+    const nodeId = String(body?.nodeId ?? '');
+    if (!nodeId) return errorResponse('BAD_REQUEST', 'Falta nodeId', 400);
+
+    const node = await getVisibleNode(auth, nodeId);
+    if (!node || node.type !== 'FILE' || !node.gcsPath) {
+      return errorResponse('NOT_FOUND', 'Fichero no encontrado', 404);
+    }
+
+    // Caché: hay texto y el sha256 coincide (o no hay sha256) → devuelve cacheado.
+    const cached = await prisma.fileText.findUnique({ where: { driveNodeId: nodeId } });
+    if (cached?.texto && (!node.sha256 || cached.sha256 === node.sha256)) {
+      return successResponse({
+        texto: cached.texto, chars: cached.chars, metodo: cached.metodo, cached: true, needsOcr: false,
+      });
+    }
+
+    if (!storage.readBytes) {
+      return errorResponse('NOT_CONFIGURED', 'Lectura de contenido no disponible en esta app', 501);
+    }
+    const bytes = await storage.readBytes(node.gcsPath);
+    if (!bytes) return errorResponse('STORAGE_ERROR', 'No se pudo leer el documento', 502);
+
+    const ex = await extractText(bytes, node.mimeType);
+    // Solo cachea si hay texto real; `needsOcr` (escaneo) queda para v0.2 (Document AI).
+    if (!ex.needsOcr && ex.texto) {
+      await prisma.fileText.upsert({
+        where: { driveNodeId: nodeId },
+        create: {
+          driveNodeId: nodeId, orgId: auth.orgId, texto: ex.texto, chars: ex.chars,
+          metodo: ex.metodo, sha256: node.sha256 ?? null, extractedAt: new Date(),
+        },
+        update: {
+          texto: ex.texto, chars: ex.chars, metodo: ex.metodo,
+          sha256: node.sha256 ?? null, extractedAt: new Date(),
+        },
+      });
+    }
+    return successResponse({
+      texto: ex.texto, chars: ex.chars, metodo: ex.metodo, cached: false, needsOcr: ex.needsOcr,
+    });
+  };
+
+  /**
+   * POST /api/unidad/resumir { nodeId } — "Resumir con IA". Asegura el texto
+   * (caché o extrae) y, si no hay resumen cacheado, lo pide a `deps.summarize`
+   * (→ Consultor cobra 1 crédito + Gemini). Cachea el resumen en `FileText`.
+   * Ver PLAN_TECNICO_MYCOBOT_TOOLS.md §5.1.
+   */
+  const resumirHandler: UnidadHandler = async (request, { auth }) => {
+    const body = await request.json().catch(() => null);
+    const nodeId = String(body?.nodeId ?? '');
+    if (!nodeId) return errorResponse('BAD_REQUEST', 'Falta nodeId', 400);
+
+    const node = await getVisibleNode(auth, nodeId);
+    if (!node || node.type !== 'FILE' || !node.gcsPath) {
+      return errorResponse('NOT_FOUND', 'Fichero no encontrado', 404);
+    }
+
+    // Resumen cacheado → gratis/instantáneo.
+    let ft = await prisma.fileText.findUnique({ where: { driveNodeId: nodeId } });
+    if (ft?.resumen) return successResponse({ resumen: ft.resumen, cached: true });
+
+    // Asegura el texto (caché o extrae ahora).
+    let texto: string = ft?.texto ?? '';
+    if (!texto) {
+      if (!storage.readBytes) return errorResponse('NOT_CONFIGURED', 'Lectura no disponible', 501);
+      const bytes = await storage.readBytes(node.gcsPath);
+      if (!bytes) return errorResponse('STORAGE_ERROR', 'No se pudo leer el documento', 502);
+      const ex = await extractText(bytes, node.mimeType);
+      if (ex.needsOcr || !ex.texto) {
+        return errorResponse('NEEDS_OCR', 'Documento escaneado sin capa de texto (OCR próximamente)', 422);
+      }
+      ft = await prisma.fileText.upsert({
+        where: { driveNodeId: nodeId },
+        create: {
+          driveNodeId: nodeId, orgId: auth.orgId, texto: ex.texto, chars: ex.chars,
+          metodo: ex.metodo, sha256: node.sha256 ?? null, extractedAt: new Date(),
+        },
+        update: {
+          texto: ex.texto, chars: ex.chars, metodo: ex.metodo,
+          sha256: node.sha256 ?? null, extractedAt: new Date(),
+        },
+      });
+      texto = ex.texto;
+    }
+
+    if (!summarize) return errorResponse('NOT_CONFIGURED', 'Resumen IA no disponible en esta app', 501);
+    const r = await summarize(texto);
+    if (!r.ok || !r.resumen) {
+      const code = r.status === 402 ? 'NO_CREDITS' : 'SUMMARY_FAILED';
+      return errorResponse(code, r.error ?? 'No se pudo resumir', r.status ?? 502);
+    }
+
+    await prisma.fileText.update({
+      where: { driveNodeId: nodeId },
+      data: { resumen: r.resumen, resumidoAt: new Date() },
+    });
+    return successResponse({ resumen: r.resumen, cached: false });
+  };
+
   // Handlers ya envueltos por el wrapper de permisos del host.
   const wrapped = {
     list: withPermission('unidad:read')(listHandler),
+    read: withPermission('unidad:read')(readHandler),
+    resumir: withPermission('unidad:read')(resumirHandler),
     folder: withPermission('unidad:write')(folderHandler),
     uploadUrl: withPermission('unidad:write')(uploadUrlHandler),
     confirm: withPermission('unidad:write')(confirmHandler),
@@ -741,6 +868,14 @@ export function createUnidadRoutes(deps: UnidadDeps) {
     // /trash
     if (segs.length === 1 && segs[0] === 'trash' && method === 'GET') {
       return { run: wrapped.trash, params: {} };
+    }
+    // /read
+    if (segs.length === 1 && segs[0] === 'read' && method === 'POST') {
+      return { run: wrapped.read, params: {} };
+    }
+    // /resumir
+    if (segs.length === 1 && segs[0] === 'resumir' && method === 'POST') {
+      return { run: wrapped.resumir, params: {} };
     }
     // /download/[id]
     if (segs.length === 2 && segs[0] === 'download' && method === 'GET') {

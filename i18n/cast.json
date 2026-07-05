@@ -9,7 +9,13 @@
       "title": "Vista previa",
       "loading": "Cargando documento…",
       "download": "Descargar",
-      "notPreviewable": "Este tipo de archivo no se puede previsualizar."
+      "notPreviewable": "Este tipo de archivo no se puede previsualizar.",
+      "summarize": "Resumir con IA",
+      "summarizing": "Resumiendo…",
+      "summaryTitle": "Resumen IA",
+      "summaryError": "No se pudo resumir el documento",
+      "summaryNoCredits": "No tienes créditos suficientes para resumir",
+      "summaryNeedsOcr": "Documento escaneado sin capa de texto (OCR próximamente)"
     },
     "errors": {
       "generic": "No se ha podido completar la acción. Inténtalo de nuevo.",
