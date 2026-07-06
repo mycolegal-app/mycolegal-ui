@@ -70,6 +70,10 @@ export interface AppSidebarProps {
   /** Optional content rendered after navItems and before the system separator
    *  (e.g. a `<SidebarFlyout>` for Mantenimientos, or a labelled sub-section). */
   extraNav?: ReactNode;
+  /** Optional content rendered in the system block (below the divider, next to
+   *  Admin/Configuración and above Manual). Use for admin-level flyouts that
+   *  should live in the system area rather than the product nav. */
+  systemNav?: ReactNode;
   /** Show the Admin entry. Defaults to whatever `useIsOrgAdmin()` returns. */
   showAdmin?: boolean;
   /** Admin route (default: "/admin"). */
@@ -78,6 +82,10 @@ export interface AppSidebarProps {
   settingsHref?: string;
   /** Manual route (default: "/manual"). */
   manualHref?: string;
+  /** Optional content rendered inside the Manual block, above the Manual link
+   *  (sharing its divider/section). Use for admin-level flyouts that should sit
+   *  in the same section as Manual rather than in the system block. */
+  manualExtra?: ReactNode;
   /** Oculta el bloque "Mis aplicaciones" del sidebar. Las apps que usen el
    *  AppSwitcherBar (subheader) en su lugar deben activar este flag para
    *  evitar duplicar el acceso al catálogo de apps. */
@@ -158,10 +166,12 @@ export function AppSidebar({
   accent,
   navItems,
   extraNav,
+  systemNav,
   showAdmin,
   adminHref = "/admin",
   settingsHref,
   manualHref = "/manual",
+  manualExtra,
   hideMyApps,
   user,
   apps,
@@ -183,7 +193,7 @@ export function AppSidebar({
 
   const a = { ...DEFAULT_ACCENT, ...(accent ?? {}) };
   const showAdminResolved = showAdmin ?? isOrgAdmin;
-  const hasSystemBlock = showAdminResolved || Boolean(settingsHref);
+  const hasSystemBlock = showAdminResolved || Boolean(settingsHref) || Boolean(systemNav);
   // Padding lateral de los bloques: más estrecho en compacto para centrar
   // los iconos en la columna de 64px.
   const blockPadX = collapsed ? "px-2" : "px-3";
@@ -336,6 +346,7 @@ export function AppSidebar({
                 collapsed={collapsed}
               />
             )}
+            {systemNav}
           </div>
         )}
 
@@ -353,13 +364,15 @@ export function AppSidebar({
           </div>
         )}
 
-        {/* Manual — always above the user block, separated. */}
+        {/* Manual — always above the user block, separated. `manualExtra`
+            (e.g. an Administración flyout) shares this section/divider. */}
         <div
           className={cn(
             "space-y-0.5 border-t border-white/10 pb-3 pt-3",
             blockPadX,
           )}
         >
+          {manualExtra}
           <SidebarLink
             href={manualHref}
             icon={BookOpen}
