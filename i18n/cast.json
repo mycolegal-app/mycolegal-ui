@@ -615,7 +615,9 @@
       "loading": "Cargando…",
       "empty": "No hay datos para mostrar",
       "errorForbidden": "No tienes permiso para ver estos datos",
-      "errorGeneric": "No se pudieron cargar los datos. Inténtalo de nuevo."
+      "errorGeneric": "No se pudieron cargar los datos. Inténtalo de nuevo.",
+      "columnsSelectAll": "Marcar todas",
+      "columnsDeselectAll": "Desmarcar todas"
     },
     "sortableList": {
       "lockedTitle": "Elemento bloqueado",

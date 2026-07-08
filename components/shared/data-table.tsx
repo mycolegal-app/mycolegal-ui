@@ -555,6 +555,30 @@ export function DataTable<TData, TValue>({
               </Button>
               {colMenuOpen && (
                 <div className="absolute right-0 z-20 mt-1 min-w-[180px] rounded-md border bg-white p-2 shadow-lg">
+                  {/* Atajo marcar/desmarcar todas las columnas ocultables
+                      (excluye "acciones"). Si todas están visibles, oculta;
+                      si no, muestra todas. */}
+                  {(() => {
+                    const hideable = table
+                      .getAllLeafColumns()
+                      .filter((c) => c.id !== "acciones" && c.getCanHide());
+                    if (hideable.length === 0) return null;
+                    const allVisible = hideable.every((c) => c.getIsVisible());
+                    return (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => hideable.forEach((c) => c.toggleVisibility(!allVisible))}
+                          className="mb-1 w-full rounded px-2 py-1.5 text-left text-xs font-medium text-mc-primary-600 hover:bg-gray-50"
+                        >
+                          {allVisible
+                            ? t("ui.dataTable.columnsDeselectAll")
+                            : t("ui.dataTable.columnsSelectAll")}
+                        </button>
+                        <div className="mb-1 border-b" />
+                      </>
+                    );
+                  })()}
                   {table.getAllLeafColumns().map((column) => {
                     if (column.id === "acciones") return null;
                     return (

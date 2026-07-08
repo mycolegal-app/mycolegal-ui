@@ -615,7 +615,9 @@
       "loading": "Carregant…",
       "empty": "No hi ha dades per mostrar",
       "errorForbidden": "No tens permís per veure aquestes dades",
-      "errorGeneric": "No s'han pogut carregar les dades. Torna-ho a provar."
+      "errorGeneric": "No s'han pogut carregar les dades. Torna-ho a provar.",
+      "columnsSelectAll": "Marcar totes",
+      "columnsDeselectAll": "Desmarcar totes"
     },
     "sortableList": {
       "lockedTitle": "Element bloquejat",
