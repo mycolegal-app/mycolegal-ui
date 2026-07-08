@@ -1,8 +1,28 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { AlarmClock } from "lucide-react";
+import {
+  AlarmClock, AlertTriangle, CheckCircle2, FileSignature, Send, Receipt,
+  Trash2, Archive, ShieldCheck, Inbox, Clock, type LucideIcon,
+} from "lucide-react";
 import { NavLink as Link } from "./nav-link";
+
+// Icono/color por SEMÁNTICA del estado (mismo lenguaje que el workspace de dominio).
+// Se deriva de la clave + etiqueta ya resuelta, así funciona para cualquier consumidor
+// sin conocer sus claves. Fallback neutro (Clock / gris).
+function bucketMeta(key: string, label: string): { Icon: LucideIcon; tone: string } {
+  const s = `${key} ${label}`.toLowerCase();
+  if (/incid|rechaz/.test(s)) return { Icon: AlertTriangle, tone: "text-amber-700" };
+  if (/valid/.test(s)) return { Icon: CheckCircle2, tone: "text-emerald-700" };
+  if (/firma|matriz/.test(s)) return { Icon: FileSignature, tone: "text-emerald-700" };
+  if (/remis|remit|envi|entrega|enviar|acuse/.test(s)) return { Icon: Send, tone: "text-gray-900" };
+  if (/factur/.test(s)) return { Icon: Receipt, tone: "text-gray-900" };
+  if (/anul/.test(s)) return { Icon: Trash2, tone: "text-gray-400" };
+  if (/custodio|recepci|recepc/.test(s)) return { Icon: Archive, tone: "text-gray-900" };
+  if (/autoriz|\baut\b/.test(s)) return { Icon: ShieldCheck, tone: "text-gray-900" };
+  if (/recib|alta|pend.*env|env.*not/.test(s)) return { Icon: Inbox, tone: "text-gray-900" };
+  return { Icon: Clock, tone: "text-gray-900" };
+}
 
 /**
  * Console "Estado de peticiones" compartido por las apps B2B internas
@@ -47,11 +67,6 @@ export interface EstadoPeticionesConsoleProps {
   newHref?: string;
   newLabel?: string;
   newIcon?: ReactNode;
-}
-
-function Counter({ value, loading }: { value: number; loading?: boolean }) {
-  if (loading) return <span className="inline-block h-4 w-6 animate-pulse rounded bg-gray-100" />;
-  return <span className="tabular-nums font-semibold text-gray-900">{value}</span>;
 }
 
 export function EstadoPeticionesConsole({
@@ -113,27 +128,39 @@ export function EstadoPeticionesConsole({
           <div className="mb-6 rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">{errorText}</div>
         ) : null}
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {groups.map((g) => (
-            <section key={g.key} className="rounded-xl border border-gray-200 bg-white shadow-sm">
-              <h2 className="border-b border-gray-100 px-5 py-3 text-sm font-semibold uppercase tracking-wide text-gray-400">
-                {g.title}
-              </h2>
-              <ul className="divide-y divide-gray-50">
-                {g.buckets.map((b) => (
-                  <li key={b.key}>
-                    <Link
-                      href={b.href}
-                      className="flex items-center justify-between px-5 py-3 text-sm text-gray-700 transition-colors hover:bg-gray-50"
-                    >
-                      <span>{b.label}</span>
-                      <Counter value={b.count} loading={loading} />
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {groups.map((g) => {
+            const groupTotal = g.buckets.reduce((acc, b) => acc + b.count, 0);
+            return (
+              <section key={g.key} className="rounded-xl border border-gray-200 bg-white shadow-sm">
+                <div className="flex items-center justify-between border-b border-gray-100 px-4 py-2.5">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">{g.title}</span>
+                  <span className="tabular-nums text-xs font-semibold text-gray-500">{loading ? "…" : groupTotal}</span>
+                </div>
+                <ul className="divide-y divide-gray-50">
+                  {g.buckets.map((b) => {
+                    const { Icon, tone } = bucketMeta(b.key, b.label);
+                    return (
+                      <li key={b.key}>
+                        <Link
+                          href={b.href}
+                          className="flex items-center justify-between gap-2 px-4 py-2.5 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+                        >
+                          <span className="flex items-center gap-2">
+                            <Icon className="h-4 w-4 text-gray-400" />
+                            {b.label}
+                          </span>
+                          <span className={`tabular-nums font-semibold ${tone}`}>
+                            {loading ? <span className="inline-block h-4 w-6 animate-pulse rounded bg-gray-100" /> : b.count}
+                          </span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            );
+          })}
         </div>
 
         {alarmas.length > 0 ? (
