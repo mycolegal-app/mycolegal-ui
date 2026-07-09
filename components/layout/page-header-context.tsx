@@ -11,6 +11,8 @@ import {
 interface PageHeaderState {
   title: string;
   subtitle?: string;
+  /** Optional icon rendered to the LEFT of the title in the blue band. */
+  icon?: ReactNode;
 }
 
 interface PageHeaderContextValue {

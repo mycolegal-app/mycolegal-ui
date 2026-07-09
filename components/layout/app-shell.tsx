@@ -120,13 +120,20 @@ function AppShellInner({
           >
             <Menu className="h-5 w-5" />
           </button>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-base font-semibold text-white truncate leading-tight">
-              {header.title}
-            </h1>
-            {header.subtitle && (
-              <p className="text-xs text-navy-200 truncate">{header.subtitle}</p>
+          <div className="min-w-0 flex-1 flex items-center gap-2.5">
+            {header.icon && (
+              <span className="shrink-0 text-white/90 [&>svg]:h-5 [&>svg]:w-5">
+                {header.icon}
+              </span>
             )}
+            <div className="min-w-0">
+              <h1 className="text-base font-semibold text-white truncate leading-tight">
+                {header.title}
+              </h1>
+              {header.subtitle && (
+                <p className="text-xs text-navy-200 truncate">{header.subtitle}</p>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-3 shrink-0 ml-4">
             {/* Slot where <HeaderActions> portals its children. `empty:hidden`
