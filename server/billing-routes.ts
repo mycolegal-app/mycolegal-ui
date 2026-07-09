@@ -28,9 +28,10 @@ import { NextResponse, type NextRequest } from 'next/server';
  *   import { billingRoutes } from '@/lib/billing-server';
  *   export const { GET, POST } = billingRoutes.catchAll;
  *
- * Endpoints expuestos (bajo /api/billing): GET overview, POST checkout, POST
- * portal. NO expone `courtesy` — las exenciones son cosa del superadmin desde
- * el panel admin, no del self-service.
+ * Endpoints expuestos (bajo /api/billing): GET overview|packs|credit-balance|
+ * summary; POST checkout|portal|credit-checkout|suspend|resume|cancel. NO
+ * expone `courtesy` — las exenciones son cosa del superadmin desde el panel
+ * admin, no del self-service.
  */
 
 export interface BillingRoutesConfig {
@@ -50,8 +51,8 @@ export interface BillingRoutesConfig {
 type BillingContext = { params: Promise<{ path?: string[] }>; auth: { orgId: string } };
 type BillingHandler = (request: NextRequest, context: BillingContext) => Promise<Response>;
 
-const SELF_SERVICE_GET = new Set(['overview', 'packs', 'credit-balance']);
-const SELF_SERVICE_POST = new Set(['checkout', 'portal', 'credit-checkout']);
+const SELF_SERVICE_GET = new Set(['overview', 'packs', 'credit-balance', 'summary']);
+const SELF_SERVICE_POST = new Set(['checkout', 'portal', 'credit-checkout', 'suspend', 'resume', 'cancel']);
 
 export function createBillingRoutes(config: BillingRoutesConfig) {
   const guard = config.withPermission(config.adminPermission ?? 'admin:users');
