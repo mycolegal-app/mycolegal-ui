@@ -5,6 +5,13 @@
 
 ---
 
+##  — Fixes del job de resoluciones BOE y reorganizacion de gestorias en Tramitacion (2026-07-11)
+
+Type: **revision**
+
+
+
+
 ##  — Fixes en TEST (2026-06-29)
 
 Type: **revision**
