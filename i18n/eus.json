@@ -892,7 +892,9 @@
       "placeholder": "Bilatu erregistroa izenez edo herriz…",
       "searching": "Bilatzen…",
       "noResults": "Ez da erregistrorik aurkitu",
-      "clearAria": "Kendu hautaketa"
+      "clearAria": "Kendu hautaketa",
+      "demarcacionMunicipio": "Udalerriaren erregistroa (mugaketa)",
+      "demarcacionProvincia": "Probintziako erregistroak"
     },
     "facturar": {
       "titulo": "Wordplex-en fakturatu",

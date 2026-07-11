@@ -892,7 +892,9 @@
       "placeholder": "Buscar registro por nombre o población…",
       "searching": "Buscando…",
       "noResults": "No se encontraron registros",
-      "clearAria": "Quitar selección"
+      "clearAria": "Quitar selección",
+      "demarcacionMunicipio": "Registro del municipio (demarcación)",
+      "demarcacionProvincia": "Registros de la provincia"
     },
     "facturar": {
       "titulo": "Facturar en Wordplex",

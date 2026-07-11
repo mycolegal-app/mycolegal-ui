@@ -892,7 +892,9 @@
       "placeholder": "Cercar registre per nom o població…",
       "searching": "Cercant…",
       "noResults": "No s'han trobat registres",
-      "clearAria": "Treure selecció"
+      "clearAria": "Treure selecció",
+      "demarcacionMunicipio": "Registre del municipi (demarcació)",
+      "demarcacionProvincia": "Registres de la província"
     },
     "facturar": {
       "titulo": "Facturar a Wordplex",

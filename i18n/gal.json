@@ -892,7 +892,9 @@
       "placeholder": "Buscar rexistro por nome ou poboación…",
       "searching": "Buscando…",
       "noResults": "Non se atoparon rexistros",
-      "clearAria": "Quitar selección"
+      "clearAria": "Quitar selección",
+      "demarcacionMunicipio": "Rexistro do concello (demarcación)",
+      "demarcacionProvincia": "Rexistros da provincia"
     },
     "facturar": {
       "titulo": "Facturar en Wordplex",
