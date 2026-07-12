@@ -11,6 +11,15 @@ interface AppSwitcherBarProps {
   apps: AppInfo[];
   /** Slug of the current app — highlighted, not navigated to on click. */
   currentSlug: string;
+  /**
+   * Apps VENDIBLES que la org aún NO tiene concedidas. Se muestran en gris
+   * (solo al org_admin, que es quien recibe esta lista desde user-apps) con un
+   * tooltip para suscribirse. Al hacer clic navegan a `subscribeUrl`. Vacío o sin
+   * `subscribeUrl` ⇒ no se muestra nada (una org con todo concedido no ve gris).
+   */
+  unsubscribedApps?: AppInfo[];
+  /** Destino de suscripción (Config → /suscripcion). */
+  subscribeUrl?: string | null;
 }
 
 const STORAGE_KEY = "mc:app-switcher:open";
@@ -77,7 +86,7 @@ function UnreadBadge({ count }: { count: number }) {
  *
  * El estado se persiste por usuario+dispositivo en localStorage.
  */
-export function AppSwitcherBar({ apps, currentSlug }: AppSwitcherBarProps) {
+export function AppSwitcherBar({ apps, currentSlug, unsubscribedApps = [], subscribeUrl }: AppSwitcherBarProps) {
   const { t } = useI18n();
   const [expanded, setExpanded] = useState(false);
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
@@ -110,6 +119,17 @@ export function AppSwitcherBar({ apps, currentSlug }: AppSwitcherBarProps) {
         a.name.localeCompare(b.name, "es", { sensitivity: "base" }),
       ),
     [apps],
+  );
+
+  // Apps vendibles no concedidas (grayed) — solo si hay destino de suscripción.
+  const sortedUnsub = useMemo(
+    () =>
+      subscribeUrl
+        ? [...unsubscribedApps].sort((a, b) =>
+            a.name.localeCompare(b.name, "es", { sensitivity: "base" }),
+          )
+        : [],
+    [unsubscribedApps, subscribeUrl],
   );
 
   function persist(next: boolean) {
@@ -152,7 +172,7 @@ export function AppSwitcherBar({ apps, currentSlug }: AppSwitcherBarProps) {
     window.location.href = app.appUrl;
   }
 
-  if (apps.length === 0) return null;
+  if (apps.length === 0 && sortedUnsub.length === 0) return null;
 
   if (!expanded) {
     return (
@@ -216,6 +236,29 @@ export function AppSwitcherBar({ apps, currentSlug }: AppSwitcherBarProps) {
                 </button>
               );
             })}
+
+            {/* Apps vendibles no concedidas: en gris, con tooltip de suscripción. */}
+            {sortedUnsub.length > 0 && (
+              <span className="mx-1 w-px shrink-0 self-stretch bg-white/10" aria-hidden="true" />
+            )}
+            {sortedUnsub.map((app) => (
+              <button
+                key={`sell-${app.slug}`}
+                type="button"
+                onClick={() => {
+                  if (subscribeUrl) window.location.href = subscribeUrl;
+                }}
+                title="Pulsa para suscribirte"
+                className="group flex w-[78px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-md px-1 py-0.5 opacity-40 transition-opacity hover:opacity-75"
+              >
+                <div className="relative grayscale">
+                  <AppLogo app={app} active={false} />
+                </div>
+                <span className="w-full text-center text-[10px] font-medium leading-tight text-white/70">
+                  {app.name}
+                </span>
+              </button>
+            ))}
           </div>
         </div>
         <button

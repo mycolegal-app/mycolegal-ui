@@ -199,6 +199,9 @@ export default function AppShell({
   const [user, setUser] = useState<UserInfo>({ displayName: "Cargando…", email: "", role: "" });
   const [org, setOrg] = useState<OrgInfo | undefined>(undefined);
   const [apps, setApps] = useState<AppInfo[]>([]);
+  // Apps vendibles no concedidas (grayed en la toolbar, solo org_admin) + destino.
+  const [sellableExtras, setSellableExtras] = useState<AppInfo[]>([]);
+  const [subscribeUrl, setSubscribeUrl] = useState<string | null>(null);
   const [inactivityTimeout, setInactivityTimeout] = useState(15);
   // Label of the impersonated user when this is an impersonation session,
   // null otherwise. Drives the persistent "acting as" banner.
@@ -221,6 +224,10 @@ export default function AppShell({
           if (json.data.apps) {
             setApps(json.data.apps);
           }
+          if (Array.isArray(json.data.sellableExtras)) {
+            setSellableExtras(json.data.sellableExtras);
+          }
+          setSubscribeUrl(json.data.subscribeUrl ?? null);
           if (json.data.inactivityTimeout) {
             setInactivityTimeout(json.data.inactivityTimeout);
           }
@@ -258,7 +265,12 @@ export default function AppShell({
           breadcrumbs={breadcrumbs}
           appSwitcherBar={
             showAppSwitcherBar ? (
-              <AppSwitcherBar apps={apps} currentSlug={appSlug} />
+              <AppSwitcherBar
+                apps={apps}
+                currentSlug={appSlug}
+                unsubscribedApps={sellableExtras}
+                subscribeUrl={subscribeUrl}
+              />
             ) : undefined
           }
           impersonationBanner={
