@@ -257,9 +257,13 @@ export function AppSidebar({
             en oro / «LegalTech» en blanco), escalado para caber en 220px. En
             plegado (64px) solo se muestra el isotipo centrado. */}
         {companyLogoSrc && (
-          <div
+          <button
+            type="button"
+            onClick={toggle}
+            title={collapsed ? t("ui.sidebar.expand") : t("ui.sidebar.collapse")}
+            aria-label={collapsed ? t("ui.sidebar.expand") : t("ui.sidebar.collapse")}
             className={cn(
-              "flex shrink-0 items-center border-b border-white/10",
+              "flex w-full shrink-0 items-center border-b border-white/10 text-left transition-opacity hover:opacity-80",
               collapsed ? "justify-center px-2 py-3" : "gap-2 px-5 pb-3 pt-4",
             )}
           >
@@ -271,13 +275,23 @@ export function AppSidebar({
             />
             {!collapsed && (
               <span className="truncate text-sm font-bold tracking-tight text-white">
-                <span className="bg-gradient-to-r from-mc-primary-300 to-mc-primary-500 bg-clip-text text-transparent">
+                {/* «Myco» en el oro vivo de marca (isotipo dorado) — color fijo,
+                    no depende del tema de la app: la marca de compañía es
+                    constante en todas las apps. «LegalTech» en blanco. */}
+                <span
+                  style={{
+                    backgroundImage: "linear-gradient(90deg,#f3d896,#d9a34e)",
+                    WebkitBackgroundClip: "text",
+                    backgroundClip: "text",
+                    color: "transparent",
+                  }}
+                >
                   Myco
                 </span>
                 LegalTech
               </span>
             )}
-          </div>
+          </button>
         )}
 
         {/* Brand + toggle. En expandido: logo + título a la izquierda y el
