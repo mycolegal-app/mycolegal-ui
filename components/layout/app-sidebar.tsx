@@ -63,6 +63,11 @@ export interface AppSidebarProps {
   brandLogo: BrandLogo;
   /** Brand link target (default: "/"). */
   brandHref?: string;
+  /** Ruta (servida por la app) del logo de MycoLegalTech. Cuando se indica, el
+   *  sidebar muestra un banner de compañía en la parte superior (por encima de
+   *  la marca de la app): en expandido, el isotipo + wordmark «MycoLegalTech»;
+   *  en plegado, solo el isotipo centrado. Sin valor no se renderiza nada. */
+  companyLogoSrc?: string;
   /** Per-app accent overrides. Default uses --mc-primary CSS variable. */
   accent?: AppSidebarAccent;
   /** Product nav items — only feature links. Admin/Settings/Manual handled by the shell. */
@@ -163,6 +168,7 @@ export function AppSidebar({
   title,
   brandLogo,
   brandHref = "/",
+  companyLogoSrc,
   accent,
   navItems,
   extraNav,
@@ -245,6 +251,35 @@ export function AppSidebar({
           mobileOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
+        {/* Banner de compañía MycoLegalTech (opcional). Se coloca por encima de
+            la marca de la app y ocupa el ancho de la columna. Replica el logo de
+            la columna izquierda del registro (isotipo + wordmark bicolor «Myco»
+            en oro / «LegalTech» en blanco), escalado para caber en 220px. En
+            plegado (64px) solo se muestra el isotipo centrado. */}
+        {companyLogoSrc && (
+          <div
+            className={cn(
+              "flex shrink-0 items-center border-b border-white/10",
+              collapsed ? "justify-center px-2 py-3" : "gap-2 px-5 pb-3 pt-4",
+            )}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={companyLogoSrc}
+              alt="MycoLegalTech"
+              className={cn("w-auto shrink-0", collapsed ? "h-8" : "h-7")}
+            />
+            {!collapsed && (
+              <span className="truncate text-sm font-bold tracking-tight text-white">
+                <span className="bg-gradient-to-r from-mc-primary-300 to-mc-primary-500 bg-clip-text text-transparent">
+                  Myco
+                </span>
+                LegalTech
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Brand + toggle. En expandido: logo + título a la izquierda y el
             botón de plegar a la derecha. En compacto: logo centrado y el botón
             debajo, ambos centrados en la columna estrecha. */}
