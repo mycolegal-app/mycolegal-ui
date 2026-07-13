@@ -183,9 +183,12 @@ export function SubscribeAppModal({ app, onClose, onSubscribed }: SubscribeAppMo
               </button>
             </div>
 
+            {/* Sin promesas de prueba gratis: los 30 días son del alta. Una app
+                añadida después entra en la suscripción viva y se cobra prorrateada
+                desde hoy con la tarjeta ya registrada. */}
             <p className="mt-3 text-center text-xs text-slate-400">
               {sellable
-                ? "Se añadirá a tu suscripción actual, con la tarjeta que ya tienes registrada."
+                ? "Se añade a tu suscripción actual, prorrateada desde hoy, con la tarjeta que ya tienes registrada."
                 : "No contratas ni pagas nada: solo anotamos tu interés."}
             </p>
           </>
