@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import type { AppInfo } from "./app-info";
+import { SubscribeAppModal, type SubscribableApp } from "./subscribe-app-modal";
 import { useI18n } from "../i18n/i18n-context";
 import { cn } from "../../lib/utils";
 
@@ -12,13 +13,14 @@ interface AppSwitcherBarProps {
   /** Slug of the current app — highlighted, not navigated to on click. */
   currentSlug: string;
   /**
-   * Apps VENDIBLES que la org aún NO tiene concedidas. Se muestran en gris
-   * (solo al org_admin, que es quien recibe esta lista desde user-apps) con un
-   * tooltip para suscribirse. Al hacer clic navegan a `subscribeUrl`. Vacío o sin
-   * `subscribeUrl` ⇒ no se muestra nada (una org con todo concedido no ve gris).
+   * Apps que la org aún NO tiene concedidas. Se muestran en gris (solo al
+   * org_admin, que es quien recibe esta lista desde user-apps). Al hacer clic se
+   * abre un modal para contratarla en el sitio —o para registrar interés, si aún
+   * es "Próximamente"—. Vacío ⇒ no se muestra nada (una org con todo concedido no
+   * ve nada gris).
    */
-  unsubscribedApps?: AppInfo[];
-  /** Destino de suscripción (Config → /suscripcion). */
+  unsubscribedApps?: SubscribableApp[];
+  /** Destino de suscripción (Config → /suscripcion). Fallback del modal. */
   subscribeUrl?: string | null;
 }
 
@@ -90,6 +92,8 @@ export function AppSwitcherBar({ apps, currentSlug, unsubscribedApps = [], subsc
   const { t } = useI18n();
   const [expanded, setExpanded] = useState(false);
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
+  // App gris sobre la que se ha pulsado → modal de suscripción / interés.
+  const [subscribing, setSubscribing] = useState<SubscribableApp | null>(null);
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const unreadByApp = useUnreadByApp();
   const totalUnread = useMemo(
@@ -245,10 +249,12 @@ export function AppSwitcherBar({ apps, currentSlug, unsubscribedApps = [], subsc
               <button
                 key={`sell-${app.slug}`}
                 type="button"
-                onClick={() => {
-                  if (subscribeUrl) window.location.href = subscribeUrl;
-                }}
-                title="Pulsa para suscribirte"
+                onClick={() => setSubscribing(app)}
+                title={
+                  (app as SubscribableApp).sellable === false
+                    ? "Próximamente — pulsa para que te avisemos"
+                    : "Pulsa para suscribirte"
+                }
                 className="group flex w-[78px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-md px-1 py-0.5 opacity-40 transition-opacity hover:opacity-75"
               >
                 <div className="relative grayscale">
@@ -272,6 +278,15 @@ export function AppSwitcherBar({ apps, currentSlug, unsubscribedApps = [], subsc
         </button>
       </div>
       {navigatingTo && <AppNavigatingOverlay />}
+      {subscribing && (
+        <SubscribeAppModal
+          app={subscribing}
+          onClose={() => setSubscribing(null)}
+          // Tras contratar, el OrgApp lo concede el webhook de Stripe (asíncrono):
+          // recargamos para que la toolbar la pinte ya como concedida.
+          onSubscribed={() => window.location.reload()}
+        />
+      )}
     </>
   );
 }

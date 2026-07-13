@@ -52,7 +52,19 @@ type BillingContext = { params: Promise<{ path?: string[] }>; auth: { orgId: str
 type BillingHandler = (request: NextRequest, context: BillingContext) => Promise<Response>;
 
 const SELF_SERVICE_GET = new Set(['overview', 'packs', 'credit-balance', 'summary']);
-const SELF_SERVICE_POST = new Set(['checkout', 'portal', 'credit-checkout', 'suspend', 'resume', 'cancel']);
+// `add-app` e `interest` son los que usa el modal de la toolbar (SubscribeAppModal)
+// al pulsar una app gris: contratarla, o anotar el interés si aún no es vendible.
+// Ambos fuerzan el orgId de la sesión, igual que el resto.
+const SELF_SERVICE_POST = new Set([
+  'checkout',
+  'portal',
+  'credit-checkout',
+  'suspend',
+  'resume',
+  'cancel',
+  'add-app',
+  'interest',
+]);
 
 export function createBillingRoutes(config: BillingRoutesConfig) {
   const guard = config.withPermission(config.adminPermission ?? 'admin:users');
