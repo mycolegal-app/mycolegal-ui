@@ -605,11 +605,19 @@ export function DataTable<TData, TValue>({
         </div>
       )}
 
+      {/*
+        `max-lg:overflow-x-auto` — SOLO por debajo de `lg`. En pantalla estrecha
+        (móvil/tableta) la tabla no cabe: el shell lleva `overflow-x-hidden`, así
+        que las columnas de la derecha no es que se apretaran, es que se
+        RECORTABAN sin forma de llegar a ellas (incidencia #410). Con esto la
+        tabla se desplaza en horizontal dentro de su caja. De `lg` para arriba no
+        aplica ninguna de estas dos clases: el escritorio queda exactamente igual.
+      */}
       <div
-        className={`rounded-lg border${scrollable ? " overflow-y-auto" : ""}${fillParent && scrollable ? " flex-1 min-h-0" : ""}`}
+        className={`rounded-lg border max-lg:overflow-x-auto${scrollable ? " overflow-y-auto" : ""}${fillParent && scrollable ? " flex-1 min-h-0" : ""}`}
         style={scrollable && !fillParent ? { maxHeight: scrollBodyMaxHeight } : undefined}
       >
-        <table className="w-full caption-bottom text-xs">
+        <table className="w-full caption-bottom text-xs max-lg:min-w-[46rem]">
           {/*
             Tailwind's preflight sets `border-collapse: collapse`, which
             breaks `position: sticky` on <thead>. We pin each <th> instead

@@ -8,6 +8,13 @@ export interface ActOption {
   codigo: string;
   nombre: string;
   categoria: string | null;
+  /**
+   * Opcional: sólo consultor la informa hoy. Es lo que separa actos que se
+   * llaman igual ("Compraventa · Inmuebles" solar vs. vivienda en PH), así que
+   * sin pintarla el desplegable los muestra indistinguibles. Los backends que
+   * no la devuelven no notan nada.
+   */
+  subcategoria?: string | null;
 }
 
 interface ActPickerProps {
@@ -198,6 +205,11 @@ export function ActPicker({
             {selectedAct.categoria && (
               <span className="text-xs text-gray-400">— {selectedAct.categoria}</span>
             )}
+            {selectedAct.subcategoria && (
+              <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">
+                {selectedAct.subcategoria}
+              </span>
+            )}
           </span>
           <button
             type="button"
@@ -243,6 +255,11 @@ export function ActPicker({
               <div className="flex items-center gap-2">
                 <span className="font-mono text-xs text-gray-500">{act.codigo}</span>
                 <span className="font-medium">{act.nombre}</span>
+                {act.subcategoria && (
+                  <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">
+                    {act.subcategoria}
+                  </span>
+                )}
               </div>
               {act.categoria && (
                 <div className="mt-0.5 text-xs text-gray-400">{act.categoria}</div>
