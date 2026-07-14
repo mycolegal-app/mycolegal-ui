@@ -315,7 +315,9 @@
       "fieldConfirm": "Berretsi pasahitza",
       "btnSet": "Pasahitza ezarri",
       "errComplexity": "Pasahitzak gutxienez maiuskula bat, minuskula bat eta zenbaki bat izan behar ditu.",
-      "reqHint": "Gutxienez {min} karaktere, maiuskula bat, minuskula bat eta zenbaki batekin."
+      "reqHint": "Gutxienez {min} karaktere, maiuskula bat, minuskula bat eta zenbaki batekin.",
+      "show": "Pasahitza erakutsi",
+      "hide": "Pasahitza ezkutatu"
     },
     "changePassword": {
       "title": "Aldatu zure pasahitza",

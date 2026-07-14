@@ -315,7 +315,9 @@
       "fieldConfirm": "Confirma a contrasinal",
       "btnSet": "Establecer contrasinal",
       "errComplexity": "O contrasinal debe incluír polo menos unha maiúscula, unha minúscula e un número.",
-      "reqHint": "Mínimo {min} caracteres, con polo menos unha maiúscula, unha minúscula e un número."
+      "reqHint": "Mínimo {min} caracteres, con polo menos unha maiúscula, unha minúscula e un número.",
+      "show": "Amosar o contrasinal",
+      "hide": "Agochar o contrasinal"
     },
     "changePassword": {
       "title": "Cambia a túa contrasinal",

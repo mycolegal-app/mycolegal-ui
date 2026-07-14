@@ -315,7 +315,9 @@
       "fieldConfirm": "Confirma la contrasenya",
       "btnSet": "Establir contrasenya",
       "errComplexity": "La contrasenya ha d'incloure com a mínim una majúscula, una minúscula i un número.",
-      "reqHint": "Mínim {min} caràcters, amb almenys una majúscula, una minúscula i un número."
+      "reqHint": "Mínim {min} caràcters, amb almenys una majúscula, una minúscula i un número.",
+      "show": "Mostrar la contrasenya",
+      "hide": "Amagar la contrasenya"
     },
     "changePassword": {
       "title": "Canvia la contrasenya",

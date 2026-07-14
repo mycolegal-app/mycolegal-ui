@@ -315,7 +315,9 @@
       "fieldConfirm": "Confirma la contraseña",
       "btnSet": "Establecer contraseña",
       "errComplexity": "La contraseña debe incluir al menos una mayúscula, una minúscula y un número.",
-      "reqHint": "Mínimo {min} caracteres, con al menos una mayúscula, una minúscula y un número."
+      "reqHint": "Mínimo {min} caracteres, con al menos una mayúscula, una minúscula y un número.",
+      "show": "Mostrar la contraseña",
+      "hide": "Ocultar la contraseña"
     },
     "changePassword": {
       "title": "Cambia tu contraseña",
