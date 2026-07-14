@@ -14,6 +14,7 @@ import { NavLink as Link } from "../shared/nav-link";
 import { NotificationsBell } from "../shared/notifications-bell";
 import { UserAccountDialog } from "../shared/user-account-dialog";
 import { MyAppsSection } from "./my-apps-section";
+import { COMPANY_LOGO_DATA_URI } from "./company-logo";
 import type { AppInfo } from "./app-info";
 import { useIsOrgAdmin } from "../../hooks/use-is-org-admin";
 import { useI18n } from "../i18n/i18n-context";
@@ -63,11 +64,15 @@ export interface AppSidebarProps {
   brandLogo: BrandLogo;
   /** Brand link target (default: "/"). */
   brandHref?: string;
-  /** Ruta (servida por la app) del logo de MycoLegalTech. Cuando se indica, el
-   *  sidebar muestra un banner de compañía en la parte superior (por encima de
-   *  la marca de la app): en expandido, el isotipo + wordmark «MycoLegalTech»;
-   *  en plegado, solo el isotipo centrado. Sin valor no se renderiza nada. */
-  companyLogoSrc?: string;
+  /** Logo de MycoLegalTech del banner de compañía que corona el sidebar (por
+   *  encima de la marca de la app): en expandido, isotipo + wordmark
+   *  «MycoLegalTech»; en plegado, solo el isotipo centrado.
+   *
+   *  Valor habitual: `"default"` — el isotipo lo sirve la propia `ui` desde un
+   *  data URI, así que la app no necesita copiar ningún asset a su `public/`.
+   *  Cualquier otro valor se trata como una ruta/URL de imagen a medida.
+   *  Sin valor no se renderiza el banner. */
+  companyLogoSrc?: "default" | (string & {});
   /** Per-app accent overrides. Default uses --mc-primary CSS variable. */
   accent?: AppSidebarAccent;
   /** Product nav items — only feature links. Admin/Settings/Manual handled by the shell. */
@@ -269,7 +274,7 @@ export function AppSidebar({
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={companyLogoSrc}
+              src={companyLogoSrc === "default" ? COMPANY_LOGO_DATA_URI : companyLogoSrc}
               alt="MycoLegalTech"
               className={cn("w-auto shrink-0", collapsed ? "h-8" : "h-7")}
             />

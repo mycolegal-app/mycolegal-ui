@@ -514,7 +514,15 @@ export function createUnidadRoutes(deps: UnidadDeps) {
       where: { id: node.id },
       data: { gcsPath, mimeType: contentType, sizeBytes },
     });
-    return successResponse({ uploadUrl: signed.url, contentType, node: serializeNode(updated, auth) });
+    // `created` distingue alta de sobrescritura: si el PUT del navegador falla,
+    // el cliente solo puede retirar el nodo cuando lo acaba de crear (retirarlo
+    // en una sobrescritura se llevaría por delante el fichero que ya estaba).
+    return successResponse({
+      uploadUrl: signed.url,
+      contentType,
+      created: !existing,
+      node: serializeNode(updated, auth),
+    });
   };
 
   /** POST /api/unidad/confirm { nodeId } — contabiliza el storage tras el PUT. */

@@ -203,30 +203,47 @@ export function UnidadExplorer({ mode = "browse", onPick }: UnidadExplorerProps 
           setError(json?.error?.message ?? t("unidad.errorSubir"));
           break;
         }
-        const put = await fetch(json.data.uploadUrl, {
-          method: "PUT",
-          headers: { "Content-Type": contentType },
-          body: file,
-        });
-        if (!put.ok) {
+        // PUT directo a GCS. Si el bucket no tiene CORS para este origen el
+        // `fetch` LANZA (no devuelve !ok), así que hay que capturarlo: sin el
+        // catch la excepción escapaba y se saltaba el `load()` final — la vista
+        // no refrescaba y el nodo quedaba en BD sin bytes (fichero fantasma).
+        let ok = false;
+        try {
+          const put = await fetch(json.data.uploadUrl, {
+            method: "PUT",
+            headers: { "Content-Type": contentType },
+            body: file,
+          });
+          ok = put.ok;
+        } catch {
+          ok = false;
+        }
+        if (!ok) {
           setError(t("unidad.errorSubir"));
+          // Retira el nodo recién creado para no dejar un fichero sin contenido.
+          if (json?.data?.created && json?.data?.node?.id) {
+            await fetch(`/api/unidad/node/${json.data.node.id}`, { method: "DELETE" }).catch(() => {});
+          }
           break;
         }
         // Confirma la subida: contabiliza el almacenamiento facturable (lee el
-        // tamaño real de GCS). Best-effort: no bloquea la subida si falla.
+        // tamaño real de GCS). Best-effort: no bloquea la subida si falla, pero
+        // se espera para que el `load()` posterior ya vea el tamaño definitivo.
         const nodeId: string | undefined = json?.data?.node?.id;
         if (nodeId) {
-          void fetch("/api/unidad/confirm", {
+          await fetch("/api/unidad/confirm", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ nodeId }),
-          });
+          }).catch(() => {});
         }
       }
-      await load(parentId);
     } finally {
+      // Refresca SIEMPRE (también si la subida falló a medias): la lista debe
+      // reflejar el estado real del servidor, no el que asumimos.
       setBusy(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
+      await load(parentId);
     }
   }
 
