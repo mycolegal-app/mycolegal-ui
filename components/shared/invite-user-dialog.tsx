@@ -168,7 +168,20 @@ export function InviteUserDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[480px]">
+      {/*
+       * Es un formulario de captura de datos: un click fuera del modal (o un
+       * Escape accidental) NO debe cerrarlo y borrar lo tecleado — se perdía el
+       * email/nombre/contraseña a medio escribir (incidencia Notaría Oñate #1).
+       * Sólo se cierra con Cancelar, la X o un alta correcta. Prevenir el cierre
+       * externo además evita el clásico problema de Radix por el que elegir una
+       * opción del <Select> (rol/idioma), que se pinta en un portal, contase como
+       * "interacción fuera" y cerrase el diálogo.
+       */}
+      <DialogContent
+        className="sm:max-w-[480px]"
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>{t("ui.inviteUser.title")}</DialogTitle>
           <DialogDescription>{t("ui.inviteUser.description")}</DialogDescription>
