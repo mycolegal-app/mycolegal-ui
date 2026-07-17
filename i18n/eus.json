@@ -888,7 +888,10 @@
       "chipDoctrina": "Onartu gabeko hipoteka unilaterala inskribagarria al da?",
       "chipAyuda": "Nola funtzionatzen du aplikazio honek?",
       "chipDatosNotaria": "Zenbat espediente ditut iraungita?",
-      "chipDatosLegifirma": "Zenbat jardun ditut kobratzeke?"
+      "chipDatosLegifirma": "Zenbat jardun ditut kobratzeke?",
+      "onboardTitle": "Zalantza legalak? Galdetu",
+      "onboardBody": "Doktrina eta ebazpenak kontsultatzen ditut eta aplikazioa nola erabili azaltzen dizut. Sakatu hemen hasteko.",
+      "onboardDismiss": "Ados"
     },
     "registradorPicker": {
       "placeholder": "Bilatu erregistroa izenez edo herriz…",

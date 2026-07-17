@@ -888,7 +888,10 @@
       "chipDoctrina": "És inscriptible una hipoteca unilateral no acceptada?",
       "chipAyuda": "Com funciona aquesta aplicació?",
       "chipDatosNotaria": "Quants expedients tinc vençuts?",
-      "chipDatosLegifirma": "Quantes actuacions pendents de cobrament?"
+      "chipDatosLegifirma": "Quantes actuacions pendents de cobrament?",
+      "onboardTitle": "Dubtes legals? Pregunta’m",
+      "onboardBody": "Consulto doctrina i resolucions i t’explico com fer servir l’aplicació. Prem aquí per començar.",
+      "onboardDismiss": "Entesos"
     },
     "registradorPicker": {
       "placeholder": "Cercar registre per nom o població…",

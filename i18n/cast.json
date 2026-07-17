@@ -888,7 +888,10 @@
       "chipDoctrina": "¿Es inscribible una hipoteca unilateral no aceptada?",
       "chipAyuda": "¿Cómo funciona esta aplicación?",
       "chipDatosNotaria": "¿Cuántos expedientes tengo vencidos?",
-      "chipDatosLegifirma": "¿Cuántas actuaciones pendientes de cobro?"
+      "chipDatosLegifirma": "¿Cuántas actuaciones pendientes de cobro?",
+      "onboardTitle": "¿Dudas legales? Pregúntame",
+      "onboardBody": "Consulto doctrina y resoluciones y te explico cómo usar la aplicación. Pulsa aquí para empezar.",
+      "onboardDismiss": "Entendido"
     },
     "registradorPicker": {
       "placeholder": "Buscar registro por nombre o población…",

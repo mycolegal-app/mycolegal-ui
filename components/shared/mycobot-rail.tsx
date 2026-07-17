@@ -107,6 +107,11 @@ interface MycoBotRailProps {
 }
 
 const OPEN_STORAGE_KEY = "mycolegal:mycobot:open";
+// #1 (consultor) — el usuario que entra por primera vez no sabe que puede
+// preguntar a MycoBot. Mostramos un globo descartable junto al lanzador hasta
+// que abra el rail una vez o lo cierre; la preferencia se recuerda en
+// localStorage (no vuelve a salir).
+const ONBOARD_STORAGE_KEY = "mycolegal:mycobot:onboarded";
 // Hilo activo persistido SOLO en Consultor: al pinchar una cita se navega
 // full-page a `/resoluciones/[id]` (output: 'standalone' fuerza recarga), lo que
 // desmontaría el rail y perdería la conversación. Lo guardamos en sessionStorage
@@ -153,6 +158,8 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
     null,
   );
   const [wallet, setWallet] = useState<{ total: number; blocked: boolean } | null>(null);
+  // #1 — globo de onboarding: null hasta hidratar, luego true/false.
+  const [showOnboard, setShowOnboard] = useState(false);
   const threadRef = useRef<HTMLDivElement>(null);
 
   // Base de los endpoints de resoluciones (quita el sufijo `/ask`).
@@ -202,9 +209,26 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
   // Hidrata el estado abierto/colapsado (por defecto colapsado).
   useEffect(() => {
     try {
-      if (window.localStorage.getItem(OPEN_STORAGE_KEY) === "true") setOpen(true);
+      const isOpen = window.localStorage.getItem(OPEN_STORAGE_KEY) === "true";
+      if (isOpen) setOpen(true);
+      // #1 — globo de onboarding solo si nunca lo ha visto Y el rail está
+      // colapsado (si ya está abierto, no aporta nada).
+      if (!isOpen && window.localStorage.getItem(ONBOARD_STORAGE_KEY) !== "true") {
+        setShowOnboard(true);
+      }
     } catch {
       /* localStorage bloqueado: queda colapsado */
+    }
+  }, []);
+
+  // #1 — descarta el globo de onboarding (al abrir el rail o al cerrarlo a mano)
+  // y recuerda la preferencia para no volver a mostrarlo.
+  const dismissOnboard = useCallback(() => {
+    setShowOnboard(false);
+    try {
+      window.localStorage.setItem(ONBOARD_STORAGE_KEY, "true");
+    } catch {
+      /* ignore */
     }
   }, []);
 
@@ -460,15 +484,40 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
     <>
       {/* Handle colapsado: borde derecho, vertical */}
       {!open && (
-        <button
-          type="button"
-          onClick={() => setOpenPersisted(true)}
-          aria-label={t("ui.mycobot.railAria")}
-          title={t("ui.mycobot.title")}
-          className="fixed right-0 top-1/2 z-40 flex -translate-y-1/2 items-center gap-1 rounded-l-lg bg-cyan-600 py-3 pl-2 pr-1.5 text-white shadow-lg transition-colors hover:bg-cyan-700"
-        >
-          <Sparkles className="h-4 w-4" />
-        </button>
+        <>
+          {/* #1 — globo de onboarding para primer acceso, descartable. */}
+          {showOnboard && (
+            <div className="fixed right-12 top-1/2 z-40 w-64 -translate-y-1/2 rounded-lg border border-cyan-200 bg-white p-3 shadow-xl">
+              <div
+                className="absolute right-[-6px] top-1/2 h-3 w-3 -translate-y-1/2 rotate-45 border-r border-t border-cyan-200 bg-white"
+                aria-hidden
+              />
+              <p className="text-sm font-semibold text-cyan-800">{t("ui.mycobot.onboardTitle")}</p>
+              <p className="mt-1 text-[12px] leading-relaxed text-gray-600">{t("ui.mycobot.onboardBody")}</p>
+              <div className="mt-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={dismissOnboard}
+                  className="rounded px-2 py-1 text-[12px] font-medium text-gray-500 hover:bg-gray-100"
+                >
+                  {t("ui.mycobot.onboardDismiss")}
+                </button>
+              </div>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              dismissOnboard();
+              setOpenPersisted(true);
+            }}
+            aria-label={t("ui.mycobot.railAria")}
+            title={t("ui.mycobot.title")}
+            className="fixed right-0 top-1/2 z-40 flex -translate-y-1/2 items-center gap-1 rounded-l-lg bg-cyan-600 py-3 pl-2 pr-1.5 text-white shadow-lg transition-colors hover:bg-cyan-700"
+          >
+            <Sparkles className="h-4 w-4" />
+          </button>
+        </>
       )}
 
       {/* Panel abierto: rail lateral derecho, no modal */}
@@ -806,8 +855,13 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
                                     // colapsa el rail (el hilo queda persistido en sessionStorage y
                                     // se rehidrata tras la recarga). `setOpenPersisted(false)` corre
                                     // síncrono antes de la navegación full-page.
+                                    // #2 — pasamos la lista ORDENADA de fuentes citadas (`fuentes`)
+                                    // y el índice de esta (`fi`) para que la ficha ofrezca navegación
+                                    // «anterior/siguiente fuente» sin tener que volver a MycoBot.
                                     <a
-                                      href={`/resoluciones/${c.resolucionId}`}
+                                      href={`/resoluciones/${c.resolucionId}?fuentes=${encodeURIComponent(
+                                        m.citas!.map((x) => x.resolucionId).join(","),
+                                      )}&fi=${j}`}
                                       className={cls}
                                       onClick={() => setOpenPersisted(false)}
                                     >
