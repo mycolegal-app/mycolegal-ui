@@ -485,9 +485,12 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
       {/* Handle colapsado: borde derecho, vertical */}
       {!open && (
         <>
-          {/* #1 — globo de onboarding para primer acceso, descartable. */}
+          {/* #1 — globo de onboarding para primer acceso, descartable.
+              pointer-events-none en el contenedor: es un HINT, no debe interceptar
+              los clicks de los elementos que quedan debajo (rompía interacciones
+              reales y los e2e). El botón "Entendido" reactiva pointer-events. */}
           {showOnboard && (
-            <div className="fixed right-12 top-1/2 z-40 w-64 -translate-y-1/2 rounded-lg border border-cyan-200 bg-white p-3 shadow-xl">
+            <div className="pointer-events-none fixed right-12 top-1/2 z-40 w-64 -translate-y-1/2 rounded-lg border border-cyan-200 bg-white p-3 shadow-xl">
               <div
                 className="absolute right-[-6px] top-1/2 h-3 w-3 -translate-y-1/2 rotate-45 border-r border-t border-cyan-200 bg-white"
                 aria-hidden
@@ -498,7 +501,7 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
                 <button
                   type="button"
                   onClick={dismissOnboard}
-                  className="rounded px-2 py-1 text-[12px] font-medium text-gray-500 hover:bg-gray-100"
+                  className="pointer-events-auto rounded px-2 py-1 text-[12px] font-medium text-gray-500 hover:bg-gray-100"
                 >
                   {t("ui.mycobot.onboardDismiss")}
                 </button>
