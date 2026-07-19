@@ -490,7 +490,7 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
               los clicks de los elementos que quedan debajo (rompía interacciones
               reales y los e2e). El botón "Entendido" reactiva pointer-events. */}
           {showOnboard && (
-            <div className="pointer-events-none fixed right-12 top-1/2 z-40 w-64 -translate-y-1/2 rounded-lg border border-cyan-200 bg-white p-3 shadow-xl">
+            <div className="pointer-events-none fixed right-12 top-1/2 z-40 w-64 -translate-y-1/2 rounded-lg border border-cyan-200 bg-white p-3 shadow-xl print:hidden">
               <div
                 className="absolute right-[-6px] top-1/2 h-3 w-3 -translate-y-1/2 rotate-45 border-r border-t border-cyan-200 bg-white"
                 aria-hidden
@@ -516,7 +516,7 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
             }}
             aria-label={t("ui.mycobot.railAria")}
             title={t("ui.mycobot.title")}
-            className="fixed right-0 top-1/2 z-40 flex -translate-y-1/2 items-center gap-1 rounded-l-lg bg-cyan-600 py-3 pl-2 pr-1.5 text-white shadow-lg transition-colors hover:bg-cyan-700"
+            className="fixed right-0 top-1/2 z-40 flex -translate-y-1/2 items-center gap-1 rounded-l-lg bg-cyan-600 py-3 pl-2 pr-1.5 text-white shadow-lg transition-colors hover:bg-cyan-700 print:hidden"
           >
             <Sparkles className="h-4 w-4" />
           </button>
@@ -525,7 +525,7 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
 
       {/* Panel abierto: rail lateral derecho, no modal */}
       {open && (
-        <aside className="fixed right-0 top-0 z-50 flex h-full w-full max-w-[380px] flex-col border-l bg-white shadow-2xl">
+        <aside className="fixed right-0 top-0 z-50 flex h-full w-full max-w-[380px] flex-col border-l bg-white shadow-2xl print:hidden">
           <header className="flex items-center gap-2 border-b bg-cyan-600 px-4 py-3 text-white">
             <Sparkles className="h-4 w-4 shrink-0" />
             <div className="min-w-0 flex-1">
