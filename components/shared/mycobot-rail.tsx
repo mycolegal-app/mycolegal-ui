@@ -525,7 +525,7 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
 
       {/* Panel abierto: rail lateral derecho, no modal */}
       {open && (
-        <aside className="fixed right-0 top-0 z-50 flex h-full w-full max-w-[380px] flex-col border-l bg-white shadow-2xl print:hidden">
+        <aside className="fixed right-0 top-0 z-[70] flex h-full w-full max-w-[380px] flex-col border-l bg-white shadow-2xl print:hidden">
           <header className="flex items-center gap-2 border-b bg-cyan-600 px-4 py-3 text-white">
             <Sparkles className="h-4 w-4 shrink-0" />
             <div className="min-w-0 flex-1">

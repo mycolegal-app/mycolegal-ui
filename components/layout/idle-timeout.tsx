@@ -36,6 +36,15 @@ interface IdleTimeoutProps {
   refreshIntervalMinutes?: number;
 }
 
+// #452 — "leer cuenta como actividad": mientras la pestaña esté visible Y con
+// foco, un tick periódico resetea el temporizador de inactividad aunque el
+// usuario no mueva ratón/teclado ni haga scroll (p.ej. leyendo una resolución
+// corta que cabe en pantalla). Se ACOTA a `READING_KEEPALIVE_CAP × timeout`
+// desde la última interacción REAL, para no eternizar una pestaña abandonada
+// pero abierta: pasado ese margen, el temporizador de inactividad salta normal.
+const READING_TICK_MS = 30_000;
+const READING_KEEPALIVE_CAP = 3;
+
 const ACTIVITY_EVENTS: (keyof DocumentEventMap)[] = [
   "mousemove",
   "keydown",
@@ -67,6 +76,9 @@ export function IdleTimeout({
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countdownTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastActivity = useRef(Date.now());
+  // Última interacción REAL (ratón/teclado/scroll/touch), distinta de los ticks de
+  // lectura (#452): acota cuánto puede la lectura sola mantener viva la sesión.
+  const lastRealActivity = useRef(Date.now());
   const lastRefreshAt = useRef(Date.now());
   const silentRefreshing = useRef(false);
   const onSilentRefreshRef = useRef(onSilentRefresh);
@@ -112,6 +124,7 @@ export function IdleTimeout({
   useEffect(() => {
     function handleActivity() {
       if (showModal) return;
+      lastRealActivity.current = Date.now();
       resetIdleTimer();
       maybeSilentRefresh();
     }
@@ -149,6 +162,22 @@ export function IdleTimeout({
     };
   }, [resetIdleTimer, maybeSilentRefresh, timeoutMs, countdownSeconds, showModal]);
 
+  // Reading keep-alive (#452): count sustained reading as activity, bounded.
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (showModal) return;
+      if (typeof document === "undefined") return;
+      // Solo si la pestaña está realmente delante del usuario.
+      if (document.hidden || !document.hasFocus()) return;
+      // Cap: la lectura sola extiende la sesión hasta `READING_KEEPALIVE_CAP ×
+      // timeout` desde la última interacción real; pasado eso, dejar que salte.
+      if (Date.now() - lastRealActivity.current >= timeoutMs * READING_KEEPALIVE_CAP) return;
+      resetIdleTimer();
+      maybeSilentRefresh();
+    }, READING_TICK_MS);
+    return () => clearInterval(id);
+  }, [resetIdleTimer, maybeSilentRefresh, timeoutMs, showModal]);
+
   // Countdown when modal is showing
   useEffect(() => {
     if (!showModal) {
@@ -184,6 +213,7 @@ export function IdleTimeout({
       setShowModal(false);
       setRefreshing(false);
       lastActivity.current = Date.now();
+      lastRealActivity.current = Date.now();
       lastRefreshAt.current = Date.now();
       if (idleTimer.current) clearTimeout(idleTimer.current);
       idleTimer.current = setTimeout(() => {
