@@ -169,21 +169,22 @@ export function SpainCCAAMap({
     if (highlightCodigo === codigo) return "#164e63"; // cyan-900 — active filter
     if (filledSet.has(codigo)) {
       const intensity = values && maxValue > 0 ? (values[codigo] || 0) / maxValue : 0.4;
-      const alpha = 0.18 + intensity * 0.55;
+      // Tope translúcido (~0.45) para no confundir con "seleccionada" (#451).
+      const alpha = 0.12 + intensity * 0.33;
       return `rgba(6, 182, 212, ${alpha.toFixed(2)})`;
     }
     return "#f3f4f6"; // gray-100
   }
 
   function strokeFor(codigo: string) {
+    if (selSet.has(codigo)) return "#083344"; // anillo oscuro distintivo (#451)
     if (highlightCodigo === codigo) return "#164e63";
-    if (selSet.has(codigo)) return "#0e7490";
     return "#9ca3af"; // gray-400
   }
 
   function strokeWidthFor(codigo: string) {
+    if (selSet.has(codigo)) return 2.6;
     if (highlightCodigo === codigo) return 2.5;
-    if (selSet.has(codigo)) return 1.8;
     return 0.8;
   }
 
@@ -545,18 +546,22 @@ function RealisticCCAAMap({
       const isFilled = filledSet.has(codigo);
       const intensity =
         maxValue > 0 ? (values[codigo] || 0) / maxValue : 0.4;
-      const alpha = 0.18 + intensity * 0.55;
+      // El tinte de "tiene documentos" se mantiene translúcido (tope ~0.45)
+      // para que NUNCA se confunda con el relleno sólido de "seleccionada".
+      const alpha = 0.12 + intensity * 0.33;
 
       let fill = "#ffffff";
       if (isSelected) fill = "#0891b2";
       else if (isHighlight) fill = "#164e63";
       else if (isFilled) fill = `rgba(6, 182, 212, ${alpha.toFixed(2)})`;
 
+      // La CCAA seleccionada lleva un anillo oscuro y grueso, distintivo frente
+      // al mero tinte de "tiene documentos" (evita la confusión de #451).
       let stroke = "#6b7280";
-      if (isHighlight) stroke = "#164e63";
-      else if (isSelected) stroke = "#0e7490";
+      if (isSelected) stroke = "#083344";
+      else if (isHighlight) stroke = "#164e63";
 
-      const sw = isHighlight ? 2.2 : isSelected ? 1.6 : 0.9;
+      const sw = isSelected ? 2.6 : isHighlight ? 2.2 : 0.9;
 
       p.style.fill = fill;
       p.style.stroke = stroke;
