@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, type ReactNode } from "react";
-import { Menu } from "lucide-react";
+import { Menu, Coins } from "lucide-react";
 import { PageHeaderProvider, usePageHeader } from "./page-header-context";
 import { type AppInfo } from "./app-info";
 import { IdleTimeout } from "./idle-timeout";
@@ -73,6 +73,7 @@ function AppShellInner({
   commandPalette,
   helpButton,
   creditBalance,
+  subscribeUrl,
   breadcrumbs,
   appSwitcherBar,
   impersonationBanner,
@@ -85,6 +86,7 @@ function AppShellInner({
   commandPalette?: ReactNode;
   helpButton?: ReactNode;
   creditBalance?: ReactNode;
+  subscribeUrl?: string | null;
   breadcrumbs?: ReactNode;
   appSwitcherBar?: ReactNode;
   impersonationBanner?: ReactNode;
@@ -147,8 +149,9 @@ function AppShellInner({
             {commandPalette ?? <DefaultSearchButton />}
             {helpButton ?? <DefaultHelpButton />}
             <AppInfoButton appName={appName} appLogoUrl={appLogoUrl} />
-            {/* Org info */}
-            {org?.name && <OrgBadge org={org} />}
+            {/* Org info: nombre + saldo de créditos de IA debajo (monedero único
+                de la org; se auto-oculta si la app no expone /api/credits/balance). */}
+            {org?.name && <OrgBadge org={org} subscribeUrl={subscribeUrl} />}
           </div>
         </header>
       )}
@@ -158,7 +161,7 @@ function AppShellInner({
   );
 }
 
-function OrgBadge({ org }: { org: OrgInfo }) {
+function OrgBadge({ org, subscribeUrl }: { org: OrgInfo; subscribeUrl?: string | null }) {
   const [errored, setErrored] = useState(false);
   const showImg = org.logo && !errored;
   return (
@@ -176,8 +179,63 @@ function OrgBadge({ org }: { org: OrgInfo }) {
           {org.name.charAt(0).toUpperCase()}
         </div>
       )}
-      <span className="text-sm font-medium text-navy-100 hidden xl:block">{org.name}</span>
+      {/* Nombre de la org (más pequeño para dejar sitio) con el saldo de créditos
+          justo debajo. El saldo solo aparece si la app expone el monedero. */}
+      <div className="hidden min-w-0 flex-col leading-tight xl:flex">
+        <span className="truncate text-xs font-medium text-navy-100">{org.name}</span>
+        <OrgCreditBalance subscribeUrl={subscribeUrl} />
+      </div>
     </div>
+  );
+}
+
+// Saldo del monedero único de créditos de IA de la org, bajo el nombre en la
+// barra superior. Lee `/api/credits/balance` (proxy a platform en cada app); si
+// la app no lo expone o falla, no renderiza nada. Enlaza a Config para recargar
+// cuando hay `subscribeUrl`.
+function OrgCreditBalance({ subscribeUrl }: { subscribeUrl?: string | null }) {
+  const { t } = useI18n();
+  const [total, setTotal] = useState<number | null>(null);
+  const [blocked, setBlocked] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/credits/balance")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!alive || !d) return;
+        if (typeof d.total === "number") {
+          setTotal(d.total);
+          setBlocked(Boolean(d.blocked));
+        }
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  if (total === null) return null;
+
+  const content = (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 text-[11px] leading-tight",
+        blocked ? "text-amber-300" : "text-navy-200",
+      )}
+      title={t("ui.billing.credits")}
+    >
+      <Coins className="h-3 w-3 shrink-0" />
+      <span className="truncate">{t("ui.billing.creditsBalance", { n: String(total) })}</span>
+    </span>
+  );
+
+  return subscribeUrl ? (
+    <a href={subscribeUrl} className="transition-colors hover:text-white">
+      {content}
+    </a>
+  ) : (
+    content
   );
 }
 
@@ -262,6 +320,7 @@ export default function AppShell({
           commandPalette={commandPalette}
           helpButton={helpButton}
           creditBalance={creditBalance}
+          subscribeUrl={subscribeUrl}
           breadcrumbs={breadcrumbs}
           appSwitcherBar={
             showAppSwitcherBar ? (
