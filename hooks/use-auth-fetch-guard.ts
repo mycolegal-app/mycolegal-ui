@@ -53,6 +53,11 @@ export function useAuthFetchGuard(loginPath = "/login") {
       if (pathname.startsWith("/api/auth/logout")) return response;
       if (pathname.startsWith("/api/auth/set-password")) return response;
       if (pathname.startsWith("/api/auth/reset-password")) return response;
+      // El indicador de saldo de créditos de la cabecera es informativo y
+      // opcional: si su endpoint falla con 401 (p.ej. service-key mal cableada
+      // en una app, o la app no expone el monedero) NO debe cerrar la sesión.
+      // El propio badge se auto-oculta ante cualquier respuesta no-2xx.
+      if (pathname.startsWith("/api/credits/balance")) return response;
 
       // Avoid infinite loops if we're already on the login page
       if (window.location.pathname === loginPath) return response;
