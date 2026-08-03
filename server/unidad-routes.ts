@@ -28,6 +28,26 @@ import { extractText } from '@mycolegal-app/sharedlib/text-extract';
 // Tipos inyectados (todo lo app-specific viaja por `deps`)
 // --------------------------------------------------------------------------
 
+/**
+ * Scope del "Área de archivos" (intercambio Notaría ↔ partner). Cuando está
+ * presente en `auth`, el factory opera en MODO PARTNER (raíces `PARTNER:*`) en
+ * lugar del modo Unidad interna (Documentos/Compartido/Mi espacio). Lo resuelve
+ * el gate de la app y lo inyecta en `auth`:
+ *   - `all`  → interno de la notaría: ve TODAS las raíces `PARTNER:*` de la org.
+ *   - `one`  → externo (gestoría/banco): ve SOLO su raíz `PARTNER:{partnerOrgId}`;
+ *              en bancos, sub-scope por `partnerDeptIds`; `inboxOnly` limita la
+ *              escritura a las carpetas `_bandeja` (`partnerInbox`).
+ * Ver PLAN_TECNICO_UNIDAD_DE_RED.md §B.1.
+ */
+export type PartnerScope =
+  | { mode: 'all' }
+  | {
+      mode: 'one';
+      partnerOrgId: string;
+      partnerDeptIds?: string[] | null; // null/vacío en gestorías o banco sin restricción de depto
+      inboxOnly: boolean;
+    };
+
 export interface UnidadAuth {
   authUserId: string;
   orgId: string;
@@ -39,10 +59,22 @@ export interface UnidadAuth {
    * incluido lo PRIVATE de otros. Reemplaza el `isOrgAdmin(authRole)` de archivo.
    */
   mine?: boolean;
+  /**
+   * Presente ⇒ el factory sirve el "Área de archivos" (modo partner) en vez de la
+   * Unidad interna. Ausente ⇒ comportamiento legacy intacto. Ver `PartnerScope`.
+   */
+  partnerScope?: PartnerScope;
 }
 
 export interface UnidadStorage {
-  buildPath(a: { orgId: string; ownerUserId?: string | null; nodeId: string; filename: string }): string;
+  buildPath(a: {
+    orgId: string;
+    ownerUserId?: string | null;
+    nodeId: string;
+    filename: string;
+    /** Modo partner: prefijo físico `_partners/{partnerOrgId}` (opcional). */
+    partnerOrgId?: string | null;
+  }): string;
   signUploadUrl(gcsPath: string, contentType: string): Promise<{ ok: boolean; url?: string; error?: string }>;
   signDownloadUrl(
     gcsPath: string,
@@ -94,6 +126,12 @@ export interface UnidadDeps {
   summarize?: (
     texto: string,
   ) => Promise<{ ok: boolean; resumen?: string; status?: number; error?: string }>;
+  /**
+   * Claves de permiso a exigir. Por defecto `unidad:read`/`unidad:write` (Unidad
+   * interna). El montaje del "Área de archivos" (modo partner) pasa
+   * `{ read: 'unidad:read_partner', write: 'unidad:write_partner' }`.
+   */
+  permissions?: { read: string; write: string };
 }
 
 // --------------------------------------------------------------------------
@@ -129,6 +167,12 @@ interface DriveNodeRow {
   ownerUserId: string | null;
   managedBy: string | null;
   rootKey: string | null;
+  partnerOrgId: string | null;
+  partnerDeptId: string | null;
+  partnerInbox: boolean;
+  entityType: string | null;
+  entityId: string | null;
+  entityLabel: string | null;
   mimeType: string | null;
   sizeBytes: bigint | null;
   parentId: string | null;
@@ -143,6 +187,8 @@ export interface DriveNodeDTO {
   rootKey: string | null;
   managed: boolean;
   mine: boolean;
+  /** Modo partner: `true` = carpeta `_bandeja` (única zona escribible por el externo). */
+  partnerInbox?: boolean;
   mimeType: string | null;
   sizeBytes: number | null;
   createdAt: string;
@@ -166,6 +212,66 @@ export function createUnidadRoutes(deps: UnidadDeps) {
     return { trashedAt: null, OR: [{ visibility: 'ORG' }, { ownerUserId: auth.authUserId }] };
   }
 
+  // ---- Modo partner ("Área de archivos") -----------------------------------
+
+  /**
+   * Fragmento `where` de aislamiento por partner (SIN `trashedAt`). `all` =
+   * interno de la notaría (todas las raíces partner); `one` = externo acotado a
+   * su `partnerOrgId` (+ sub-scope por departamento en bancos). Este fragmento es
+   * la ÚNICA llave que impide que una gestoría vea lo de otra.
+   */
+  function partnerFilter(s: PartnerScope): Record<string, unknown> {
+    if (s.mode === 'all') return { partnerOrgId: { not: null } };
+    const w: Record<string, unknown> = { partnerOrgId: s.partnerOrgId };
+    if (s.partnerDeptIds && s.partnerDeptIds.length) {
+      // El nodo entra si no tiene depto (raíz) o si su depto está autorizado.
+      w.OR = [{ partnerDeptId: null }, { partnerDeptId: { in: s.partnerDeptIds } }];
+    }
+    return w;
+  }
+
+  /**
+   * Filtro de lectura efectivo: en modo partner sustituye por completo al de
+   * visibilidad ORG/PRIVATE (que NO debe aplicarse a un externo — filtraría por
+   * lo compartido de la notaría). Incluye `trashedAt: null`.
+   */
+  function scopeWhere(auth: UnidadAuth): Record<string, unknown> {
+    if (auth.partnerScope) return { trashedAt: null, ...partnerFilter(auth.partnerScope) };
+    return visibilityWhere(auth);
+  }
+
+  /** ¿El nodo cuelga de (o es) una carpeta `_bandeja` (`partnerInbox`)? */
+  async function isInsideInbox(
+    node: { id: string; parentId: string | null; partnerInbox: boolean },
+    orgId: string,
+  ): Promise<boolean> {
+    let cur: { id: string; parentId: string | null; partnerInbox: boolean } | null = node;
+    for (let i = 0; i < 50 && cur; i++) {
+      if (cur.partnerInbox) return true;
+      if (!cur.parentId) break;
+      cur = await prisma.driveNode.findFirst({
+        where: { id: cur.parentId, orgId },
+        select: { id: true, parentId: true, partnerInbox: true },
+      });
+    }
+    return false;
+  }
+
+  /**
+   * ¿Puede el usuario ESCRIBIR (crear/renombrar/mover/borrar/versionar) sobre este
+   * nodo? Modo partner `one` con `inboxOnly` ⇒ solo dentro de `_bandeja`; `all`
+   * (notaría) ⇒ gobierna toda la estructura. Fuera de modo partner devuelve true
+   * (el llamante ya validó `managedBy`).
+   */
+  async function partnerWriteAllowed(
+    auth: UnidadAuth,
+    node: { id: string; parentId: string | null; partnerInbox: boolean },
+  ): Promise<boolean> {
+    const s = auth.partnerScope;
+    if (!s || s.mode === 'all' || !s.inboxOnly) return true;
+    return isInsideInbox(node, auth.orgId);
+  }
+
   function serializeNode(n: DriveNodeRow, auth: UnidadAuth): DriveNodeDTO {
     return {
       id: n.id,
@@ -175,6 +281,7 @@ export function createUnidadRoutes(deps: UnidadDeps) {
       rootKey: n.rootKey,
       managed: n.managedBy != null,
       mine: n.ownerUserId == null ? false : n.ownerUserId === auth.authUserId,
+      ...(n.partnerInbox ? { partnerInbox: true } : {}),
       mimeType: n.mimeType,
       sizeBytes: n.sizeBytes == null ? null : Number(n.sizeBytes),
       createdAt: n.createdAt.toISOString(),
@@ -234,20 +341,26 @@ export function createUnidadRoutes(deps: UnidadDeps) {
     return { compartido, miEspacio };
   }
 
-  /** Lee un nodo de la org del usuario aplicando el filtro de visibilidad. */
+  /** Lee un nodo de la org del usuario aplicando el filtro de visibilidad/scope. */
   async function getVisibleNode(auth: UnidadAuth, id: string) {
     return prisma.driveNode.findFirst({
-      where: { id, orgId: auth.orgId, ...visibilityWhere(auth) },
+      where: { id, orgId: auth.orgId, ...scopeWhere(auth) },
     });
   }
 
   /**
-   * Carpeta destino válida para escribir: existe, es FOLDER, visible y NO es de
-   * sistema (`managedBy` null). Devuelve la carpeta o `null`.
+   * Carpeta destino válida para escribir: existe, es FOLDER y visible. En modo
+   * legacy, además NO puede ser de sistema (`managedBy` null). En modo partner
+   * externo con `inboxOnly`, debe colgar de una `_bandeja`; el interno (`all`)
+   * gobierna toda la estructura. Devuelve la carpeta o `null`.
    */
   async function getWritableFolder(auth: UnidadAuth, parentId: string) {
     const parent = await getVisibleNode(auth, parentId);
-    if (!parent || parent.type !== 'FOLDER' || parent.managedBy != null) return null;
+    if (!parent || parent.type !== 'FOLDER') return null;
+    if (auth.partnerScope) {
+      return (await partnerWriteAllowed(auth, parent)) ? parent : null;
+    }
+    if (parent.managedBy != null) return null;
     return parent;
   }
 
@@ -317,7 +430,72 @@ export function createUnidadRoutes(deps: UnidadDeps) {
    * `TRASH:*`       → papelera del área (Compartido / Mi espacio).
    * Carpeta real    → hijos (filtrados por visibilidad) + breadcrumb.
    */
+  /**
+   * GET /api/unidad/list (MODO PARTNER, "Área de archivos").
+   * - Sin `parentId`:
+   *     · `all`  → una carpeta por partner (raíces `PARTNER:*`), etiquetada con la
+   *                razón social de la Organization externa.
+   *     · `one`  → entra directo en su raíz y lista sus expedientes.
+   * - Con `parentId` → hijos de la carpeta (validada por scope) + breadcrumb.
+   */
+  const partnerListHandler = async (request: NextRequest, auth: UnidadAuth): Promise<Response> => {
+    const s = auth.partnerScope!;
+    const parentId = new URL(request.url).searchParams.get('parentId');
+    const filter = partnerFilter(s);
+
+    if (!parentId) {
+      if (s.mode === 'all') {
+        const roots = await prisma.driveNode.findMany({
+          where: { orgId: auth.orgId, parentId: null, rootKey: { startsWith: 'PARTNER:' }, trashedAt: null },
+          orderBy: { name: 'asc' },
+        });
+        const ids = roots.map((r: DriveNodeRow) => r.partnerOrgId).filter(Boolean) as string[];
+        const orgs = ids.length
+          ? await prisma.organization.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } })
+          : [];
+        const nameById = new Map(orgs.map((o: { id: string; name: string }) => [o.id, o.name]));
+        return successResponse({
+          breadcrumb: [],
+          parent: null,
+          nodes: roots.map((r: DriveNodeRow) => ({
+            ...serializeNode(r, auth),
+            name: (r.partnerOrgId && nameById.get(r.partnerOrgId)) || r.name,
+          })),
+        });
+      }
+      // mode 'one': la raíz del propio partner (puede no existir aún → vacío).
+      const root = await prisma.driveNode.findFirst({
+        where: { orgId: auth.orgId, parentId: null, rootKey: `PARTNER:${s.partnerOrgId}`, trashedAt: null },
+      });
+      if (!root) return successResponse({ breadcrumb: [], parent: null, nodes: [] });
+      const children = await prisma.driveNode.findMany({
+        where: { parentId: root.id, orgId: auth.orgId, trashedAt: null, ...filter },
+        orderBy: [{ type: 'desc' }, { name: 'asc' }],
+      });
+      return successResponse({
+        breadcrumb: [{ id: root.id, name: 'Área de archivos', rootKey: root.rootKey }],
+        parent: { id: root.id, name: 'Área de archivos', rootKey: root.rootKey, managed: true },
+        nodes: children.map((n: DriveNodeRow) => serializeNode(n, auth)),
+      });
+    }
+
+    const folder = await getVisibleNode(auth, parentId);
+    if (!folder || folder.type !== 'FOLDER') {
+      return errorResponse('NOT_FOUND', 'Carpeta no encontrada', 404);
+    }
+    const children = await prisma.driveNode.findMany({
+      where: { parentId: folder.id, orgId: auth.orgId, trashedAt: null, ...filter },
+      orderBy: [{ type: 'desc' }, { name: 'asc' }],
+    });
+    return successResponse({
+      breadcrumb: await buildBreadcrumb(folder.id, auth.orgId),
+      parent: { id: folder.id, name: folder.name, rootKey: folder.rootKey, managed: folder.managedBy != null },
+      nodes: children.map((n: DriveNodeRow) => serializeNode(n, auth)),
+    });
+  };
+
   const listHandler: UnidadHandler = async (request, { auth }) => {
+    if (auth.partnerScope) return partnerListHandler(request, auth);
     const url = new URL(request.url);
     const parentId = url.searchParams.get('parentId');
 
@@ -456,6 +634,10 @@ export function createUnidadRoutes(deps: UnidadDeps) {
         name,
         visibility: inh.visibility,
         ownerUserId: inh.ownerUserId,
+        // Modo partner: hereda el eje de aislamiento del padre para no salirse del scope.
+        ...(auth.partnerScope
+          ? { partnerOrgId: parent.partnerOrgId, partnerDeptId: parent.partnerDeptId }
+          : {}),
         createdBy: auth.authUserId,
       },
     });
@@ -494,6 +676,9 @@ export function createUnidadRoutes(deps: UnidadDeps) {
           name: filename,
           visibility: inh.visibility,
           ownerUserId: inh.ownerUserId,
+          ...(auth.partnerScope
+            ? { partnerOrgId: parent.partnerOrgId, partnerDeptId: parent.partnerDeptId }
+            : {}),
           mimeType: contentType,
           sizeBytes,
           createdBy: auth.authUserId,
@@ -503,7 +688,13 @@ export function createUnidadRoutes(deps: UnidadDeps) {
 
     const gcsPath =
       node.gcsPath ??
-      storage.buildPath({ orgId: auth.orgId, ownerUserId: node.ownerUserId, nodeId: node.id, filename });
+      storage.buildPath({
+        orgId: auth.orgId,
+        ownerUserId: node.ownerUserId,
+        nodeId: node.id,
+        filename,
+        partnerOrgId: node.partnerOrgId,
+      });
     const signed = await storage.signUploadUrl(gcsPath, contentType);
     if (!signed.ok || !signed.url) {
       if (!existing) await prisma.driveNode.delete({ where: { id: node.id } }).catch(() => {});
@@ -532,7 +723,12 @@ export function createUnidadRoutes(deps: UnidadDeps) {
     if (!nodeId) return errorResponse('BAD_REQUEST', 'Falta nodeId', 400);
 
     const node = await prisma.driveNode.findFirst({
-      where: { id: nodeId, orgId: auth.orgId, type: 'FILE' },
+      where: {
+        id: nodeId,
+        orgId: auth.orgId,
+        type: 'FILE',
+        ...(auth.partnerScope ? partnerFilter(auth.partnerScope) : {}),
+      },
       select: { id: true, gcsPath: true },
     });
     if (!node || !node.gcsPath) return errorResponse('NOT_FOUND', 'Fichero no encontrado', 404);
@@ -543,15 +739,18 @@ export function createUnidadRoutes(deps: UnidadDeps) {
 
   /** GET /api/unidad/trash — papelera (áreas libres del usuario), recientes primero. */
   const trashHandler: UnidadHandler = async (_request, { auth }) => {
+    const where: Record<string, unknown> = auth.partnerScope
+      ? { orgId: auth.orgId, trashedAt: { not: null }, ...partnerFilter(auth.partnerScope) }
+      : {
+          orgId: auth.orgId,
+          trashedAt: { not: null },
+          managedBy: null,
+          ...(isOrgAdmin(auth)
+            ? {}
+            : { OR: [{ visibility: 'ORG' }, { ownerUserId: auth.authUserId }] }),
+        };
     const nodes = await prisma.driveNode.findMany({
-      where: {
-        orgId: auth.orgId,
-        trashedAt: { not: null },
-        managedBy: null,
-        ...(isOrgAdmin(auth)
-          ? {}
-          : { OR: [{ visibility: 'ORG' }, { ownerUserId: auth.authUserId }] }),
-      },
+      where,
       orderBy: { trashedAt: 'desc' },
       take: 200,
     });
@@ -609,6 +808,9 @@ export function createUnidadRoutes(deps: UnidadDeps) {
     if (node.managedBy) {
       return errorResponse('FORBIDDEN', 'Carpeta gestionada por una app (solo lectura)', 403);
     }
+    if (!(await partnerWriteAllowed(auth, node))) {
+      return errorResponse('FORBIDDEN', 'Solo se puede escribir en la bandeja de entrada', 403);
+    }
 
     const body = await request.json().catch(() => null);
     const newName =
@@ -660,6 +862,9 @@ export function createUnidadRoutes(deps: UnidadDeps) {
     if (node.managedBy) {
       return errorResponse('FORBIDDEN', 'Carpeta gestionada por una app (solo lectura)', 403);
     }
+    if (!(await partnerWriteAllowed(auth, node))) {
+      return errorResponse('FORBIDDEN', 'Solo se puede escribir en la bandeja de entrada', 403);
+    }
 
     const ids = await collectSubtreeIds(node.id, auth.orgId);
     const { count } = await prisma.driveNode.updateMany({
@@ -689,6 +894,9 @@ export function createUnidadRoutes(deps: UnidadDeps) {
     if (node.managedBy) {
       return errorResponse('FORBIDDEN', 'Carpeta gestionada por una app (solo lectura)', 403);
     }
+    if (!(await partnerWriteAllowed(auth, node))) {
+      return errorResponse('FORBIDDEN', 'Solo se puede escribir en la bandeja de entrada', 403);
+    }
     const body = await request.json().catch(() => null);
     const generation = String(body?.generation ?? '');
     if (!generation) return errorResponse('BAD_REQUEST', 'Falta generation', 400);
@@ -704,11 +912,20 @@ export function createUnidadRoutes(deps: UnidadDeps) {
   const restoreHandler: UnidadHandler = async (_request, { params, auth }) => {
     const { id } = params;
     const node = await prisma.driveNode.findFirst({
-      where: { id, orgId: auth.orgId, trashedAt: { not: null } },
+      where: {
+        id,
+        orgId: auth.orgId,
+        trashedAt: { not: null },
+        ...(auth.partnerScope ? partnerFilter(auth.partnerScope) : {}),
+      },
     });
     if (!node) return errorResponse('NOT_FOUND', 'Elemento no encontrado en la papelera', 404);
     if (node.managedBy) return errorResponse('FORBIDDEN', 'Carpeta gestionada (solo lectura)', 403);
-    if (!isOrgAdmin(auth) && node.visibility !== 'ORG' && node.ownerUserId !== auth.authUserId) {
+    if (auth.partnerScope) {
+      if (!(await partnerWriteAllowed(auth, node))) {
+        return errorResponse('FORBIDDEN', 'Solo se puede escribir en la bandeja de entrada', 403);
+      }
+    } else if (!isOrgAdmin(auth) && node.visibility !== 'ORG' && node.ownerUserId !== auth.authUserId) {
       return errorResponse('FORBIDDEN', 'Sin permiso sobre este elemento', 403);
     }
 
@@ -846,7 +1063,7 @@ export function createUnidadRoutes(deps: UnidadDeps) {
       where: {
         orgId: auth.orgId,
         name: { contains: query, mode: 'insensitive' },
-        ...visibilityWhere(auth),
+        ...scopeWhere(auth),
       },
       orderBy: [{ type: 'desc' }, { name: 'asc' }],
       take: 20,
@@ -860,22 +1077,27 @@ export function createUnidadRoutes(deps: UnidadDeps) {
     });
   };
 
+  // Permisos a exigir (por defecto Unidad interna; el montaje partner pasa
+  // `unidad:read_partner`/`unidad:write_partner`).
+  const permRead = deps.permissions?.read ?? 'unidad:read';
+  const permWrite = deps.permissions?.write ?? 'unidad:write';
+
   // Handlers ya envueltos por el wrapper de permisos del host.
   const wrapped = {
-    list: withPermission('unidad:read')(listHandler),
-    search: withPermission('unidad:read')(searchHandler),
-    read: withPermission('unidad:read')(readHandler),
-    resumir: withPermission('unidad:read')(resumirHandler),
-    folder: withPermission('unidad:write')(folderHandler),
-    uploadUrl: withPermission('unidad:write')(uploadUrlHandler),
-    confirm: withPermission('unidad:write')(confirmHandler),
-    trash: withPermission('unidad:read')(trashHandler),
-    download: withPermission('unidad:read')(downloadHandler),
-    nodePatch: withPermission('unidad:write')(nodePatchHandler),
-    nodeDelete: withPermission('unidad:write')(nodeDeleteHandler),
-    versionsGet: withPermission('unidad:read')(versionsGetHandler),
-    versionsPost: withPermission('unidad:write')(versionsPostHandler),
-    restore: withPermission('unidad:write')(restoreHandler),
+    list: withPermission(permRead)(listHandler),
+    search: withPermission(permRead)(searchHandler),
+    read: withPermission(permRead)(readHandler),
+    resumir: withPermission(permRead)(resumirHandler),
+    folder: withPermission(permWrite)(folderHandler),
+    uploadUrl: withPermission(permWrite)(uploadUrlHandler),
+    confirm: withPermission(permWrite)(confirmHandler),
+    trash: withPermission(permRead)(trashHandler),
+    download: withPermission(permRead)(downloadHandler),
+    nodePatch: withPermission(permWrite)(nodePatchHandler),
+    nodeDelete: withPermission(permWrite)(nodeDeleteHandler),
+    versionsGet: withPermission(permRead)(versionsGetHandler),
+    versionsPost: withPermission(permWrite)(versionsPostHandler),
+    restore: withPermission(permWrite)(restoreHandler),
   };
 
   /**

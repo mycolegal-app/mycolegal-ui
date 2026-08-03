@@ -102,9 +102,21 @@ export interface UnidadExplorerProps {
   mode?: "browse" | "picker";
   /** Callback al seleccionar un fichero en modo picker. */
   onPick?: (node: DriveNode) => void;
+  /** Base de la API (por defecto `/api/unidad`). El "Área de archivos" (modo
+   *  partner) monta el mismo factory en `/api/area-archivos`. */
+  basePath?: string;
+  /** Título/raíz a mostrar (por defecto la Unidad de red). */
+  title?: string;
+  subtitle?: string;
 }
 
-export function UnidadExplorer({ mode = "browse", onPick }: UnidadExplorerProps = {}) {
+export function UnidadExplorer({
+  mode = "browse",
+  onPick,
+  basePath = "/api/unidad",
+  title,
+  subtitle,
+}: UnidadExplorerProps = {}) {
   const { t } = useI18n();
   const [parentId, setParentId] = useState<string | null>(null);
   const [data, setData] = useState<ListResponse | null>(null);
@@ -135,7 +147,7 @@ export function UnidadExplorer({ mode = "browse", onPick }: UnidadExplorerProps 
       setError(null);
       try {
         const qs = pid ? `?parentId=${encodeURIComponent(pid)}` : "";
-        const res = await fetch(`/api/unidad/list${qs}`);
+        const res = await fetch(`${basePath}/list${qs}`);
         const json = await res.json();
         if (!res.ok) {
           setError(json?.error?.message ?? t("unidad.errorCargar"));
@@ -165,7 +177,7 @@ export function UnidadExplorer({ mode = "browse", onPick }: UnidadExplorerProps 
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/unidad/folder", {
+      const res = await fetch(`${basePath}/folder`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ parentId, name: name.trim() }),
@@ -188,7 +200,7 @@ export function UnidadExplorer({ mode = "browse", onPick }: UnidadExplorerProps 
     try {
       for (const file of Array.from(files)) {
         const contentType = file.type || "application/octet-stream";
-        const res = await fetch("/api/unidad/upload-url", {
+        const res = await fetch(`${basePath}/upload-url`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -222,7 +234,7 @@ export function UnidadExplorer({ mode = "browse", onPick }: UnidadExplorerProps 
           setError(t("unidad.errorSubir"));
           // Retira el nodo recién creado para no dejar un fichero sin contenido.
           if (json?.data?.created && json?.data?.node?.id) {
-            await fetch(`/api/unidad/node/${json.data.node.id}`, { method: "DELETE" }).catch(() => {});
+            await fetch(`${basePath}/node/${json.data.node.id}`, { method: "DELETE" }).catch(() => {});
           }
           break;
         }
@@ -231,7 +243,7 @@ export function UnidadExplorer({ mode = "browse", onPick }: UnidadExplorerProps 
         // se espera para que el `load()` posterior ya vea el tamaño definitivo.
         const nodeId: string | undefined = json?.data?.node?.id;
         if (nodeId) {
-          await fetch("/api/unidad/confirm", {
+          await fetch(`${basePath}/confirm`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ nodeId }),
@@ -248,7 +260,7 @@ export function UnidadExplorer({ mode = "browse", onPick }: UnidadExplorerProps 
   }
 
   async function handleDownload(node: DriveNode) {
-    const res = await fetch(`/api/unidad/download/${node.id}`);
+    const res = await fetch(`${basePath}/download/${node.id}`);
     const json = await res.json();
     if (!res.ok || !json?.data?.url) {
       setError(json?.error?.message ?? t("unidad.errorDescargar"));
@@ -262,7 +274,7 @@ export function UnidadExplorer({ mode = "browse", onPick }: UnidadExplorerProps 
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/unidad/node/${node.id}`, { method: "DELETE" });
+      const res = await fetch(`${basePath}/node/${node.id}`, { method: "DELETE" });
       const json = await res.json();
       if (!res.ok) {
         setError(json?.error?.message ?? t("unidad.errorBorrar"));
@@ -279,7 +291,7 @@ export function UnidadExplorer({ mode = "browse", onPick }: UnidadExplorerProps 
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/unidad/node/${node.id}/restore`, { method: "POST" });
+      const res = await fetch(`${basePath}/node/${node.id}/restore`, { method: "POST" });
       const json = await res.json();
       if (!res.ok) {
         setError(json?.error?.message ?? t("unidad.errorRestaurar"));
@@ -297,7 +309,7 @@ export function UnidadExplorer({ mode = "browse", onPick }: UnidadExplorerProps 
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/unidad/node/${node.id}`, {
+      const res = await fetch(`${basePath}/node/${node.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: name.trim() }),
@@ -318,7 +330,7 @@ export function UnidadExplorer({ mode = "browse", onPick }: UnidadExplorerProps 
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/unidad/node/${moving.id}`, {
+      const res = await fetch(`${basePath}/node/${moving.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ parentId }),
@@ -345,7 +357,7 @@ export function UnidadExplorer({ mode = "browse", onPick }: UnidadExplorerProps 
       loading: true,
     });
     try {
-      const res = await fetch(`/api/unidad/download/${node.id}?disposition=inline`);
+      const res = await fetch(`${basePath}/download/${node.id}?disposition=inline`);
       const json = await res.json();
       if (!res.ok || !json?.data?.url) {
         setPreview((p) =>
@@ -366,7 +378,7 @@ export function UnidadExplorer({ mode = "browse", onPick }: UnidadExplorerProps 
   async function handleVersions(node: DriveNode) {
     setVersions({ node, list: [], loading: true });
     setError(null);
-    const res = await fetch(`/api/unidad/node/${node.id}/versions`);
+    const res = await fetch(`${basePath}/node/${node.id}/versions`);
     const json = await res.json();
     if (!res.ok) {
       setError(json?.error?.message ?? t("unidad.errorVersiones"));
@@ -381,7 +393,7 @@ export function UnidadExplorer({ mode = "browse", onPick }: UnidadExplorerProps 
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/unidad/node/${node.id}/versions`, {
+      const res = await fetch(`${basePath}/node/${node.id}/versions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ generation }),
@@ -560,7 +572,7 @@ export function UnidadExplorer({ mode = "browse", onPick }: UnidadExplorerProps 
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <PageTitle title={t("unidad.titulo")} subtitle={t("unidad.subtitulo")} />
+      <PageTitle title={title ?? t("unidad.titulo")} subtitle={subtitle ?? t("unidad.subtitulo")} />
 
       {/* Barra: breadcrumb + acciones */}
       <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -571,7 +583,7 @@ export function UnidadExplorer({ mode = "browse", onPick }: UnidadExplorerProps 
             className="inline-flex items-center gap-1 hover:underline"
           >
             <HardDrive className="h-4 w-4" />
-            {t("unidad.titulo")}
+            {title ?? t("unidad.titulo")}
           </button>
           {data?.breadcrumb.map((c) => (
             <span key={c.id} className="flex items-center gap-1">
@@ -696,7 +708,7 @@ export function UnidadExplorer({ mode = "browse", onPick }: UnidadExplorerProps 
                     </span>
                     <div className="ml-auto flex shrink-0 gap-2">
                       <a
-                        href={`/api/unidad/download/${versions.node.id}?generation=${v.generation}`}
+                        href={`${basePath}/download/${versions.node.id}?generation=${v.generation}`}
                         className="rounded-md border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50"
                         title={t("unidad.descargar")}
                       >
