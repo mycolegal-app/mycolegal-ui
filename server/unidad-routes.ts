@@ -189,6 +189,8 @@ export interface DriveNodeDTO {
   mine: boolean;
   /** Modo partner: `true` = carpeta `_bandeja` (única zona escribible por el externo). */
   partnerInbox?: boolean;
+  /** Metadatos visuales del smart folder (B.5), si esta carpeta gestionada lo es. */
+  smartFolder?: { color: string | null; icon: string | null; description: string | null };
   mimeType: string | null;
   sizeBytes: number | null;
   createdAt: string;
@@ -286,6 +288,34 @@ export function createUnidadRoutes(deps: UnidadDeps) {
       sizeBytes: n.sizeBytes == null ? null : Number(n.sizeBytes),
       createdAt: n.createdAt.toISOString(),
     };
+  }
+
+  /**
+   * Adjunta los metadatos visuales (color/icono/descripción) del `SmartFolderType`
+   * a los DTOs de carpetas GESTIONADAS que sean smart folders. El vínculo es
+   * `(managedBy = app, name = label)` — estable porque las carpetas gestionadas son
+   * read-only (no renombrables en la UI). No-op si la app no tiene el modelo
+   * `SmartFolderType` (notaria/legifirma/polizas/tributos/peticiones). `rows` y
+   * `dtos` deben venir alineados por índice. Ver PLAN_TECNICO_UNIDAD_DE_RED.md §B.5.
+   */
+  async function enrichSmartFolders(rows: DriveNodeRow[], dtos: DriveNodeDTO[]): Promise<void> {
+    if (!prisma.smartFolderType) return;
+    const apps = [
+      ...new Set(rows.filter((r) => r.type === 'FOLDER' && r.managedBy).map((r) => r.managedBy as string)),
+    ];
+    if (!apps.length) return;
+    const types: { app: string; label: string; color: string | null; icon: string | null; description: string | null }[] =
+      await prisma.smartFolderType.findMany({
+        where: { app: { in: apps }, active: true },
+        select: { app: true, label: true, color: true, icon: true, description: true },
+      });
+    if (!types.length) return;
+    const byKey = new Map(types.map((t) => [`${t.app} ${t.label}`, t]));
+    rows.forEach((r, i) => {
+      if (r.type !== 'FOLDER' || !r.managedBy) return;
+      const t = byKey.get(`${r.managedBy} ${r.name}`);
+      if (t) dtos[i].smartFolder = { color: t.color ?? null, icon: t.icon ?? null, description: t.description ?? null };
+    });
   }
 
   async function ensureRoot(args: {
@@ -603,6 +633,9 @@ export function createUnidadRoutes(deps: UnidadDeps) {
         ]
       : [];
 
+    const childDtos = children.map((n: DriveNodeRow) => serializeNode(n, auth));
+    await enrichSmartFolders(children, childDtos);
+
     return successResponse({
       breadcrumb: await buildBreadcrumb(folder.id, auth.orgId),
       parent: {
@@ -611,7 +644,7 @@ export function createUnidadRoutes(deps: UnidadDeps) {
         rootKey: folder.rootKey,
         managed: folder.managedBy != null,
       },
-      nodes: [...children.map((n: DriveNodeRow) => serializeNode(n, auth)), ...trashNode],
+      nodes: [...childDtos, ...trashNode],
     });
   };
 

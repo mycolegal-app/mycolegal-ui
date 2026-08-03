@@ -3,23 +3,30 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
+  AlertTriangle,
   ChevronRight,
   ClipboardPaste,
   Download,
   Eye,
   FileText,
   Folder,
+  FolderInput,
   FolderPlus,
   HardDrive,
   History,
+  Info,
+  Inbox,
   Lock,
+  Mail,
   Move,
   Pencil,
   RotateCcw,
+  Star,
   Trash2,
   Upload,
   Users,
   X,
+  type LucideIcon,
 } from "lucide-react";
 import { PageTitle } from "../layout/page-title";
 import { DataTable } from "../shared/data-table";
@@ -64,6 +71,20 @@ const PREVIEW_CLOSED: PreviewState = {
   error: null,
 };
 
+// Iconos disponibles para smart folders (B.5). `SmartFolderType.icon` = una de
+// estas claves; si no casa, se usa la carpeta normal. Se mantiene curado (no se
+// resuelve dinámicamente cualquier nombre de lucide) para no inflar el bundle.
+const SMART_ICONS: Record<string, LucideIcon> = {
+  inbox: Inbox,
+  mail: Mail,
+  alert: AlertTriangle,
+  warning: AlertTriangle,
+  star: Star,
+  folderinput: FolderInput,
+  file: FileText,
+  folder: Folder,
+};
+
 export interface DriveNode {
   id: string;
   type: "FOLDER" | "FILE";
@@ -75,6 +96,8 @@ export interface DriveNode {
   mimeType: string | null;
   sizeBytes: number | null;
   createdAt: string;
+  /** Metadatos visuales del smart folder (B.5). */
+  smartFolder?: { color: string | null; icon: string | null; description: string | null } | null;
 }
 
 interface Crumb {
@@ -420,21 +443,42 @@ export function UnidadExplorer({
         cell: ({ row }) => {
           const n = row.original;
           const isTrash = n.rootKey?.startsWith("TRASH:") ?? false;
-          const Icon = n.type === "FOLDER" ? (isTrash ? Trash2 : Folder) : FileText;
+          const sf = n.smartFolder;
           const label = displayName(n);
           if (n.type === "FOLDER") {
+            // Smart folder (B.5): icono/color identificable + "(i)" con su comportamiento.
+            const FolderIcon =
+              (sf?.icon && SMART_ICONS[sf.icon.toLowerCase()]) || (isTrash ? Trash2 : Folder);
+            const iconClass = isTrash
+              ? "text-gray-400"
+              : sf?.color
+                ? ""
+                : "text-mc-primary-700";
             return (
               <button
                 type="button"
                 onClick={() => setParentId(n.id)}
                 className="flex items-center gap-2 min-w-0 text-left hover:underline"
               >
-                <Icon className={`h-4 w-4 shrink-0 ${isTrash ? "text-gray-400" : "text-mc-primary-700"}`} />
+                <FolderIcon
+                  className={`h-4 w-4 shrink-0 ${iconClass}`}
+                  style={!isTrash && sf?.color ? { color: sf.color } : undefined}
+                />
                 <span className="truncate font-medium">{label}</span>
-                {n.managed && !isTrash && <Lock className="h-3 w-3 shrink-0 text-gray-400" />}
+                {sf?.description && (
+                  <span
+                    title={sf.description}
+                    aria-label={sf.description}
+                    className="inline-flex shrink-0 cursor-help"
+                  >
+                    <Info className="h-3.5 w-3.5 text-gray-400" />
+                  </span>
+                )}
+                {n.managed && !isTrash && !sf && <Lock className="h-3 w-3 shrink-0 text-gray-400" />}
               </button>
             );
           }
+          const Icon = FileText;
           return (
             <div className="flex items-center gap-2 min-w-0">
               <Icon className="h-4 w-4 shrink-0 text-gray-500" />
