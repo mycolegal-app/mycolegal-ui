@@ -478,6 +478,9 @@ export function IncidentReporter({
                 onChange={(e) => updateDescription(e.target.value)}
                 placeholder={t("ui.incidentReporter.descriptionPlaceholder")}
                 rows={5}
+                // #429 — tope alineado con el backend (evita que el envío falle
+                // silenciosamente por longitud; antes eran 4000 y truncaba).
+                maxLength={20000}
                 autoFocus
               />
             </div>
