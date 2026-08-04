@@ -21,6 +21,7 @@ import {
   Move,
   Pencil,
   RotateCcw,
+  Search,
   Star,
   Trash2,
   Upload,
@@ -100,6 +101,15 @@ export interface DriveNode {
   smartFolder?: { color: string | null; icon: string | null; description: string | null } | null;
 }
 
+/** Ítem devuelto por `POST /search` (DTO ligero por nombre). */
+interface SearchItem {
+  id: string;
+  name: string;
+  type: "FOLDER" | "FILE";
+  mimeType: string | null;
+  sizeBytes: number | null;
+}
+
 interface Crumb {
   id: string;
   name: string;
@@ -150,6 +160,10 @@ export function UnidadExplorer({
   const [versions, setVersions] = useState<{ node: DriveNode; list: DriveVersion[]; loading: boolean } | null>(null);
   const [preview, setPreview] = useState<PreviewState>(PREVIEW_CLOSED);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Búsqueda por nombre (B.2): consulta el endpoint `/search` (scope del backend).
+  const [search, setSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchItem[] | null>(null);
+  const [searching, setSearching] = useState(false);
 
   // Nombre a mostrar: las raíces se traducen por rootKey.
   const displayName = useCallback(
@@ -188,6 +202,53 @@ export function UnidadExplorer({
   useEffect(() => {
     load(parentId);
   }, [parentId, load]);
+
+  // Búsqueda por nombre contra el backend (respeta el scope del gate). Debounce
+  // 300ms; <2 caracteres = sin búsqueda (vuelve a la vista de carpeta).
+  const runSearch = useCallback(
+    async (q: string) => {
+      setSearching(true);
+      try {
+        const res = await fetch(`${basePath}/search`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: q }),
+        });
+        const json = await res.json();
+        setSearchResults(res.ok ? ((json.data?.items ?? []) as SearchItem[]) : []);
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setSearching(false);
+      }
+    },
+    [basePath],
+  );
+
+  useEffect(() => {
+    const q = search.trim();
+    if (q.length < 2) {
+      setSearchResults(null);
+      return;
+    }
+    const timer = setTimeout(() => runSearch(q), 300);
+    return () => clearTimeout(timer);
+  }, [search, runSearch]);
+
+  // Adapta un resultado de búsqueda (DTO ligero) a `DriveNode` para reusar los
+  // handlers de vista previa / descarga.
+  const asNode = (r: SearchItem): DriveNode => ({
+    id: r.id,
+    name: r.name,
+    type: r.type,
+    mimeType: r.mimeType,
+    sizeBytes: r.sizeBytes,
+    visibility: "ORG",
+    rootKey: null,
+    managed: false,
+    mine: false,
+    createdAt: "",
+  });
 
   // Escribible cuando estamos DENTRO de una carpeta NO de sistema (no raíz-
   // listado, no carpeta `managed` como una raíz de app). El backend lo reafirma.
@@ -640,6 +701,16 @@ export function UnidadExplorer({
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t("unidad.buscarPlaceholder")}
+              className="w-56 rounded-md border border-gray-300 py-2 pl-8 pr-2 text-sm focus:outline-none focus:ring-1 focus:ring-mc-primary-500"
+            />
+          </div>
           {canWrite && (
             <>
               <button
@@ -701,18 +772,85 @@ export function UnidadExplorer({
       {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
 
       <div className="flex min-h-0 flex-1 flex-col">
-        {data && (
-          <DataTable
-            columns={columns}
-            data={data.nodes}
-            pageSize={20}
-            scrollable
-            fillParent
-            searchable={false}
-          />
-        )}
-        {data && data.nodes.length === 0 && !loading && (
-          <p className="mt-4 text-sm text-gray-500">{t("unidad.vacio")}</p>
+        {searchResults != null ? (
+          <div className="min-h-0 flex-1 overflow-auto">
+            <div className="mb-2 flex items-center gap-2 text-xs text-gray-500">
+              <span className="truncate">{t("unidad.resultadosBusqueda", { q: search.trim() })}</span>
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="shrink-0 text-mc-primary-700 hover:underline"
+              >
+                {t("unidad.limpiarBusqueda")}
+              </button>
+            </div>
+            {searchResults.length === 0 ? (
+              <p className="mt-4 text-sm text-gray-500">
+                {searching ? t("common.loading") : t("unidad.sinResultados")}
+              </p>
+            ) : (
+              <ul className="divide-y divide-gray-100">
+                {searchResults.map((r) => (
+                  <li key={r.id} className="flex items-center gap-2 py-2 text-sm">
+                    {r.type === "FOLDER" ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setParentId(r.id);
+                          setSearch("");
+                        }}
+                        className="flex min-w-0 items-center gap-2 text-left hover:underline"
+                      >
+                        <Folder className="h-4 w-4 shrink-0 text-mc-primary-700" />
+                        <span className="truncate font-medium">{r.name}</span>
+                      </button>
+                    ) : (
+                      <>
+                        <FileText className="h-4 w-4 shrink-0 text-gray-500" />
+                        <span className="truncate">{r.name}</span>
+                        <div className="ml-auto flex shrink-0 items-center gap-2">
+                          {isPreviewable(r.mimeType) && (
+                            <button
+                              type="button"
+                              onClick={() => handlePreview(asNode(r))}
+                              title={t("unidad.previsualizar")}
+                              className="rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50"
+                            >
+                              <Eye className="h-3 w-3" />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleDownload(asNode(r))}
+                            title={t("unidad.descargar")}
+                            className="rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50"
+                          >
+                            <Download className="h-3 w-3" />
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ) : (
+          <>
+            {data && (
+              <DataTable
+                columns={columns}
+                data={data.nodes}
+                pageSize={20}
+                scrollable
+                fillParent
+                searchable={false}
+              />
+            )}
+            {data && data.nodes.length === 0 && !loading && (
+              <p className="mt-4 text-sm text-gray-500">{t("unidad.vacio")}</p>
+            )}
+          </>
         )}
       </div>
 
