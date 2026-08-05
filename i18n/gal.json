@@ -884,6 +884,7 @@
       "helpHint": "Escribe /help en calquera momento para volver ver esta axuda.",
       "helpScope": "Limítome a estes temas; non son un asistente de uso xeral.",
       "helpCite": "Cando uso doutrina, cada resposta inclúe as resolucións citadas: preme nunha para abrir a súa ficha.",
+      "helpManual": "Para ver todos os tipos de pregunta con exemplos, abre a sección «Preguntar a MycoBot» do manual.",
       "helpCommands": "Comando dispoñible: /help para ver esta axuda.",
       "chipDoctrina": "É inscribible unha hipoteca unilateral non aceptada?",
       "chipAyuda": "Como funciona esta aplicación?",

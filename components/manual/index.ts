@@ -4,5 +4,7 @@ export { AdminUsersSection } from "./admin-users-section";
 export type { AdminUsersSectionProps, ManualLang } from "./admin-users-section";
 export { EcosistemaAppsGlosario } from "./ecosistema-apps-glosario";
 export type { EcosistemaAppsGlosarioProps } from "./ecosistema-apps-glosario";
+export { MycoBotManualSection } from "./mycobot-manual-section";
+export type { MycoBotManualSectionProps } from "./mycobot-manual-section";
 export { RolesPermissionsSection } from "./roles-permissions-section";
 export type { RolesPermissionsSectionProps, RoleRow } from "./roles-permissions-section";

@@ -295,6 +295,7 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
           caps.join("\n"),
           t("ui.mycobot.helpScope"),
           t("ui.mycobot.helpCite"),
+          t("ui.mycobot.helpManual"),
           t("ui.mycobot.helpCommands"),
         ].join("\n\n");
         setMessages((m) => [...m, { role: "bot", text: md }]);
