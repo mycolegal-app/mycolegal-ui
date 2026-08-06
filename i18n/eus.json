@@ -55,6 +55,7 @@
       },
       "credits": "IAren kredituak",
       "creditsBalance": "{n} kreditu",
+      "nextCreditProgress": "Hurrengo kredituaren %{pct}",
       "creditsBreakdown": "{sub} harpidetzakoak · {bought} erosiak",
       "creditsResets": "Zuzkidura {date}(e)an berritzen da",
       "buyCredits": "Kredituak erosi",

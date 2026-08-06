@@ -157,7 +157,9 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
   const [corpus, setCorpus] = useState<{ total: number; hasDoctrina: boolean; hasDatos: boolean } | null>(
     null,
   );
-  const [wallet, setWallet] = useState<{ total: number; blocked: boolean } | null>(null);
+  const [wallet, setWallet] = useState<{ total: number; blocked: boolean; nextCreditProgress: number } | null>(
+    null,
+  );
   // #1 — globo de onboarding: null hasta hidratar, luego true/false.
   const [showOnboard, setShowOnboard] = useState(false);
   const threadRef = useRef<HTMLDivElement>(null);
@@ -173,7 +175,12 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
       const r = await fetch(`${baseUrl}/credit-balance`);
       if (!r.ok) return;
       const d = await r.json();
-      if (typeof d?.total === "number") setWallet({ total: d.total, blocked: !!d.blocked });
+      if (typeof d?.total === "number")
+        setWallet({
+          total: d.total,
+          blocked: !!d.blocked,
+          nextCreditProgress: typeof d.nextCreditProgress === "number" ? d.nextCreditProgress : 0,
+        });
     } catch {
       /* el indicador es opcional */
     }
@@ -566,12 +573,33 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
               da ayuda de producto (gratis) → no tiene sentido mostrar saldo. */}
           {wallet && corpus?.hasDoctrina && (
             <div
-              className={`flex items-center gap-1.5 border-b px-4 py-1.5 text-xs font-medium ${
+              className={`border-b px-4 py-1.5 text-xs font-medium ${
                 wallet.blocked ? "bg-red-50 text-red-700" : "bg-cyan-50 text-cyan-800"
               }`}
             >
-              <Coins className="h-3.5 w-3.5" />
-              <span>{t("ui.billing.creditsBalance", { n: String(wallet.total) })}</span>
+              <div className="flex items-center gap-1.5">
+                <Coins className="h-3.5 w-3.5" />
+                <span>{t("ui.billing.creditsBalance", { n: String(wallet.total) })}</span>
+              </div>
+              {/* Progreso hacia el próximo crédito: el chat se factura por tokens y
+                  gasta 1 crédito cada ~decenas de mensajes. Esta barra hace visible
+                  ese consumo acumulado (0→100%) para que no parezca "gratis" ni
+                  sorprenda el cargo. Solo si hay algo acumulado y no está bloqueado. */}
+              {!wallet.blocked && wallet.nextCreditProgress > 0 && (
+                <div className="mt-1 flex items-center gap-1.5">
+                  <div className="h-1 flex-1 overflow-hidden rounded-full bg-cyan-100">
+                    <div
+                      className="h-full rounded-full bg-cyan-500 transition-all"
+                      style={{ width: `${Math.round(wallet.nextCreditProgress * 100)}%` }}
+                    />
+                  </div>
+                  <span className="shrink-0 text-[10px] font-normal text-cyan-700">
+                    {t("ui.billing.nextCreditProgress", {
+                      pct: String(Math.round(wallet.nextCreditProgress * 100)),
+                    })}
+                  </span>
+                </div>
+              )}
             </div>
           )}
 

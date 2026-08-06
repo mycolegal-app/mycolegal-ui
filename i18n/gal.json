@@ -55,6 +55,7 @@
       },
       "credits": "Créditos de IA",
       "creditsBalance": "{n} créditos",
+      "nextCreditProgress": "{pct}% do próximo crédito",
       "creditsBreakdown": "{sub} de subscrición · {bought} mercados",
       "creditsResets": "A dotación renóvase o {date}",
       "buyCredits": "Mercar créditos",
