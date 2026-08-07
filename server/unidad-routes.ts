@@ -630,14 +630,18 @@ export function createUnidadRoutes(deps: UnidadDeps) {
         : [];
       // Atajo a la "Biblioteca particular de <org>" (carpeta real bajo la org, ver
       // ensureRoots). Navegar a ella usa su id real → orgId=auth.org (escribible).
-      const particularDto = {
-        ...serializeNode(bibliotecaParticular as DriveNodeRow, auth),
-        name: `${BIBLIOTECA_PARTICULAR_LABEL} de ${orgName}`,
-      };
+      // Defensivo: si no se pudo crear (p.ej. app sin la columna `writable`), se omite
+      // el atajo en vez de romper el listado.
+      const particularNodes = bibliotecaParticular
+        ? [{
+            ...serializeNode(bibliotecaParticular as DriveNodeRow, auth),
+            name: `${BIBLIOTECA_PARTICULAR_LABEL} de ${orgName}`,
+          }]
+        : [];
       return successResponse({
         breadcrumb: [{ id: 'BIBLIOTECA', name: BIBLIOTECA_LABEL, rootKey: 'BIBLIOTECA' }],
         parent: { id: 'BIBLIOTECA', name: BIBLIOTECA_LABEL, rootKey: 'BIBLIOTECA', managed: true },
-        nodes: [...children.map((n: DriveNodeRow) => serializeNode(n, auth)), particularDto],
+        nodes: [...children.map((n: DriveNodeRow) => serializeNode(n, auth)), ...particularNodes],
       });
     }
 
