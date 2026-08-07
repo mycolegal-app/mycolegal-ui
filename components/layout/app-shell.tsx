@@ -105,7 +105,12 @@ function AppShellInner({
     // la transición lo mantiene sincronizado con el aside al plegar/desplegar.
     <div
       className={cn(
-        "flex flex-1 flex-col h-screen min-h-0 transition-[margin] duration-200",
+        // `min-w-0`: sin él, este flex item (`flex-1`) no encoge por debajo del
+        // ancho intrínseco de su contenido, así que una fila/tabla ancha empuja
+        // el área más allá del viewport y `<main overflow-x-hidden>` la recorta
+        // en vez de dejar que el contenido se ajuste (o haga su propio scroll).
+        // Con min-w-0 el contenido respeta el ancho disponible al plegar/desplegar.
+        "flex flex-1 flex-col h-screen min-h-0 min-w-0 transition-[margin] duration-200",
         collapsed ? "lg:ml-[64px]" : "lg:ml-[220px]",
       )}
     >
