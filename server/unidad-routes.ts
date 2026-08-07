@@ -176,7 +176,6 @@ export function rootMiEspacio(authUserId: string): string {
 // READ-ONLY en la Unidad de Red de TODA org. La escritura es imposible por diseño:
 // el subárbol es `managedBy != null` + la raíz tiene `rootKey` → los guards de
 // mutación existentes (managedBy/rootKey) la rechazan. Solo se relaja la LECTURA.
-const BIBLIOTECA_ORG = 'GLOBAL';
 const BIBLIOTECA_ROOT_KEY = 'GLOBAL:BIBLIOTECA';
 const BIBLIOTECA_LABEL = 'Biblioteca Digital';
 // "Biblioteca particular de <org>": raíz gestionada PERO writable (smart-inbox de
@@ -414,6 +413,18 @@ export function createUnidadRoutes(deps: UnidadDeps) {
   }
 
   /** Lee un nodo de la org del usuario aplicando el filtro de visibilidad/scope. */
+  // El corpus GLOBAL de Biblioteca cuelga de la org de SISTEMA `_system` (DriveNode.orgId
+  // tiene FK a organizations). Su UUID difiere por entorno → se resuelve por SLUG, cacheado.
+  let _bibliotecaOrgId: string | null = null;
+  let _bibLoaded = false;
+  async function bibliotecaOrgId(): Promise<string | null> {
+    if (_bibLoaded) return _bibliotecaOrgId;
+    const o = await prisma.organization.findFirst({ where: { slug: '_system' }, select: { id: true } });
+    _bibliotecaOrgId = o?.id ?? null;
+    _bibLoaded = true;
+    return _bibliotecaOrgId;
+  }
+
   async function getVisibleNode(auth: UnidadAuth, id: string) {
     const own = await prisma.driveNode.findFirst({
       where: { id, orgId: auth.orgId, ...scopeWhere(auth) },
@@ -421,8 +432,10 @@ export function createUnidadRoutes(deps: UnidadDeps) {
     if (own) return own;
     // Corpus GLOBAL de Biblioteca legal: read-only, visible desde cualquier org.
     // (Las mutaciones lo rechazan por su `managedBy`/`rootKey`, ver comentario arriba.)
+    const bibOrg = await bibliotecaOrgId();
+    if (!bibOrg) return null;
     return prisma.driveNode.findFirst({
-      where: { id, orgId: BIBLIOTECA_ORG, rootKey: null, trashedAt: null },
+      where: { id, orgId: bibOrg, rootKey: null, trashedAt: null },
     });
   }
 
@@ -618,13 +631,16 @@ export function createUnidadRoutes(deps: UnidadDeps) {
     // Área "Biblioteca legal" (corpus GLOBAL de Consultor, read-only): los hijos de
     // la raíz global (carpetas por fuente). Visible en TODA org (una sola copia).
     if (parentId === 'BIBLIOTECA') {
-      const root = await prisma.driveNode.findFirst({
-        where: { orgId: BIBLIOTECA_ORG, rootKey: BIBLIOTECA_ROOT_KEY, trashedAt: null },
-        select: { id: true },
-      });
+      const bibOrg = await bibliotecaOrgId();
+      const root = bibOrg
+        ? await prisma.driveNode.findFirst({
+            where: { orgId: bibOrg, rootKey: BIBLIOTECA_ROOT_KEY, trashedAt: null },
+            select: { id: true },
+          })
+        : null;
       const children = root
         ? await prisma.driveNode.findMany({
-            where: { parentId: root.id, orgId: BIBLIOTECA_ORG, trashedAt: null },
+            where: { parentId: root.id, orgId: bibOrg!, trashedAt: null },
             orderBy: { name: 'asc' },
           })
         : [];
