@@ -124,7 +124,7 @@ interface DriveVersion {
 
 interface ListResponse {
   breadcrumb: Crumb[];
-  parent: { id: string; name: string; rootKey: string | null; managed?: boolean; trash?: boolean } | null;
+  parent: { id: string; name: string; rootKey: string | null; managed?: boolean; writable?: boolean; trash?: boolean } | null;
   nodes: DriveNode[];
   truncated?: boolean;
 }
@@ -252,7 +252,13 @@ export function UnidadExplorer({
 
   // Escribible cuando estamos DENTRO de una carpeta NO de sistema (no raíz-
   // listado, no carpeta `managed` como una raíz de app). El backend lo reafirma.
-  const canWrite = parentId != null && data?.parent != null && !data.parent.managed;
+  // Escritura: carpeta libre (no gestionada) O gestionada-writable (Biblioteca
+  // particular, smart-inbox de aportaciones). El backend lo reafirma.
+  const canWrite =
+    parentId != null && data?.parent != null && (!data.parent.managed || !!data.parent.writable);
+  // Los ficheros de una carpeta writable-gestionada (Biblioteca particular) se
+  // pueden "Incorporar al corpus" privado de la org.
+  const canIncorporate = !!(data?.parent?.managed && data?.parent?.writable);
 
   async function handleNewFolder() {
     if (!parentId) return;
@@ -925,6 +931,7 @@ export function UnidadExplorer({
         loading={preview.loading}
         error={preview.error}
         nodeId={preview.nodeId ?? undefined}
+        canIncorporate={canIncorporate}
         onDownload={
           preview.nodeId
             ? () => {

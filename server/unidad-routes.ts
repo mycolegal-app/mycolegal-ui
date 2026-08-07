@@ -127,6 +127,18 @@ export interface UnidadDeps {
     texto: string,
   ) => Promise<{ ok: boolean; resumen?: string; status?: number; error?: string }>;
   /**
+   * Incorpora un fichero de la "Biblioteca particular" al corpus PRIVADO de la org
+   * (Consultor: enrich + embeddings, resolucion con orgId + clase APORTACION_ORG,
+   * enlazada al DriveNode). Lo inyecta la app (reenvía a Consultor con el JWT). Sin
+   * él, la acción degrada a 501. El texto ya lo extrae el factory (capa de texto).
+   */
+  corpusIngest?: (payload: {
+    nodeId: string;
+    titulo: string;
+    texto: string;
+    mime: string | null;
+  }) => Promise<{ ok: boolean; status?: number; error?: string }>;
+  /**
    * Claves de permiso a exigir. Por defecto `unidad:read`/`unidad:write` (Unidad
    * interna). El montaje del "Área de archivos" (modo partner) pasa
    * `{ read: 'unidad:read_partner', write: 'unidad:write_partner' }`.
@@ -159,6 +171,20 @@ export function rootMiEspacio(authUserId: string): string {
   return `MIESPACIO:${authUserId}`;
 }
 
+// Corpus GLOBAL de "Biblioteca legal" (Consultor): una sola copia de los originales
+// bajo un orgId SENTINELA (`DriveNode.orgId` es string suelto, no FK), montada
+// READ-ONLY en la Unidad de Red de TODA org. La escritura es imposible por diseño:
+// el subárbol es `managedBy != null` + la raíz tiene `rootKey` → los guards de
+// mutación existentes (managedBy/rootKey) la rechazan. Solo se relaja la LECTURA.
+const BIBLIOTECA_ORG = 'GLOBAL';
+const BIBLIOTECA_ROOT_KEY = 'GLOBAL:BIBLIOTECA';
+const BIBLIOTECA_LABEL = 'Biblioteca Digital';
+// "Biblioteca particular de <org>": raíz gestionada PERO writable (smart-inbox de
+// aportaciones al corpus privado de la org). Vive bajo la org (orgId), aparece en
+// Documentos y como atajo dentro de "Biblioteca Digital".
+const BIBLIOTECA_PARTICULAR_KEY = 'BIBLIOTECA_PARTICULAR';
+const BIBLIOTECA_PARTICULAR_LABEL = 'Biblioteca particular';
+
 interface DriveNodeRow {
   id: string;
   type: string;
@@ -166,6 +192,7 @@ interface DriveNodeRow {
   visibility: string;
   ownerUserId: string | null;
   managedBy: string | null;
+  writable?: boolean | null;
   rootKey: string | null;
   partnerOrgId: string | null;
   partnerDeptId: string | null;
@@ -326,6 +353,7 @@ export function createUnidadRoutes(deps: UnidadDeps) {
     ownerUserId: string | null;
     createdBy: string;
     managedBy?: string | null;
+    writable?: boolean;
   }) {
     const where = { orgId_rootKey: { orgId: args.orgId, rootKey: args.rootKey } };
     const existing = await prisma.driveNode.findUnique({ where });
@@ -340,6 +368,7 @@ export function createUnidadRoutes(deps: UnidadDeps) {
           visibility: args.visibility,
           ownerUserId: args.ownerUserId,
           managedBy: args.managedBy ?? null,
+          writable: args.writable ?? false,
           createdBy: args.createdBy,
         },
       });
@@ -368,13 +397,32 @@ export function createUnidadRoutes(deps: UnidadDeps) {
       ownerUserId: auth.authUserId,
       createdBy: auth.authUserId,
     });
-    return { compartido, miEspacio };
+    // "Biblioteca particular de <org>": carpeta GESTIONADA (aparece en Documentos,
+    // no borrable) pero WRITABLE (smart-inbox de aportaciones al corpus privado).
+    // Se monta además como atajo dentro de "Biblioteca Digital".
+    const bibliotecaParticular = await ensureRoot({
+      orgId: auth.orgId,
+      rootKey: BIBLIOTECA_PARTICULAR_KEY,
+      name: BIBLIOTECA_PARTICULAR_LABEL,
+      visibility: 'ORG',
+      ownerUserId: null,
+      managedBy: 'consultor',
+      writable: true,
+      createdBy: auth.authUserId,
+    });
+    return { compartido, miEspacio, bibliotecaParticular };
   }
 
   /** Lee un nodo de la org del usuario aplicando el filtro de visibilidad/scope. */
   async function getVisibleNode(auth: UnidadAuth, id: string) {
-    return prisma.driveNode.findFirst({
+    const own = await prisma.driveNode.findFirst({
       where: { id, orgId: auth.orgId, ...scopeWhere(auth) },
+    });
+    if (own) return own;
+    // Corpus GLOBAL de Biblioteca legal: read-only, visible desde cualquier org.
+    // (Las mutaciones lo rechazan por su `managedBy`/`rootKey`, ver comentario arriba.)
+    return prisma.driveNode.findFirst({
+      where: { id, orgId: BIBLIOTECA_ORG, rootKey: null, trashedAt: null },
     });
   }
 
@@ -390,7 +438,8 @@ export function createUnidadRoutes(deps: UnidadDeps) {
     if (auth.partnerScope) {
       return (await partnerWriteAllowed(auth, parent)) ? parent : null;
     }
-    if (parent.managedBy != null) return null;
+    // Gestionada = read-only, SALVO las smart-inbox (`writable`): Biblioteca particular.
+    if (parent.managedBy != null && !parent.writable) return null;
     return parent;
   }
 
@@ -530,7 +579,7 @@ export function createUnidadRoutes(deps: UnidadDeps) {
     const parentId = url.searchParams.get('parentId');
 
     // Asegura las raíces libres en cada acceso (idempotente).
-    const { compartido, miEspacio } = await ensureRoots(auth);
+    const { compartido, miEspacio, bibliotecaParticular } = await ensureRoots(auth);
 
     // Nombre de la org para la etiqueta "Documentos [Notaría X]".
     const org = await prisma.organization.findUnique({
@@ -566,6 +615,32 @@ export function createUnidadRoutes(deps: UnidadDeps) {
       });
     }
 
+    // Área "Biblioteca legal" (corpus GLOBAL de Consultor, read-only): los hijos de
+    // la raíz global (carpetas por fuente). Visible en TODA org (una sola copia).
+    if (parentId === 'BIBLIOTECA') {
+      const root = await prisma.driveNode.findFirst({
+        where: { orgId: BIBLIOTECA_ORG, rootKey: BIBLIOTECA_ROOT_KEY, trashedAt: null },
+        select: { id: true },
+      });
+      const children = root
+        ? await prisma.driveNode.findMany({
+            where: { parentId: root.id, orgId: BIBLIOTECA_ORG, trashedAt: null },
+            orderBy: { name: 'asc' },
+          })
+        : [];
+      // Atajo a la "Biblioteca particular de <org>" (carpeta real bajo la org, ver
+      // ensureRoots). Navegar a ella usa su id real → orgId=auth.org (escribible).
+      const particularDto = {
+        ...serializeNode(bibliotecaParticular as DriveNodeRow, auth),
+        name: `${BIBLIOTECA_PARTICULAR_LABEL} de ${orgName}`,
+      };
+      return successResponse({
+        breadcrumb: [{ id: 'BIBLIOTECA', name: BIBLIOTECA_LABEL, rootKey: 'BIBLIOTECA' }],
+        parent: { id: 'BIBLIOTECA', name: BIBLIOTECA_LABEL, rootKey: 'BIBLIOTECA', managed: true },
+        nodes: [...children.map((n: DriveNodeRow) => serializeNode(n, auth)), particularDto],
+      });
+    }
+
     // Papelera por área: nodos en `trashedAt` del Espacio compartido o Mi espacio.
     // Solo elementos de nivel superior (su padre no está en papelera). Restaurar
     // (POST /api/unidad/node/[id]/restore) rehace el subárbol.
@@ -589,15 +664,31 @@ export function createUnidadRoutes(deps: UnidadDeps) {
       });
     }
 
-    // Listado raíz: Documentos [org] · Espacio compartido · Mi espacio.
+    // Listado raíz: Documentos [org] · Biblioteca legal (si hay corpus) · Espacio
+    // compartido · Mi espacio.
     if (!parentId) {
       const freeRoots = [compartido, miEspacio].filter(
         (n): n is NonNullable<typeof n> => n != null,
       );
+      // Nodo virtual "Biblioteca Digital" (corpus global read-only + atajo a la
+      // Biblioteca particular de la org). Siempre presente: contiene al menos la
+      // particular (creada en ensureRoots).
+      const bibliotecaNode = {
+        id: 'BIBLIOTECA',
+        type: 'FOLDER' as const,
+        name: BIBLIOTECA_LABEL,
+        visibility: 'ORG' as const,
+        rootKey: 'BIBLIOTECA' as string | null,
+        managed: true,
+        mine: false,
+        mimeType: null as string | null,
+        sizeBytes: null as number | null,
+        createdAt: new Date().toISOString(),
+      };
       return successResponse({
         breadcrumb: [],
         parent: null,
-        nodes: [documentosNode, ...freeRoots.map((n: DriveNodeRow) => serializeNode(n, auth))],
+        nodes: [documentosNode, bibliotecaNode, ...freeRoots.map((n: DriveNodeRow) => serializeNode(n, auth))],
       });
     }
 
@@ -608,7 +699,9 @@ export function createUnidadRoutes(deps: UnidadDeps) {
     }
 
     const children = await prisma.driveNode.findMany({
-      where: { parentId: folder.id, orgId: auth.orgId, ...visibilityWhere(auth) },
+      // `folder.orgId`: para carpetas normales == auth.orgId; para el corpus GLOBAL
+      // read-only (Biblioteca legal) == BIBLIOTECA_ORG → navega el subárbol global.
+      where: { parentId: folder.id, orgId: folder.orgId, ...visibilityWhere(auth) },
       orderBy: [{ type: 'desc' }, { name: 'asc' }], // FOLDER antes que FILE
     });
 
@@ -643,6 +736,7 @@ export function createUnidadRoutes(deps: UnidadDeps) {
         name: folder.name,
         rootKey: folder.rootKey,
         managed: folder.managedBy != null,
+        writable: folder.writable ?? false,
       },
       nodes: [...childDtos, ...trashNode],
     });
@@ -1081,6 +1175,58 @@ export function createUnidadRoutes(deps: UnidadDeps) {
   };
 
   /**
+   * POST /api/unidad/incorporar-corpus { nodeId } — "Incorporar al corpus": añade
+   * un fichero de la Biblioteca particular al corpus PRIVADO de la org (Consultor).
+   * El factory extrae el texto (capa de texto) y lo delega en `deps.corpusIngest`
+   * (→ Consultor: enrich + embeddings + resolucion orgId/APORTACION_ORG). Solo para
+   * ficheros propios de la org (no el corpus global read-only).
+   */
+  const corpusIngestHandler: UnidadHandler = async (request, { auth }) => {
+    if (!deps.corpusIngest) {
+      return errorResponse('NOT_CONFIGURED', 'Incorporar al corpus no disponible en esta app', 501);
+    }
+    const body = await request.json().catch(() => null);
+    const nodeId = String(body?.nodeId ?? '');
+    if (!nodeId) return errorResponse('BAD_REQUEST', 'Falta nodeId', 400);
+
+    const node = await getVisibleNode(auth, nodeId);
+    if (!node || node.type !== 'FILE' || !node.gcsPath) {
+      return errorResponse('NOT_FOUND', 'Fichero no encontrado', 404);
+    }
+    // Solo ficheros de la PROPIA org (la Biblioteca particular); el corpus global es
+    // read-only y ya está incorporado.
+    if (node.orgId !== auth.orgId) {
+      return errorResponse('FORBIDDEN', 'Solo se pueden incorporar ficheros de la organización', 403);
+    }
+
+    // Asegura el texto (caché de FileText o extracción por capa de texto).
+    let texto = (await prisma.fileText.findUnique({ where: { driveNodeId: nodeId } }))?.texto ?? '';
+    if (!texto) {
+      if (!storage.readBytes) {
+        return errorResponse('NOT_CONFIGURED', 'Lectura de contenido no disponible', 501);
+      }
+      const bytes = await storage.readBytes(node.gcsPath);
+      if (!bytes) return errorResponse('STORAGE_ERROR', 'No se pudo leer el documento', 502);
+      const ex = await extractText(bytes, node.mimeType);
+      if (ex.needsOcr || !ex.texto) {
+        return errorResponse('NO_TEXT', 'El documento no tiene capa de texto (OCR pendiente)', 422);
+      }
+      texto = ex.texto;
+      await prisma.fileText.upsert({
+        where: { driveNodeId: nodeId },
+        create: { driveNodeId: nodeId, orgId: auth.orgId, texto, chars: ex.chars, metodo: ex.metodo, sha256: node.sha256 ?? null, extractedAt: new Date() },
+        update: { texto, chars: ex.chars, metodo: ex.metodo, sha256: node.sha256 ?? null, extractedAt: new Date() },
+      });
+    }
+
+    const res = await deps.corpusIngest({ nodeId, titulo: node.name, texto, mime: node.mimeType });
+    if (!res.ok) {
+      return errorResponse('INGEST_ERROR', res.error ?? 'No se pudo incorporar al corpus', res.status ?? 502);
+    }
+    return successResponse({ ok: true });
+  };
+
+  /**
    * POST /api/unidad/search { query } → nodos cuyo nombre contiene `query`,
    * acotados a la org y a la visibilidad del usuario (MISMO filtro que el explorer
    * vía `visibilityWhere`). Es la superficie de la tool `unidad_buscar` de MycoBot.
@@ -1121,6 +1267,7 @@ export function createUnidadRoutes(deps: UnidadDeps) {
     search: withPermission(permRead)(searchHandler),
     read: withPermission(permRead)(readHandler),
     resumir: withPermission(permRead)(resumirHandler),
+    incorporarCorpus: withPermission(permWrite)(corpusIngestHandler),
     folder: withPermission(permWrite)(folderHandler),
     uploadUrl: withPermission(permWrite)(uploadUrlHandler),
     confirm: withPermission(permWrite)(confirmHandler),
@@ -1174,6 +1321,10 @@ export function createUnidadRoutes(deps: UnidadDeps) {
     // /resumir
     if (segs.length === 1 && segs[0] === 'resumir' && method === 'POST') {
       return { run: wrapped.resumir, params: {} };
+    }
+    // /incorporar-corpus
+    if (segs.length === 1 && segs[0] === 'incorporar-corpus' && method === 'POST') {
+      return { run: wrapped.incorporarCorpus, params: {} };
     }
     // /download/[id]
     if (segs.length === 2 && segs[0] === 'download' && method === 'GET') {

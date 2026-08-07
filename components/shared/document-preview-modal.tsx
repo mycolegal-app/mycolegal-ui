@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Download, FileWarning, Loader2, Sparkles } from "lucide-react";
+import { Download, FileWarning, Library, Loader2, Sparkles } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -43,6 +43,13 @@ export interface DocumentPreviewModalProps {
    * crédito, editable en Admin). Ver PLAN_TECNICO_MYCOBOT_TOOLS.md §5.1.
    */
   nodeId?: string;
+  /**
+   * Si `true` (y hay `nodeId`), muestra "Incorporar al corpus" — añade el fichero
+   * al corpus PRIVADO de la org (POST /api/unidad/incorporar-corpus → Consultor).
+   * El explorador lo activa solo para ficheros de la Biblioteca particular (carpeta
+   * writable de aportaciones).
+   */
+  canIncorporate?: boolean;
 }
 
 /**
@@ -60,6 +67,7 @@ export function DocumentPreviewModal({
   error,
   onDownload,
   nodeId,
+  canIncorporate,
 }: DocumentPreviewModalProps) {
   const { t } = useI18n();
   const isImage = !!mimeType && mimeType.startsWith("image/");
@@ -106,6 +114,36 @@ export function DocumentPreviewModal({
     }
   }
 
+  const [incorporating, setIncorporating] = React.useState(false);
+  const [incorporateMsg, setIncorporateMsg] = React.useState<{ ok: boolean; text: string } | null>(null);
+  React.useEffect(() => {
+    setIncorporating(false);
+    setIncorporateMsg(null);
+  }, [nodeId, open]);
+
+  async function handleIncorporate() {
+    if (!nodeId) return;
+    setIncorporating(true);
+    setIncorporateMsg(null);
+    try {
+      const res = await fetch("/api/unidad/incorporar-corpus", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nodeId }),
+      });
+      const json = await res.json().catch(() => ({}));
+      setIncorporateMsg(
+        res.ok
+          ? { ok: true, text: t("ui.documentPreview.incorporateOk") }
+          : { ok: false, text: json?.error?.message ?? t("ui.documentPreview.incorporateError") },
+      );
+    } catch {
+      setIncorporateMsg({ ok: false, text: t("ui.documentPreview.incorporateError") });
+    } finally {
+      setIncorporating(false);
+    }
+  }
+
   const showPanel = !!nodeId && (summarizing || summary != null || summaryError != null);
 
   return (
@@ -125,6 +163,22 @@ export function DocumentPreviewModal({
               >
                 {summarizing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
                 {summarizing ? t("ui.documentPreview.summarizing") : t("ui.documentPreview.summarize")}
+              </button>
+            )}
+            {nodeId && canIncorporate && (
+              <button
+                type="button"
+                onClick={handleIncorporate}
+                disabled={incorporating || incorporateMsg?.ok}
+                title={incorporateMsg && !incorporateMsg.ok ? incorporateMsg.text : undefined}
+                className="inline-flex items-center gap-1.5 rounded-md border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-800 hover:bg-emerald-100 disabled:opacity-50"
+              >
+                {incorporating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Library className="h-3.5 w-3.5" />}
+                {incorporating
+                  ? t("ui.documentPreview.incorporating")
+                  : incorporateMsg?.ok
+                    ? t("ui.documentPreview.incorporateOk")
+                    : t("ui.documentPreview.incorporate")}
               </button>
             )}
             {onDownload && (
