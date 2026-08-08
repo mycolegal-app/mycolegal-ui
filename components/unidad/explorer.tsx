@@ -621,7 +621,7 @@ export function UnidadExplorer({
                   <History className="h-3 w-3" />
                 </button>
               )}
-              {n.type === "FILE" && isPreviewable(n.mimeType) && (
+              {n.type === "FILE" && isPreviewable(n.mimeType, n.name) && (
                 <button
                   type="button"
                   onClick={() => handlePreview(n)}
@@ -815,7 +815,7 @@ export function UnidadExplorer({
                         <FileText className="h-4 w-4 shrink-0 text-gray-500" />
                         <span className="truncate">{r.name}</span>
                         <div className="ml-auto flex shrink-0 items-center gap-2">
-                          {isPreviewable(r.mimeType) && (
+                          {isPreviewable(r.mimeType, r.name) && (
                             <button
                               type="button"
                               onClick={() => handlePreview(asNode(r))}

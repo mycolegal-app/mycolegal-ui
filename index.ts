@@ -122,9 +122,9 @@ export { usePermissions, type UsePermissionsResult } from './hooks/use-permissio
 // i18n defaults (used by consumer apps' I18nProvider#defaults)
 export { uiMessages, getUiDefaults } from './i18n';
 
-// Document preview (modal reutilizable de vista previa de PDF/imágenes)
-export { DocumentPreviewModal, isPreviewable } from './components/shared/document-preview-modal';
-export type { DocumentPreviewModalProps } from './components/shared/document-preview-modal';
+// Document preview (modal reutilizable: PDF/imagen/audio/vídeo/HTML/texto/markdown/CSV)
+export { DocumentPreviewModal, isPreviewable, previewKind } from './components/shared/document-preview-modal';
+export type { DocumentPreviewModalProps, PreviewKind } from './components/shared/document-preview-modal';
 
 // DocFilling integration
 export { DocFillingModal } from './components/docfilling/DocFillingModal';
