@@ -11,15 +11,16 @@
       "download": "Descargar",
       "notPreviewable": "Este tipo de archivo no se puede previsualizar.",
       "summarize": "Resumir con IA",
-    "incorporate": "Incorporar al corpus",
-    "incorporating": "Incorporando…",
-    "incorporateOk": "Incorporado ✓",
-    "incorporateError": "No se pudo incorporar",
+      "incorporate": "Incorporar al corpus",
+      "incorporating": "Incorporando…",
+      "incorporateOk": "Incorporado ✓",
+      "incorporateError": "No se pudo incorporar",
       "summarizing": "Resumiendo…",
       "summaryTitle": "Resumen IA",
       "summaryError": "No se pudo resumir el documento",
       "summaryNoCredits": "No tienes créditos suficientes para resumir",
-      "summaryNeedsOcr": "Documento escaneado sin capa de texto (OCR próximamente)"
+      "summaryNeedsOcr": "Documento escaneado sin capa de texto (OCR próximamente)",
+      "truncated": "Vista previa truncada: el documento es grande y se muestra parcialmente."
     },
     "errors": {
       "generic": "No se ha podido completar la acción. Inténtalo de nuevo.",
@@ -897,7 +898,26 @@
       "chipDatosLegifirma": "¿Cuántas actuaciones pendientes de cobro?",
       "onboardTitle": "¿Dudas legales? Pregúntame",
       "onboardBody": "Consulto doctrina y resoluciones y te explico cómo usar la aplicación. Pulsa aquí para empezar.",
-      "onboardDismiss": "Entendido"
+      "onboardDismiss": "Entendido",
+      "sourcesBadge": "{clases} clases · {docs} documentos",
+      "sourcesOpen": "Elegir las clases que MycoBot considera",
+      "sourcesTitle": "Clases consideradas",
+      "sourcesHelp": "MycoBot solo tendrá en cuenta las clases marcadas de la Biblioteca legal.",
+      "sourcesEmpty": "No hay clases disponibles.",
+      "sourcesAll": "Considerar todas",
+      "sourcesDone": "Hecho",
+      "clases": {
+        "RESOLUCIONES_DGRN": "Resoluciones DGRN",
+        "RESOLUCIONES_DGDEJ": "Resoluciones DGDEJ (CAT)",
+        "SISTEMA_NOTARIAL": "Sistema Notarial",
+        "DOCTRINA": "Doctrina",
+        "JURISPRUDENCIA": "Jurisprudencia",
+        "LEGISLACION": "Legislación",
+        "LEGISLACION_AUTONOMICA": "Legislación autonómica",
+        "LEGISLACION_UE": "Legislación UE",
+        "GUIAS": "Guías y recomendaciones",
+        "OTROS": "Otros"
+      }
     },
     "registradorPicker": {
       "placeholder": "Buscar registro por nombre o población…",

@@ -14,10 +14,30 @@ import {
   PlusCircle,
   ArrowLeft,
   Coins,
+  SlidersHorizontal,
+  X,
+  Check,
 } from "lucide-react";
 import { marked } from "marked";
 import { useI18n } from "../i18n/i18n-context";
 import { apiErrorMessage } from "../../lib/api-error";
+import { readClasesSel, writeClasesSel, CLASES_CHANGED_EVENT } from "../../lib/biblioteca-clases";
+
+// Estilo de las pastillas de clase en el modal /sources (mismo criterio de color
+// que la leyenda de la Biblioteca del Consultor). El label sale de i18n
+// (`ui.mycobot.clases.<CLASE>`), con fallback al propio código.
+const CLASE_COLOR: Record<string, string> = {
+  RESOLUCIONES_DGRN: "bg-cyan-100 text-cyan-800 border-cyan-300",
+  RESOLUCIONES_DGDEJ: "bg-red-100 text-red-800 border-red-300",
+  SISTEMA_NOTARIAL: "bg-indigo-100 text-indigo-800 border-indigo-300",
+  DOCTRINA: "bg-violet-100 text-violet-800 border-violet-300",
+  JURISPRUDENCIA: "bg-amber-100 text-amber-800 border-amber-300",
+  LEGISLACION: "bg-emerald-100 text-emerald-800 border-emerald-300",
+  LEGISLACION_AUTONOMICA: "bg-emerald-100 text-emerald-800 border-emerald-300",
+  LEGISLACION_UE: "bg-blue-100 text-blue-800 border-blue-300",
+  GUIAS: "bg-amber-100 text-amber-800 border-amber-300",
+  OTROS: "bg-gray-100 text-gray-700 border-gray-300",
+};
 
 marked.setOptions({ breaks: true, gfm: true });
 
@@ -154,19 +174,32 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
   const [conversaciones, setConversaciones] = useState<ConversacionResumen[] | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [viewer, setViewer] = useState<ViewerState | null>(null);
-  const [corpus, setCorpus] = useState<{ total: number; hasDoctrina: boolean; hasDatos: boolean } | null>(
-    null,
-  );
+  const [corpus, setCorpus] = useState<{
+    total: number;
+    hasDoctrina: boolean;
+    hasDatos: boolean;
+    clases: { clase: string; count: number }[];
+  } | null>(null);
+  // Modal /sources: selección de CLASES que MycoBot considera. `clasesSel` = null →
+  // todas (sin selección guardada). Persistida en cookie del dominio padre (helper),
+  // compartida con la página de Biblioteca y entre apps.
+  const [sourcesOpen, setSourcesOpen] = useState(false);
+  const [clasesSel, setClasesSel] = useState<string[] | null>(null);
   const [wallet, setWallet] = useState<{ total: number; blocked: boolean; nextCreditProgress: number } | null>(
     null,
   );
   // #1 — globo de onboarding: null hasta hidratar, luego true/false.
   const [showOnboard, setShowOnboard] = useState(false);
   const threadRef = useRef<HTMLDivElement>(null);
-  // Scope por CLASE fijado al abrir el rail desde la Biblioteca (evento
-  // open-mycobot). Se reutiliza en las preguntas tecleadas después, dentro de la
-  // misma sesión de chat. null = sin scope (todas las clases).
-  const scopeClasesRef = useRef<string[] | null>(null);
+
+  // Carga la selección de clases (cookie compartida) al montar, al abrir el modal y
+  // cuando otro consumidor del mismo origen (la página de Biblioteca) la cambia.
+  useEffect(() => {
+    const sync = () => setClasesSel(readClasesSel());
+    sync();
+    window.addEventListener(CLASES_CHANGED_EVENT, sync);
+    return () => window.removeEventListener(CLASES_CHANGED_EVENT, sync);
+  }, [sourcesOpen]);
 
   // Base de los endpoints de resoluciones (quita el sufijo `/ask`).
   const baseUrl = askUrl.replace(/\/ask$/, "");
@@ -208,6 +241,12 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
             total: Number(j.data.resolucionesTotal) || 0,
             hasDoctrina: !!j.data.hasDoctrina,
             hasDatos: !!j.data.hasDatos,
+            clases: Array.isArray(j.data.clases)
+              ? j.data.clases.map((c: { clase: string; count: number }) => ({
+                  clase: String(c.clase),
+                  count: Number(c.count) || 0,
+                }))
+              : [],
           });
         }
       })
@@ -287,9 +326,19 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
   }, []);
 
   const ask = useCallback(
-    async (pregunta: string, clasesArg?: string[]) => {
+    async (pregunta: string) => {
       const q = pregunta.trim();
       if (!q || loading) return;
+
+      // Comando especial /sources (alias /fuentes): abre el modal de selección de
+      // clases de la Biblioteca. Se resuelve EN CLIENTE (no llama al backend).
+      if (q === "/sources" || q === "/fuentes") {
+        setInput("");
+        setClasesSel(readClasesSel());
+        setSourcesOpen(true);
+        return;
+      }
+
       setView("chat");
 
       // Comando especial /help (alias /ayuda): ayuda sobre el propio MycoBot.
@@ -320,13 +369,13 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
         const res = await fetch(askUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          // Scope por CLASE (pastillas de la Biblioteca): el de esta llamada, o el
-          // último fijado al abrir el rail desde la página. Ausente = todas las clases.
+          // Scope por CLASE: la selección de la Biblioteca (cookie compartida,
+          // editable con /sources). Ausente/null = todas las clases.
           body: JSON.stringify({
             pregunta: q,
             conversacionId,
             appSlug,
-            clases: clasesArg ?? scopeClasesRef.current ?? undefined,
+            clases: readClasesSel() ?? undefined,
           }),
         });
         const json = await res.json().catch(() => ({}));
@@ -465,13 +514,10 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
   useEffect(() => {
     const handler = (e: Event) => {
       setOpenPersisted(true);
-      const detail = (e as CustomEvent).detail ?? {};
-      const pregunta = detail.pregunta as string | undefined;
-      // Scope por CLASE que envía la Biblioteca (pastillas marcadas). Se recuerda
-      // para las siguientes preguntas tecleadas en el rail.
-      const clases = Array.isArray(detail.clases) ? (detail.clases as string[]) : undefined;
-      scopeClasesRef.current = clases ?? null;
-      if (pregunta) void ask(pregunta, clases);
+      const pregunta = (e as CustomEvent).detail?.pregunta as string | undefined;
+      // El scope de clases lo lee el `ask` de la cookie compartida (que la propia
+      // Biblioteca escribe), así que aquí solo abrimos y lanzamos la pregunta.
+      if (pregunta) void ask(pregunta);
     };
     window.addEventListener("mycolegal:open-mycobot", handler);
     return () => window.removeEventListener("mycolegal:open-mycobot", handler);
@@ -503,6 +549,24 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
   welcomeChips.push(t("ui.mycobot.chipAyuda"));
   if (corpus?.hasDatos && appSlug === "notaria") welcomeChips.push(t("ui.mycobot.chipDatosNotaria"));
   else if (corpus?.hasDatos && appSlug === "legifirma") welcomeChips.push(t("ui.mycobot.chipDatosLegifirma"));
+
+  // ── /sources: clases de la Biblioteca que MycoBot considera ───────────────
+  const claseLabel = (clase: string) => t(`ui.mycobot.clases.${clase}`) || clase;
+  const clasesDisponibles = corpus?.clases ?? [];
+  const isClaseSel = (clase: string) => clasesSel === null || clasesSel.includes(clase);
+  const toggleClaseSel = (clase: string) => {
+    const all = clasesDisponibles.map((c) => c.clase);
+    const current = clasesSel === null ? all : clasesSel;
+    const next = current.includes(clase) ? current.filter((c) => c !== clase) : [...current, clase];
+    if (next.length === 0) return; // siempre al menos una clase considerada
+    const value = next.length === all.length ? null : next; // todas → null (estado limpio)
+    setClasesSel(value);
+    writeClasesSel(value);
+  };
+  // Leyenda de cabecera: nº de clases consideradas y documentos que suman.
+  const consideradas = clasesDisponibles.filter((c) => isClaseSel(c.clase));
+  const nClasesConsideradas = consideradas.length;
+  const nDocsConsiderados = consideradas.reduce((s, c) => s + c.count, 0);
 
   return (
     <>
@@ -619,12 +683,28 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
             </div>
           )}
 
-          {/* Chip persistente: base de doctrina disponible (solo si la org tiene Consultor). */}
+          {/* Clases de la Biblioteca que MycoBot está considerando (solo si la org
+              tiene Consultor). Toda la leyenda —y el icono de la derecha— abren el
+              modal /sources para editar la selección. */}
           {corpus?.hasDoctrina && (
-            <div className="flex items-center gap-1.5 border-b bg-cyan-50 px-4 py-1.5 text-[11px] text-cyan-800">
+            <button
+              type="button"
+              onClick={() => {
+                setClasesSel(readClasesSel());
+                setSourcesOpen(true);
+              }}
+              title={t("ui.mycobot.sourcesOpen")}
+              className="flex w-full items-center gap-1.5 border-b bg-cyan-50 px-4 py-1.5 text-[11px] text-cyan-800 hover:bg-cyan-100"
+            >
               <Scale className="h-3.5 w-3.5 shrink-0 text-cyan-600" />
-              <span>{t("ui.mycobot.corpusBadge", { count: corpus.total.toLocaleString() })}</span>
-            </div>
+              <span className="flex-1 text-left">
+                {t("ui.mycobot.sourcesBadge", {
+                  clases: String(nClasesConsideradas),
+                  docs: nDocsConsiderados.toLocaleString(),
+                })}
+              </span>
+              <SlidersHorizontal className="h-3.5 w-3.5 shrink-0 text-cyan-600" />
+            </button>
           )}
 
           {/* ── Historial de conversaciones ─────────────────────────── */}
@@ -978,6 +1058,84 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
             </>
           )}
         </aside>
+      )}
+
+      {/* Modal /sources: clases de la Biblioteca que MycoBot considera. Editable
+          desde cualquier app; la selección se guarda en la cookie compartida. */}
+      {sourcesOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setSourcesOpen(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-lg bg-white shadow-xl dark:bg-gray-800"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b px-4 py-3 dark:border-gray-700">
+              <div className="flex items-center gap-2">
+                <SlidersHorizontal className="h-4 w-4 text-cyan-600" />
+                <h3 className="text-sm font-semibold">{t("ui.mycobot.sourcesTitle")}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSourcesOpen(false)}
+                aria-label={t("ui.mycobot.sourcesDone")}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="px-4 pt-3 text-xs text-gray-500">{t("ui.mycobot.sourcesHelp")}</p>
+            <div className="flex flex-wrap gap-1.5 p-4">
+              {clasesDisponibles.length === 0 && (
+                <span className="text-xs text-gray-400">{t("ui.mycobot.sourcesEmpty")}</span>
+              )}
+              {clasesDisponibles.map((c) => {
+                const sel = isClaseSel(c.clase);
+                return (
+                  <button
+                    key={c.clase}
+                    type="button"
+                    onClick={() => toggleClaseSel(c.clase)}
+                    aria-pressed={sel}
+                    className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs transition-colors ${
+                      sel
+                        ? `${CLASE_COLOR[c.clase] ?? "border-gray-300 bg-gray-100 text-gray-700"} ring-1 ring-inset ring-current`
+                        : "border-gray-200 text-gray-400 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700"
+                    }`}
+                  >
+                    {sel ? (
+                      <Check className="h-3 w-3 shrink-0" />
+                    ) : (
+                      <span className="h-3 w-3 shrink-0 rounded-full border border-current opacity-40" />
+                    )}
+                    <span>{claseLabel(c.clase)}</span>
+                    <span className="opacity-60">{c.count.toLocaleString()}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex items-center justify-between border-t px-4 py-2.5 dark:border-gray-700">
+              <button
+                type="button"
+                onClick={() => {
+                  setClasesSel(null);
+                  writeClasesSel(null);
+                }}
+                className="text-xs text-gray-400 underline-offset-2 hover:text-gray-600 hover:underline"
+              >
+                {t("ui.mycobot.sourcesAll")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSourcesOpen(false)}
+                className="rounded-md bg-cyan-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-cyan-700"
+              >
+                {t("ui.mycobot.sourcesDone")}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
