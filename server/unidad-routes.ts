@@ -1,6 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { extractText } from '@mycolegal-app/sharedlib/text-extract';
-import { ocrViaPlatform } from '@mycolegal-app/sharedlib/ocr-client';
 
 /**
  * Factory con TODA la lógica de la Unidad de Red (`DriveNode`) — dominio +
@@ -247,6 +246,10 @@ export function createUnidadRoutes(deps: UnidadDeps) {
       const platformUrl = process.env.PLATFORM_SERVICE_URL || process.env.PLATFORM_INTERNAL_URL || '';
       const serviceKey = process.env.APPS_REGISTER_SECRET || '';
       if (!platformUrl || !serviceKey) return null;
+      // import dinámico: si la app va con un sharedlib antiguo (sin ocr-client), esto
+      // falla y se captura → null (la UR sigue funcionando, solo sin OCR). Evita
+      // acoplar el bump de ui al de sharedlib para no romper consumidores.
+      const { ocrViaPlatform } = await import('@mycolegal-app/sharedlib/ocr-client');
       return await ocrViaPlatform({ platformUrl, serviceKey, bytes, mimeType: mime ?? undefined });
     } catch (e) {
       console.warn('[unidad] OCR vía platform falló:', e instanceof Error ? e.message : e);
