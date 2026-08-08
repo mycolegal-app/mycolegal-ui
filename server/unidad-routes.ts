@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { extractText } from '@mycolegal-app/sharedlib/text-extract';
+import { ocrViaPlatform } from '@mycolegal-app/sharedlib/ocr-client';
 
 /**
  * Factory con TODA la lógica de la Unidad de Red (`DriveNode`) — dominio +
@@ -139,6 +140,14 @@ export interface UnidadDeps {
     mime: string | null;
   }) => Promise<{ ok: boolean; status?: number; error?: string }>;
   /**
+   * OCR por visión de un escaneo (bytes → texto), para `read`/`resumir` cuando el
+   * PDF/imagen NO tiene capa de texto. OVERRIDE opcional: si no se inyecta, la
+   * factory llama a platform (`POST /internal/ocr`) resolviendo URL+clave por env
+   * (`PLATFORM_SERVICE_URL`/`PLATFORM_INTERNAL_URL` + `APPS_REGISTER_SECRET`). Sin
+   * override ni env → el escaneo queda sin texto (`needsOcr:true`), como en v0.1.
+   */
+  ocr?: (bytes: Uint8Array, mime: string | null) => Promise<{ texto: string; chars: number } | null>;
+  /**
    * Claves de permiso a exigir. Por defecto `unidad:read`/`unidad:write` (Unidad
    * interna). El montaje del "Área de archivos" (modo partner) pasa
    * `{ read: 'unidad:read_partner', write: 'unidad:write_partner' }`.
@@ -224,6 +233,26 @@ export interface DriveNodeDTO {
 
 export function createUnidadRoutes(deps: UnidadDeps) {
   const { prisma, storage, withPermission, summarize } = deps;
+
+  // OCR de un escaneo (needsOcr) → texto. Usa el override de la app (`deps.ocr`) si
+  // viene; si no, llama a platform (servicio-a-servicio, sin JWT) resolviendo la URL
+  // y la clave por env. Devuelve null si no hay OCR disponible → el escaneo queda
+  // sin texto (comportamiento v0.1), nunca lanza.
+  const resolveOcr = async (
+    bytes: Uint8Array,
+    mime: string | null,
+  ): Promise<{ texto: string; chars: number } | null> => {
+    try {
+      if (deps.ocr) return await deps.ocr(bytes, mime);
+      const platformUrl = process.env.PLATFORM_SERVICE_URL || process.env.PLATFORM_INTERNAL_URL || '';
+      const serviceKey = process.env.APPS_REGISTER_SECRET || '';
+      if (!platformUrl || !serviceKey) return null;
+      return await ocrViaPlatform({ platformUrl, serviceKey, bytes, mimeType: mime ?? undefined });
+    } catch (e) {
+      console.warn('[unidad] OCR vía platform falló:', e instanceof Error ? e.message : e);
+      return null;
+    }
+  };
 
   // ------------------------------------------------------------------------
   // Dominio (cerrado sobre `deps`)
@@ -1117,23 +1146,29 @@ export function createUnidadRoutes(deps: UnidadDeps) {
     if (!bytes) return errorResponse('STORAGE_ERROR', 'No se pudo leer el documento', 502);
 
     const ex = await extractText(bytes, node.mimeType);
-    // Solo cachea si hay texto real; `needsOcr` (escaneo) queda para v0.2 (Document AI).
-    if (!ex.needsOcr && ex.texto) {
+    let texto = ex.texto, chars = ex.chars, needsOcr = ex.needsOcr;
+    let metodo: string = ex.metodo;
+    // Escaneo sin capa de texto → OCR por visión (platform / deps.ocr). Si resuelve,
+    // deja de necesitar OCR y se cachea igual que la capa de texto.
+    if (needsOcr) {
+      const o = await resolveOcr(bytes, node.mimeType);
+      if (o?.texto) { texto = o.texto; chars = o.chars; metodo = 'ocr-vision'; needsOcr = false; }
+    }
+    // Solo cachea si hay texto real (capa de texto u OCR).
+    if (!needsOcr && texto) {
       await prisma.fileText.upsert({
         where: { driveNodeId: nodeId },
         create: {
-          driveNodeId: nodeId, orgId: auth.orgId, texto: ex.texto, chars: ex.chars,
-          metodo: ex.metodo, sha256: node.sha256 ?? null, extractedAt: new Date(),
+          driveNodeId: nodeId, orgId: auth.orgId, texto, chars,
+          metodo, sha256: node.sha256 ?? null, extractedAt: new Date(),
         },
         update: {
-          texto: ex.texto, chars: ex.chars, metodo: ex.metodo,
+          texto, chars, metodo,
           sha256: node.sha256 ?? null, extractedAt: new Date(),
         },
       });
     }
-    return successResponse({
-      texto: ex.texto, chars: ex.chars, metodo: ex.metodo, cached: false, needsOcr: ex.needsOcr,
-    });
+    return successResponse({ texto, chars, metodo, cached: false, needsOcr });
   };
 
   /**
@@ -1163,21 +1198,28 @@ export function createUnidadRoutes(deps: UnidadDeps) {
       const bytes = await storage.readBytes(node.gcsPath);
       if (!bytes) return errorResponse('STORAGE_ERROR', 'No se pudo leer el documento', 502);
       const ex = await extractText(bytes, node.mimeType);
+      let exTexto = ex.texto, exChars = ex.chars;
+      let exMetodo: string = ex.metodo;
+      // Escaneo sin capa de texto → OCR por visión antes de rendirse.
       if (ex.needsOcr || !ex.texto) {
-        return errorResponse('NEEDS_OCR', 'Documento escaneado sin capa de texto (OCR próximamente)', 422);
+        const o = await resolveOcr(bytes, node.mimeType);
+        if (o?.texto) { exTexto = o.texto; exChars = o.chars; exMetodo = 'ocr-vision'; }
+      }
+      if (!exTexto) {
+        return errorResponse('NEEDS_OCR', 'Documento escaneado sin capa de texto', 422);
       }
       ft = await prisma.fileText.upsert({
         where: { driveNodeId: nodeId },
         create: {
-          driveNodeId: nodeId, orgId: auth.orgId, texto: ex.texto, chars: ex.chars,
-          metodo: ex.metodo, sha256: node.sha256 ?? null, extractedAt: new Date(),
+          driveNodeId: nodeId, orgId: auth.orgId, texto: exTexto, chars: exChars,
+          metodo: exMetodo, sha256: node.sha256 ?? null, extractedAt: new Date(),
         },
         update: {
-          texto: ex.texto, chars: ex.chars, metodo: ex.metodo,
+          texto: exTexto, chars: exChars, metodo: exMetodo,
           sha256: node.sha256 ?? null, extractedAt: new Date(),
         },
       });
-      texto = ex.texto;
+      texto = exTexto;
     }
 
     if (!summarize) return errorResponse('NOT_CONFIGURED', 'Resumen IA no disponible en esta app', 501);
