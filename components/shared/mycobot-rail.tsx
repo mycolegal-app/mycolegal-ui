@@ -163,6 +163,10 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
   // #1 — globo de onboarding: null hasta hidratar, luego true/false.
   const [showOnboard, setShowOnboard] = useState(false);
   const threadRef = useRef<HTMLDivElement>(null);
+  // Scope por CLASE fijado al abrir el rail desde la Biblioteca (evento
+  // open-mycobot). Se reutiliza en las preguntas tecleadas después, dentro de la
+  // misma sesión de chat. null = sin scope (todas las clases).
+  const scopeClasesRef = useRef<string[] | null>(null);
 
   // Base de los endpoints de resoluciones (quita el sufijo `/ask`).
   const baseUrl = askUrl.replace(/\/ask$/, "");
@@ -283,7 +287,7 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
   }, []);
 
   const ask = useCallback(
-    async (pregunta: string) => {
+    async (pregunta: string, clasesArg?: string[]) => {
       const q = pregunta.trim();
       if (!q || loading) return;
       setView("chat");
@@ -316,7 +320,14 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
         const res = await fetch(askUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ pregunta: q, conversacionId, appSlug }),
+          // Scope por CLASE (pastillas de la Biblioteca): el de esta llamada, o el
+          // último fijado al abrir el rail desde la página. Ausente = todas las clases.
+          body: JSON.stringify({
+            pregunta: q,
+            conversacionId,
+            appSlug,
+            clases: clasesArg ?? scopeClasesRef.current ?? undefined,
+          }),
         });
         const json = await res.json().catch(() => ({}));
         if (!res.ok) {
@@ -454,8 +465,13 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
   useEffect(() => {
     const handler = (e: Event) => {
       setOpenPersisted(true);
-      const pregunta = (e as CustomEvent).detail?.pregunta as string | undefined;
-      if (pregunta) void ask(pregunta);
+      const detail = (e as CustomEvent).detail ?? {};
+      const pregunta = detail.pregunta as string | undefined;
+      // Scope por CLASE que envía la Biblioteca (pastillas marcadas). Se recuerda
+      // para las siguientes preguntas tecleadas en el rail.
+      const clases = Array.isArray(detail.clases) ? (detail.clases as string[]) : undefined;
+      scopeClasesRef.current = clases ?? null;
+      if (pregunta) void ask(pregunta, clases);
     };
     window.addEventListener("mycolegal:open-mycobot", handler);
     return () => window.removeEventListener("mycolegal:open-mycobot", handler);
