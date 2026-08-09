@@ -61,13 +61,41 @@ export interface JobChunkResult {
 
 export type JobHandler = (ctx: JobHandlerCtx) => Promise<unknown> | unknown;
 
+/**
+ * Convención de `paramsSchema` (ligera, NO es JSON-Schema completo): describe los
+ * parámetros que admite un job para que admin pueda pintar un formulario amable en
+ * lugar de un textarea de JSON crudo. Si un endpoint no la declara, admin cae al
+ * editor JSON. `admin` la interpreta en jobs/paramsSchema.ts.
+ */
+export type JobFieldType = 'string' | 'number' | 'boolean' | 'enum' | 'date';
+
+export interface JobFieldSpec {
+  /** Clave del parámetro en el objeto params. */
+  key: string;
+  /** Etiqueta legible para el formulario. */
+  label: string;
+  type: JobFieldType;
+  required?: boolean;
+  /** Opciones para type 'enum'. `label` opcional (por defecto = value). */
+  enum?: { value: string; label?: string }[];
+  /** Valor por defecto sugerido (independiente de defaultParams del endpoint). */
+  default?: unknown;
+  /** Texto de ayuda mostrado bajo el campo. */
+  help?: string;
+  placeholder?: string;
+}
+
+export interface JobParamsSchema {
+  fields: JobFieldSpec[];
+}
+
 export interface JobEndpointDef {
   key: string;
   name: string;
   description?: string;
   defaultParams?: Record<string, unknown>;
-  /** Informativo para la UI de admin. */
-  paramsSchema?: unknown;
+  /** Descripción de params para el formulario de admin (ver JobParamsSchema). */
+  paramsSchema?: JobParamsSchema;
   /** Timeout que auth aplica a la invocación. Default 600 s. */
   timeoutSeconds?: number;
   handler: JobHandler;
