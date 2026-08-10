@@ -676,14 +676,21 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
   useEffect(() => {
     const handler = (e: Event) => {
       setOpenPersisted(true);
-      const pregunta = (e as CustomEvent).detail?.pregunta as string | undefined;
+      const detail = (e as CustomEvent).detail ?? {};
+      // `view:'history'` abre directamente la lista de consultas anteriores (el
+      // botón "Historial" de la pantalla de Consultor, #1 — descubribilidad).
+      if (detail.view === "history") {
+        void openHistory();
+        return;
+      }
       // El scope de clases lo lee el `ask` de la cookie compartida (que la propia
       // Biblioteca escribe), así que aquí solo abrimos y lanzamos la pregunta.
+      const pregunta = detail.pregunta as string | undefined;
       if (pregunta) void ask(pregunta);
     };
     window.addEventListener("mycolegal:open-mycobot", handler);
     return () => window.removeEventListener("mycolegal:open-mycobot", handler);
-  }, [ask, setOpenPersisted]);
+  }, [ask, openHistory, setOpenPersisted]);
 
   // Auto-scroll al final del hilo.
   useEffect(() => {
