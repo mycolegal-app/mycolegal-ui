@@ -906,7 +906,7 @@
       "sourcesAll": "Denak kontuan hartu",
       "sourcesDone": "Eginda",
       "clases": {
-        "RESOLUCIONES_DGRN": "DGRN ebazpenak",
+        "RESOLUCIONES_DGRN": "DGSJFP ebazpenak",
         "RESOLUCIONES_DGDEJ": "DGDEJ ebazpenak (CAT)",
         "SISTEMA_NOTARIAL": "Sistema Notariala",
         "DOCTRINA": "Doktrina",
@@ -916,6 +916,20 @@
         "LEGISLACION_UE": "EBko legeria",
         "GUIAS": "Gidak eta gomendioak",
         "OTROS": "Bestelakoak"
+      },
+      "clasesCorto": {
+        "RESOLUCIONES_DGRN": "DGSJFP",
+        "RESOLUCIONES_DGDEJ": "DGDEJ (CAT)",
+        "FUNDACIONES": "Fundaz.",
+        "BIENES_MUEBLES": "Ond. higig.",
+        "SISTEMA_NOTARIAL": "Notariala",
+        "DOCTRINA": "Doktrina",
+        "JURISPRUDENCIA": "Jurispr.",
+        "LEGISLACION": "Legeria",
+        "LEGISLACION_AUTONOMICA": "Legeria auton.",
+        "LEGISLACION_UE": "EB legeria",
+        "GUIAS": "Gidak",
+        "OTROS": "Bestel."
       }
     },
     "registradorPicker": {

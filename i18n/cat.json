@@ -907,7 +907,7 @@
       "sourcesAll": "Considerar-les totes",
       "sourcesDone": "Fet",
       "clases": {
-        "RESOLUCIONES_DGRN": "Resolucions DGRN",
+        "RESOLUCIONES_DGRN": "Resolucions DGSJFP",
         "RESOLUCIONES_DGDEJ": "Resolucions DGDEJ (CAT)",
         "SISTEMA_NOTARIAL": "Sistema Notarial",
         "DOCTRINA": "Doctrina",
@@ -916,6 +916,20 @@
         "LEGISLACION_AUTONOMICA": "Legislació autonòmica",
         "LEGISLACION_UE": "Legislació UE",
         "GUIAS": "Guies i recomanacions",
+        "OTROS": "Altres"
+      },
+      "clasesCorto": {
+        "RESOLUCIONES_DGRN": "DGSJFP",
+        "RESOLUCIONES_DGDEJ": "DGDEJ (CAT)",
+        "FUNDACIONES": "Fundac.",
+        "BIENES_MUEBLES": "B. mobles",
+        "SISTEMA_NOTARIAL": "Notarial",
+        "DOCTRINA": "Doctrina",
+        "JURISPRUDENCIA": "Jurispr.",
+        "LEGISLACION": "Legislació",
+        "LEGISLACION_AUTONOMICA": "Legisl. auton.",
+        "LEGISLACION_UE": "Legisl. UE",
+        "GUIAS": "Guies",
         "OTROS": "Altres"
       }
     },

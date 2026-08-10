@@ -17,6 +17,16 @@ import {
   SlidersHorizontal,
   X,
   Check,
+  Gavel,
+  ScrollText,
+  Landmark,
+  Globe,
+  ShieldCheck,
+  Stamp,
+  Building2,
+  Car,
+  FileQuestion,
+  type LucideIcon,
 } from "lucide-react";
 import { marked } from "marked";
 import { useI18n } from "../i18n/i18n-context";
@@ -36,7 +46,26 @@ const CLASE_COLOR: Record<string, string> = {
   LEGISLACION_AUTONOMICA: "bg-emerald-100 text-emerald-800 border-emerald-300",
   LEGISLACION_UE: "bg-blue-100 text-blue-800 border-blue-300",
   GUIAS: "bg-amber-100 text-amber-800 border-amber-300",
+  FUNDACIONES: "bg-orange-100 text-orange-800 border-orange-300",
+  BIENES_MUEBLES: "bg-lime-100 text-lime-800 border-lime-300",
   OTROS: "bg-gray-100 text-gray-700 border-gray-300",
+};
+
+// Icono + color del icono por clase (para el badge de tipo en las citas de MycoBot,
+// #548). Mismo criterio que la Biblioteca del Consultor.
+const CLASE_ICON: Record<string, LucideIcon> = {
+  RESOLUCIONES_DGRN: Gavel,
+  RESOLUCIONES_DGDEJ: Gavel,
+  SISTEMA_NOTARIAL: Stamp,
+  DOCTRINA: BookOpen,
+  JURISPRUDENCIA: Scale,
+  LEGISLACION: ScrollText,
+  LEGISLACION_AUTONOMICA: Landmark,
+  LEGISLACION_UE: Globe,
+  GUIAS: ShieldCheck,
+  FUNDACIONES: Building2,
+  BIENES_MUEBLES: Car,
+  OTROS: FileQuestion,
 };
 
 marked.setOptions({ breaks: true, gfm: true });
@@ -58,6 +87,7 @@ interface Cita {
   referenciaBoe: string | null;
   fecha: string | null;
   titulo: string | null;
+  clase?: string; // clase de la resolución citada (badge de tipo)
 }
 
 // Cita al Manual / fichas de ayuda (AskResult.citasAyuda del carril de ayuda).
@@ -962,12 +992,28 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
                             {m.citas.map((c, j) => {
                               const label = c.referenciaBoe || `#${c.ordinal}`;
                               const cls = "block w-full rounded px-1 py-0.5 text-left hover:bg-gray-200";
+                              // #548 — badge de la CLASE citada (icono + color + etiqueta corta).
+                              const ClaseIcon = (c.clase && CLASE_ICON[c.clase]) || Scale;
+                              const claseCorto = c.clase ? t(`ui.mycobot.clasesCorto.${c.clase}`) || c.clase : "";
                               const inner = (
                                 <span className="flex items-start gap-1.5">
-                                  <Scale className="mt-0.5 h-3 w-3 shrink-0 text-cyan-600" />
                                   <span className="min-w-0">
-                                    <span className="font-mono text-[11px] text-cyan-700">
-                                      [{j + 1}] {label}
+                                    <span className="flex flex-wrap items-center gap-1">
+                                      {c.clase ? (
+                                        <span
+                                          className={`inline-flex items-center gap-0.5 rounded px-1 py-0.5 text-[9px] leading-none ${
+                                            CLASE_COLOR[c.clase] ?? "bg-gray-100 text-gray-600"
+                                          }`}
+                                        >
+                                          <ClaseIcon className="h-2.5 w-2.5 shrink-0" />
+                                          {claseCorto}
+                                        </span>
+                                      ) : (
+                                        <Scale className="h-3 w-3 shrink-0 text-cyan-600" />
+                                      )}
+                                      <span className="font-mono text-[11px] text-cyan-700">
+                                        [{j + 1}] {label}
+                                      </span>
                                     </span>
                                     {c.titulo && (
                                       <span className="block truncate text-[11px] text-gray-500">{c.titulo}</span>
