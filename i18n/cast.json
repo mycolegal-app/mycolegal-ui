@@ -891,7 +891,7 @@
       "helpScope": "Me limito a estos temas; no soy un asistente de uso general.",
       "helpCite": "Cuando uso doctrina, cada respuesta incluye las resoluciones citadas: pulsa una para abrir su ficha.",
       "helpManual": "Para ver todos los tipos de pregunta con ejemplos, abre la sección «Preguntar a MycoBot» del manual.",
-      "helpCommands": "Comando disponible: /help para ver esta ayuda.",
+      "helpCommands": "Comandos: /help para ver esta ayuda · /sources para elegir las clases de la Biblioteca que tengo en cuenta.",
       "chipDoctrina": "¿Es inscribible una hipoteca unilateral no aceptada?",
       "chipAyuda": "¿Cómo funciona esta aplicación?",
       "chipDatosNotaria": "¿Cuántos expedientes tengo vencidos?",
