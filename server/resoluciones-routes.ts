@@ -45,7 +45,7 @@ export interface ForwardResolucionesParams {
   request: NextRequest;
 }
 
-export async function forwardResoluciones(p: ForwardResolucionesParams): Promise<Response> {
+export async function forwardResoluciones(p: ForwardResolucionesParams): Promise<NextResponse> {
   const segs = p.path ?? [];
   const sub = segs.length ? `/${segs.join('/')}` : '';
   const url = `${p.consultorUrl.replace(/\/$/, '')}/api/inter/resoluciones${sub}${p.request.nextUrl.search}`;
@@ -77,8 +77,10 @@ export async function forwardResoluciones(p: ForwardResolucionesParams): Promise
   try {
     const upstream = await fetch(url, init);
     // Streaming: devolvemos el cuerpo SSE tal cual, sin leerlo entero (pass-through).
+    // NextResponse (no Response) para que las rutas catch-all envueltas en withAuth
+    // —que exigen NextResponse— tipen correctamente. Acepta ReadableStream como body.
     if (wantsStream && upstream.body) {
-      return new Response(upstream.body, {
+      return new NextResponse(upstream.body, {
         status: upstream.status,
         headers: {
           'Content-Type': upstream.headers.get('content-type') || 'text/event-stream; charset=utf-8',
