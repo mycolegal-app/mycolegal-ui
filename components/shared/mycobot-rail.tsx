@@ -80,6 +80,57 @@ function renderMarkdown(text: string): string {
   return marked.parse(text.replace(/</g, "&lt;"), { async: false }) as string;
 }
 
+/**
+ * Convierte las marcas de cita `[n]` del HTML ya renderizado en anclas clicables
+ * que apuntan a la fuente n-ésima (misma acción que la lista de Fuentes del final).
+ * Se aplica DESPUÉS de `renderMarkdown` para inyectar `<a>` sin que se escapen.
+ * Solo enlaza `[n]` con n dentro del rango de citas disponibles.
+ */
+function linkifyCitas(html: string, n: number): string {
+  if (n <= 0) return html;
+  return html.replace(/\[(\d{1,3})\]/g, (full, d) => {
+    const k = Number(d);
+    return k >= 1 && k <= n
+      ? `<a class="cita-ref" data-cita="${k - 1}" role="button" tabindex="0">[${k}]</a>`
+      : full;
+  });
+}
+
+/** Parsea un bloque de evento SSE (`event: …\ndata: …`). `data` es JSON en una línea. */
+function parseSse(raw: string): { event: string; data: unknown } | null {
+  let event = "message";
+  const dataLines: string[] = [];
+  for (const line of raw.split("\n")) {
+    if (line.startsWith("event:")) event = line.slice(6).trim();
+    else if (line.startsWith("data:")) dataLines.push(line.slice(5).replace(/^ /, ""));
+  }
+  if (!dataLines.length) return null;
+  try {
+    return { event, data: JSON.parse(dataLines.join("\n")) };
+  } catch {
+    return null;
+  }
+}
+
+/** Paso del bucle agéntico para el log «Ver proceso» (uno por transición). */
+interface StepRecord {
+  kind: "status" | "tool";
+  label: string;
+  query?: string;
+  hint?: string;
+  error?: boolean;
+}
+
+/** Payload del evento SSE `done` (cierre del turno agéntico). */
+interface DonePayload {
+  conversacionId?: string;
+  respuesta?: string;
+  citas?: Cita[];
+  citasAyuda?: AyudaCita[];
+  skill?: Msg["skill"];
+  sinResultado?: boolean;
+}
+
 // Cita devuelta por el backend (AskResult.citas de consultor).
 interface Cita {
   resolucionId: string;
@@ -108,6 +159,8 @@ interface Msg {
   skill?: "doctrina" | "ayuda" | "agente" | "fuera";
   sinResultado?: boolean;
   error?: boolean;
+  /** Pasos que siguió el bucle agéntico (para «Ver proceso»). */
+  steps?: StepRecord[];
 }
 
 // Resumen de conversación (GET …/conversaciones).
@@ -201,6 +254,10 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
   const [conversacionId, setConversacionId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  // Paso en curso del bucle agéntico que se muestra en vivo (línea que se sustituye).
+  const [stepLive, setStepLive] = useState<{ label: string; query?: string; hint?: string; error?: boolean } | null>(null);
+  // Mensajes cuyo «Ver proceso» está desplegado (por índice de mensaje).
+  const [openProcess, setOpenProcess] = useState<Set<number>>(new Set());
   const [conversaciones, setConversaciones] = useState<ConversacionResumen[] | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [viewer, setViewer] = useState<ViewerState | null>(null);
@@ -395,10 +452,15 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
       setInput("");
       setMessages((m) => [...m, { role: "user", text: q }]);
       setLoading(true);
+      setStepLive(null);
+      const steps: StepRecord[] = [];
+      let answerText = "";
       try {
         const res = await fetch(askUrl, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          // Pedimos SSE: el bucle agéntico emite sus pasos (mata el "Pensando…"
+          // eterno) y mantiene viva la conexión (mata el timeout de 30s).
+          headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
           // Scope por CLASE: la selección de la Biblioteca (cookie compartida,
           // editable con /sources). Ausente/null = todas las clases.
           body: JSON.stringify({
@@ -408,29 +470,98 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
             clases: readClasesSel() ?? undefined,
           }),
         });
-        const json = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          // Patrón unificado: código→i18n, si no mensaje del backend (salvo 500),
-          // si no el fallback del propio asistente. Ver lib/api-error.
-          const msg = apiErrorMessage(
-            t,
-            { status: res.status, code: json?.error?.code, message: json?.error?.message },
-            t("ui.mycobot.error"),
-          );
+
+        const ctype = res.headers.get("content-type") ?? "";
+        // Fallback JSON: error temprano, o backend/proxy sin streaming todavía.
+        if (!res.ok || !res.body || !ctype.includes("text/event-stream")) {
+          const json = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            const msg = apiErrorMessage(
+              t,
+              { status: res.status, code: json?.error?.code, message: json?.error?.message },
+              t("ui.mycobot.error"),
+            );
+            setMessages((m) => [...m, { role: "bot", text: msg, error: true }]);
+            return;
+          }
+          const data = json.data ?? {};
+          if (data.conversacionId) setConversacionId(data.conversacionId);
+          setMessages((m) => [
+            ...m,
+            {
+              role: "bot",
+              text: data.respuesta ?? "",
+              citas: data.citas ?? [],
+              citasAyuda: data.citasAyuda ?? [],
+              skill: data.skill,
+              sinResultado: !!data.sinResultado,
+            },
+          ]);
+          return;
+        }
+
+        // ── Consumo del stream SSE ──────────────────────────────────────────
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = "";
+        let final: DonePayload | null = null;
+        let errored: { code?: string; message?: string } | null = null;
+        let lastTool: StepRecord | null = null;
+
+        for (;;) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          let sep: number;
+          while ((sep = buf.indexOf("\n\n")) !== -1) {
+            const rawEv = buf.slice(0, sep);
+            buf = buf.slice(sep + 2);
+            const ev = parseSse(rawEv);
+            if (!ev) continue;
+            if (ev.event === "step") {
+              const s = ev.data as { type: string; phase?: string; label: string; query?: string; hint?: string };
+              if (s.type === "status") {
+                steps.push({ kind: "status", label: s.label });
+                setStepLive({ label: s.label });
+              } else if (s.type === "tool") {
+                if (s.phase === "start") {
+                  lastTool = { kind: "tool", label: s.label, query: s.query };
+                  steps.push(lastTool);
+                  setStepLive({ label: s.label, query: s.query });
+                } else if (s.phase === "done") {
+                  if (lastTool) lastTool.hint = s.hint;
+                  setStepLive({ label: s.label, hint: s.hint });
+                } else if (s.phase === "error") {
+                  if (lastTool) lastTool.error = true;
+                  setStepLive({ label: s.label, error: true });
+                }
+              }
+            } else if (ev.event === "token") {
+              answerText += (ev.data as { text?: string }).text ?? "";
+            } else if (ev.event === "done") {
+              final = ev.data as DonePayload;
+            } else if (ev.event === "error") {
+              errored = ev.data as { code?: string; message?: string };
+            }
+          }
+        }
+
+        if (errored) {
+          const msg = apiErrorMessage(t, { code: errored.code, message: errored.message }, t("ui.mycobot.error"));
           setMessages((m) => [...m, { role: "bot", text: msg, error: true }]);
           return;
         }
-        const data = json.data ?? {};
-        if (data.conversacionId) setConversacionId(data.conversacionId);
+        if (final?.conversacionId) setConversacionId(final.conversacionId);
         setMessages((m) => [
           ...m,
           {
             role: "bot",
-            text: data.respuesta ?? "",
-            citas: data.citas ?? [],
-            citasAyuda: data.citasAyuda ?? [],
-            skill: data.skill,
-            sinResultado: !!data.sinResultado,
+            text: final?.respuesta ?? answerText,
+            citas: final?.citas ?? [],
+            citasAyuda: final?.citasAyuda ?? [],
+            skill: final?.skill,
+            sinResultado: !!final?.sinResultado,
+            steps: steps.length ? steps.slice() : undefined,
           },
         ]);
       } catch {
@@ -438,6 +569,7 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
         setMessages((m) => [...m, { role: "bot", text: msg, error: true }]);
       } finally {
         setLoading(false);
+        setStepLive(null);
         void refreshBalance(); // la consulta puede haber gastado créditos
       }
     },
@@ -570,6 +702,20 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
   // en lugar del visor in-rail; en las demás apps no existe esa sección local, así que
   // se mantiene el visor in-rail (con su enlace "abrir ficha completa" a Consultor).
   const inConsultor = consultorUrl === "";
+
+  // Salto a una fuente citada, unificado para la lista de Fuentes y las marcas
+  // `[n]` inline: en Consultor navega a la sección de Resoluciones (preservando el
+  // hilo); en otras apps abre el visor in-rail.
+  const goToCita = (citas: Cita[], index: number) => {
+    if (index < 0 || index >= citas.length) return;
+    if (inConsultor) {
+      const fuentes = citas.map((x) => x.resolucionId).join(",");
+      setOpenPersisted(false);
+      window.location.href = `/resoluciones/${citas[index].resolucionId}?fuentes=${encodeURIComponent(fuentes)}&fi=${index}`;
+    } else {
+      void openCita(citas, index);
+    }
+  };
 
   // Ejemplos clicables del welcome (rellenan + lanzan). Dependen de las
   // capacidades de la app/org: doctrina (corpus), ayuda (siempre) y datos del
@@ -932,15 +1078,57 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
                       )}
                       {m.role === "bot" && !m.error ? (
                         // Respuesta del bot: Markdown. Si está fuera de ámbito (skill="fuera"),
-                        // se muestra el mensaje i18n fijo en vez del texto del backend.
+                        // se muestra el mensaje i18n fijo en vez del texto del backend. Las
+                        // marcas [n] se convierten en anclas clicables (delegación de click).
                         <div
-                          className="leading-relaxed [&_a]:text-cyan-700 [&_a]:underline [&_code]:rounded [&_code]:bg-gray-200 [&_code]:px-1 [&_h1]:text-sm [&_h1]:font-bold [&_h2]:font-semibold [&_h3]:font-semibold [&_li]:mt-0.5 [&_ol]:my-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-4"
+                          className="leading-relaxed [&_a]:text-cyan-700 [&_a]:underline [&_.cita-ref]:cursor-pointer [&_.cita-ref]:font-mono [&_.cita-ref]:font-semibold [&_.cita-ref]:no-underline [&_code]:rounded [&_code]:bg-gray-200 [&_code]:px-1 [&_h1]:text-sm [&_h1]:font-bold [&_h2]:font-semibold [&_h3]:font-semibold [&_li]:mt-0.5 [&_ol]:my-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-4"
+                          onClick={(e) => {
+                            const el = (e.target as HTMLElement).closest("a.cita-ref");
+                            if (!el) return;
+                            e.preventDefault();
+                            const idx = Number(el.getAttribute("data-cita"));
+                            if (m.citas && Number.isInteger(idx)) goToCita(m.citas, idx);
+                          }}
                           dangerouslySetInnerHTML={{
-                            __html: renderMarkdown(m.skill === "fuera" ? t("ui.mycobot.outOfScope") : m.text),
+                            __html: linkifyCitas(
+                              renderMarkdown(m.skill === "fuera" ? t("ui.mycobot.outOfScope") : m.text),
+                              m.citas?.length ?? 0,
+                            ),
                           }}
                         />
                       ) : (
                         <p className="whitespace-pre-wrap leading-relaxed">{m.text}</p>
+                      )}
+                      {m.role === "bot" && !m.error && m.steps && m.steps.length > 0 && (
+                        <div className="mt-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setOpenProcess((s) => {
+                                const n = new Set(s);
+                                if (n.has(i)) n.delete(i);
+                                else n.add(i);
+                                return n;
+                              })
+                            }
+                            className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-gray-600"
+                          >
+                            {openProcess.has(i) ? "▾ Ocultar proceso" : `▸ Ver proceso · ${m.steps.length} pasos`}
+                          </button>
+                          {openProcess.has(i) && (
+                            <ol className="mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
+                              {m.steps.map((s, k) => (
+                                <li key={k} className="text-[11px] leading-snug">
+                                  <span className={s.error ? "text-red-500" : "text-gray-600"}>{s.label}</span>
+                                  {s.hint && <span className="text-gray-400"> · {s.hint}</span>}
+                                  {s.query && (
+                                    <span className="block truncate italic text-gray-400">“{s.query}”</span>
+                                  )}
+                                </li>
+                              ))}
+                            </ol>
+                          )}
+                        </div>
                       )}
                       {m.role === "bot" && m.citasAyuda && m.citasAyuda.length > 0 && (
                         <div className="mt-2 border-t border-gray-200 pt-2">
@@ -1061,9 +1249,20 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
                   </div>
                 ))}
                 {loading && (
-                  <div className="flex items-center gap-2 px-1 text-sm text-gray-500">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    {t("ui.mycobot.thinking")}
+                  <div className="flex items-start gap-2 px-1 text-sm text-gray-500">
+                    <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin" />
+                    {stepLive ? (
+                      // Línea viva: el paso en curso (se sustituye por el siguiente).
+                      <span className="min-w-0">
+                        <span className={stepLive.error ? "text-red-500" : ""}>{stepLive.label}</span>
+                        {stepLive.hint && <span className="text-gray-400"> · {stepLive.hint}</span>}
+                        {stepLive.query && (
+                          <span className="block truncate text-[12px] italic text-gray-400">“{stepLive.query}”</span>
+                        )}
+                      </span>
+                    ) : (
+                      <span>{t("ui.mycobot.thinking")}</span>
+                    )}
                   </div>
                 )}
               </div>

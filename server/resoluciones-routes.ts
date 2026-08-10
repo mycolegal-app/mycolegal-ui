@@ -45,24 +45,30 @@ export interface ForwardResolucionesParams {
   request: NextRequest;
 }
 
-export async function forwardResoluciones(p: ForwardResolucionesParams): Promise<NextResponse> {
+export async function forwardResoluciones(p: ForwardResolucionesParams): Promise<Response> {
   const segs = p.path ?? [];
   const sub = segs.length ? `/${segs.join('/')}` : '';
   const url = `${p.consultorUrl.replace(/\/$/, '')}/api/inter/resoluciones${sub}${p.request.nextUrl.search}`;
 
   const method = p.request.method;
+  // El chat de MycoBot pide streaming (SSE) para ver los pasos del bucle agéntico:
+  // en ese modo NO bufferizamos y damos margen amplio de tiempo (el turno agéntico
+  // puede tardar decenas de segundos; el buffered+30s era justo lo que mataba la
+  // respuesta y dejaba el "No se pudo contactar").
+  const wantsStream = p.request.headers.get('accept')?.includes('text/event-stream') ?? false;
   const headers: Record<string, string> = {
     'X-Service-Key': p.serviceKey,
     'X-Org-Id': p.orgId,
     'X-User-Id': p.userId,
   };
+  if (wantsStream) headers['Accept'] = 'text/event-stream';
   // Reenvía el JWT del usuario (cookie SSO) como X-User-Token. Habilita el modo
   // AGENTE de MycoBot: Consultor lo usa para consultar la API de la app (p.ej.
   // Notaría) en nombre del usuario, respetando sus permisos. Servicio-a-servicio
   // por red interna; el navegador ya tiene esta cookie.
   const userToken = p.request.cookies.get((process.env.COOKIE_PREFIX || '') + 'mycolegal-token')?.value;
   if (userToken) headers['X-User-Token'] = userToken;
-  const init: RequestInit = { method, headers, signal: AbortSignal.timeout(30000) };
+  const init: RequestInit = { method, headers, signal: AbortSignal.timeout(wantsStream ? 120000 : 30000) };
   if (method !== 'GET' && method !== 'HEAD') {
     headers['Content-Type'] = 'application/json';
     init.body = await p.request.text();
@@ -70,6 +76,17 @@ export async function forwardResoluciones(p: ForwardResolucionesParams): Promise
 
   try {
     const upstream = await fetch(url, init);
+    // Streaming: devolvemos el cuerpo SSE tal cual, sin leerlo entero (pass-through).
+    if (wantsStream && upstream.body) {
+      return new Response(upstream.body, {
+        status: upstream.status,
+        headers: {
+          'Content-Type': upstream.headers.get('content-type') || 'text/event-stream; charset=utf-8',
+          'Cache-Control': 'no-cache, no-transform',
+          'X-Accel-Buffering': 'no',
+        },
+      });
+    }
     const text = await upstream.text();
     return new NextResponse(text, {
       status: upstream.status,
