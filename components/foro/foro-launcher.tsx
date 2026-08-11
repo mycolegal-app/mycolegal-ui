@@ -137,9 +137,27 @@ export function ForoLauncher() {
       const r = await fetch("/api/foro/link/token", { method: "POST" });
       const j = await r.json();
       if (j?.data?.deepLink) window.open(j.data.deepLink, "_blank", "noopener");
+      setDialogOpen(false);
+      // Poll de estado hasta que el usuario complete /start en Telegram (~2 min):
+      // así el icono pasa a "vinculado" sin recargar la app.
+      let tries = 0;
+      const poll = setInterval(async () => {
+        tries += 1;
+        try {
+          const s = await fetch("/api/foro/link/status");
+          const sj = s.ok ? await s.json() : null;
+          if (sj?.data?.linked) {
+            setLinked(true);
+            setMuted(!!sj.data.muted);
+            clearInterval(poll);
+          }
+        } catch {
+          /* noop */
+        }
+        if (tries >= 40) clearInterval(poll);
+      }, 3000);
     } finally {
       setConnecting(false);
-      setDialogOpen(false);
     }
   }, []);
 
