@@ -27,7 +27,9 @@
       "modDismiss": "Descartar",
       "modEmpty": "No hi ha informes pendents",
       "joinCta": "Unir-me al Club",
-      "alreadyMember": "Ja ets al grup de Telegram. Obre el bot de MycoLegal i envia /link per vincular el teu compte."
+      "alreadyMember": "Ja ets al grup de Telegram. Obre el bot de MycoLegal i envia /link per vincular el teu compte.",
+      "unlink": "Desvincular Telegram",
+      "unlinkConfirm": "Desvincular el teu Telegram i sortir del Club d'Usuaris?"
     },
     "driveLauncher": {
       "open": "Unitat de xarxa",

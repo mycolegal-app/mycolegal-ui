@@ -11,6 +11,7 @@ import {
   MessageSquareX,
   MessagesSquare,
   Send,
+  Unlink,
   X,
 } from "lucide-react";
 import { useI18n } from "../i18n";
@@ -257,6 +258,12 @@ export function ForoLauncher() {
             onToggleMute={toggleMute}
             onClose={() => setDrawerOpen(false)}
             onModCount={setModCount}
+            onUnlinked={() => {
+              setLinked(false);
+              setDrawerOpen(false);
+              setUnread(0);
+              setModCount(0);
+            }}
           />,
           document.body,
         )}
@@ -350,11 +357,13 @@ function ForoDrawerPanel({
   onToggleMute,
   onClose,
   onModCount,
+  onUnlinked,
 }: {
   muted: boolean;
   onToggleMute: () => void;
   onClose: () => void;
   onModCount: (n: number) => void;
+  onUnlinked: () => void;
 }) {
   const { t, language } = useI18n();
   const [topics, setTopics] = useState<Topic[]>([]);
@@ -455,6 +464,12 @@ function ForoDrawerPanel({
     [modReports, onModCount],
   );
 
+  const unlink = useCallback(async () => {
+    if (typeof window !== "undefined" && !window.confirm(t("ui.foro.unlinkConfirm"))) return;
+    const r = await fetch("/api/foro/unlink", { method: "POST" });
+    if (r.ok) onUnlinked();
+  }, [onUnlinked, t]);
+
   const send = useCallback(async () => {
     const text = draft.trim();
     if (!text || !activeId || sending) return;
@@ -523,6 +538,14 @@ function ForoDrawerPanel({
             className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
           >
             {muted ? <BellOff className="h-4 w-4" /> : <Bell className="h-4 w-4" />}
+          </button>
+          <button
+            onClick={unlink}
+            title={t("ui.foro.unlink")}
+            aria-label={t("ui.foro.unlink")}
+            className="text-gray-400 hover:text-red-600"
+          >
+            <Unlink className="h-4 w-4" />
           </button>
           <button
             onClick={onClose}

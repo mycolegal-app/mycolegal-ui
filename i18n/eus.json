@@ -27,7 +27,9 @@
       "modDismiss": "Baztertu",
       "modEmpty": "Ez dago txosten pendienterik",
       "joinCta": "Klubera batu",
-      "alreadyMember": "Dagoeneko Telegram taldean zaude. Ireki MycoLegal bota eta idatzi /link zure kontua lotzeko."
+      "alreadyMember": "Dagoeneko Telegram taldean zaude. Ireki MycoLegal bota eta idatzi /link zure kontua lotzeko.",
+      "unlink": "Telegram deslotu",
+      "unlinkConfirm": "Zure Telegram deslotu eta Erabiltzaileen Klubetik irten?"
     },
     "driveLauncher": {
       "open": "Sareko unitatea",
