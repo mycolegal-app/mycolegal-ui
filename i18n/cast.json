@@ -25,7 +25,9 @@
       "modMotivo": "Motivo",
       "modHide": "Ocultar",
       "modDismiss": "Descartar",
-      "modEmpty": "No hay reportes pendientes"
+      "modEmpty": "No hay reportes pendientes",
+      "joinCta": "Unirse al Club",
+      "alreadyMember": "Ya estás en el grupo de Telegram. Abre el bot de MycoLegal y envía /link para vincular tu cuenta."
     },
     "driveLauncher": {
       "open": "Unidad de red",
@@ -881,6 +883,25 @@
       "trashOptionReactivateDesc": "El usuario vuelve a poder iniciar sesión con sus permisos actuales.",
       "trashOptionDeleteTitle": "Eliminar definitivamente",
       "trashOptionDeleteDesc": "Borra al usuario y todos sus accesos de la organización. Acción irreversible."
+    },
+    "fuentes": {
+      "title": "Fuentes del corpus",
+      "help": "Activa o desactiva las fuentes y clases que MycoBot y la Biblioteca tienen en cuenta.",
+      "loading": "Cargando fuentes…",
+      "empty": "No hay fuentes disponibles.",
+      "docs": "{n} documentos",
+      "updated": "Actualizado {date}",
+      "all": "Considerar todas",
+      "done": "Hecho",
+      "familia": {
+        "REGISTRAL": "Doctrina registral",
+        "CUMPLIMIENTO": "Cumplimiento",
+        "GENERAL": "General",
+        "FISCAL": "Fiscal",
+        "UE": "Unión Europea",
+        "JURISPRUDENCIA": "Jurisprudencia",
+        "AUTONOMICA": "Autonómica"
+      }
     },
     "mycobot": {
       "railAria": "Abrir MycoBot — asistente de resoluciones",

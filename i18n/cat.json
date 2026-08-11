@@ -25,7 +25,9 @@
       "modMotivo": "Motiu",
       "modHide": "Amagar",
       "modDismiss": "Descartar",
-      "modEmpty": "No hi ha informes pendents"
+      "modEmpty": "No hi ha informes pendents",
+      "joinCta": "Unir-me al Club",
+      "alreadyMember": "Ja ets al grup de Telegram. Obre el bot de MycoLegal i envia /link per vincular el teu compte."
     },
     "driveLauncher": {
       "open": "Unitat de xarxa",
@@ -881,6 +883,25 @@
       "trashOptionReactivateDesc": "L'usuari torna a poder iniciar sessió amb els permisos actuals.",
       "trashOptionDeleteTitle": "Eliminar definitivament",
       "trashOptionDeleteDesc": "Esborra l'usuari i tots els seus accessos de l'organització. Acció irreversible."
+    },
+    "fuentes": {
+      "title": "Fonts del corpus",
+      "help": "Activa o desactiva les fonts i classes que MycoBot i la Biblioteca tenen en compte.",
+      "loading": "Carregant fonts…",
+      "empty": "No hi ha fonts disponibles.",
+      "docs": "{n} documents",
+      "updated": "Actualitzat {date}",
+      "all": "Considerar-les totes",
+      "done": "Fet",
+      "familia": {
+        "REGISTRAL": "Doctrina registral",
+        "CUMPLIMIENTO": "Compliment",
+        "GENERAL": "General",
+        "FISCAL": "Fiscal",
+        "UE": "Unió Europea",
+        "JURISPRUDENCIA": "Jurisprudència",
+        "AUTONOMICA": "Autonòmica"
+      }
     },
     "mycobot": {
       "railAria": "Obrir MycoBot — assistent de resolucions",

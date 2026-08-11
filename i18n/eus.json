@@ -25,7 +25,9 @@
       "modMotivo": "Arrazoia",
       "modHide": "Ezkutatu",
       "modDismiss": "Baztertu",
-      "modEmpty": "Ez dago txosten pendienterik"
+      "modEmpty": "Ez dago txosten pendienterik",
+      "joinCta": "Klubera batu",
+      "alreadyMember": "Dagoeneko Telegram taldean zaude. Ireki MycoLegal bota eta idatzi /link zure kontua lotzeko."
     },
     "driveLauncher": {
       "open": "Sareko unitatea",
@@ -880,6 +882,25 @@
       "trashOptionReactivateDesc": "Erabiltzaileak berriro saioa hasteko aukera du dauzkan baimenekin.",
       "trashOptionDeleteTitle": "Behin betiko ezabatu",
       "trashOptionDeleteDesc": "Erabiltzailea eta bere sarbide guztiak erakundetik ezabatzen ditu. Ekintza itzulezina."
+    },
+    "fuentes": {
+      "title": "Corpusaren iturriak",
+      "help": "Aktibatu edo desaktibatu MycoBotek eta Liburutegiak kontuan hartzen dituzten iturriak eta klaseak.",
+      "loading": "Iturriak kargatzen…",
+      "empty": "Ez dago iturririk erabilgarri.",
+      "docs": "{n} dokumentu",
+      "updated": "Eguneratua: {date}",
+      "all": "Denak kontuan hartu",
+      "done": "Eginda",
+      "familia": {
+        "REGISTRAL": "Erregistro-doktrina",
+        "CUMPLIMIENTO": "Betetzea",
+        "GENERAL": "Orokorra",
+        "FISCAL": "Fiskala",
+        "UE": "Europar Batasuna",
+        "JURISPRUDENCIA": "Jurisprudentzia",
+        "AUTONOMICA": "Autonomikoa"
+      }
     },
     "mycobot": {
       "railAria": "Ireki MycoBot — ebazpenen laguntzailea",

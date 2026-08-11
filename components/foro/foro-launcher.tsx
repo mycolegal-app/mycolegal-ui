@@ -82,6 +82,7 @@ export function ForoLauncher() {
   const { t } = useI18n();
   const [linked, setLinked] = useState<boolean | null>(null);
   const [muted, setMuted] = useState(false);
+  const [isMember, setIsMember] = useState(false);
   const [unread, setUnread] = useState(0);
   const [modCount, setModCount] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -96,6 +97,7 @@ export function ForoLauncher() {
         if (!alive) return;
         setLinked(j?.data ? !!j.data.linked : false);
         setMuted(j?.data ? !!j.data.muted : false);
+        setIsMember(j?.data ? !!j.data.isMember : false);
       })
       .catch(() => {
         if (alive) setLinked(false);
@@ -165,19 +167,19 @@ export function ForoLauncher() {
     setMuted(next);
   }, [muted]);
 
-  const acceptAndConnect = useCallback(async () => {
+  const acceptAndJoin = useCallback(async () => {
     setConnecting(true);
     // Abrimos la pestaña YA, dentro del gesto de clic, para que el bloqueador de
-    // popups no la bloquee; le ponemos la URL cuando llega el deep-link (tras el
+    // popups no la bloquee; le ponemos la URL cuando llega el invite link (tras el
     // await). Con `noopener` window.open devuelve null, así que no lo usamos aquí.
     const win = window.open("about:blank", "_blank");
     try {
-      const r = await fetch("/api/foro/link/token", { method: "POST" });
+      const r = await fetch("/api/foro/join-link", { method: "POST" });
       const j = await r.json();
-      const deepLink = j?.data?.deepLink as string | undefined;
-      if (deepLink) {
-        if (win) win.location.href = deepLink;
-        else window.location.href = deepLink; // fallback si el popup fue bloqueado
+      const inviteLink = j?.data?.inviteLink as string | undefined;
+      if (inviteLink) {
+        if (win) win.location.href = inviteLink;
+        else window.location.href = inviteLink; // fallback si el popup fue bloqueado
       } else if (win) {
         win.close();
       }
@@ -285,7 +287,11 @@ export function ForoLauncher() {
               <p className="whitespace-pre-line text-sm text-gray-600 dark:text-gray-300">
                 {t("ui.foro.linkConditions")}
               </p>
-              <p className="mt-3 text-xs text-gray-400">{t("ui.foro.linkOpening")}</p>
+              {isMember ? (
+                <p className="mt-3 text-sm text-amber-600">{t("ui.foro.alreadyMember")}</p>
+              ) : (
+                <p className="mt-3 text-xs text-gray-400">{t("ui.foro.linkOpening")}</p>
+              )}
               <div className="mt-5 flex justify-end gap-2">
                 <button
                   onClick={() => setDialogOpen(false)}
@@ -293,14 +299,16 @@ export function ForoLauncher() {
                 >
                   {t("ui.foro.linkCancel")}
                 </button>
-                <button
-                  onClick={acceptAndConnect}
-                  disabled={connecting}
-                  className="rounded-md px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
-                  style={{ backgroundColor: GOLD }}
-                >
-                  {t("ui.foro.linkAccept")}
-                </button>
+                {!isMember && (
+                  <button
+                    onClick={acceptAndJoin}
+                    disabled={connecting}
+                    className="rounded-md px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
+                    style={{ backgroundColor: GOLD }}
+                  >
+                    {t("ui.foro.joinCta")}
+                  </button>
+                )}
               </div>
             </div>
           </div>,

@@ -32,6 +32,8 @@ import { marked } from "marked";
 import { useI18n } from "../i18n/i18n-context";
 import { apiErrorMessage } from "../../lib/api-error";
 import { readClasesSel, writeClasesSel, CLASES_CHANGED_EVENT } from "../../lib/biblioteca-clases";
+import { readFuentesSel } from "../../lib/biblioteca-fuentes";
+import { FuentesModal } from "./fuentes-modal";
 
 // Estilo de las pastillas de clase en el modal /sources (mismo criterio de color
 // que la leyenda de la Biblioteca del Consultor). El label sale de i18n
@@ -468,6 +470,8 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
             conversacionId,
             appSlug,
             clases: readClasesSel() ?? undefined,
+            // Scope por FUENTE (el otro nivel del modal de Fuentes). AND con clases.
+            fuentes: readFuentesSel() ?? undefined,
           }),
         });
 
@@ -1312,83 +1316,14 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
         </aside>
       )}
 
-      {/* Modal /sources: clases de la Biblioteca que MycoBot considera. Editable
-          desde cualquier app; la selección se guarda en la cookie compartida. */}
-      {sourcesOpen && (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4"
-          onClick={() => setSourcesOpen(false)}
-        >
-          <div
-            className="w-full max-w-sm rounded-lg bg-white shadow-xl dark:bg-gray-800"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b px-4 py-3 dark:border-gray-700">
-              <div className="flex items-center gap-2">
-                <SlidersHorizontal className="h-4 w-4 text-cyan-600" />
-                <h3 className="text-sm font-semibold">{t("ui.mycobot.sourcesTitle")}</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSourcesOpen(false)}
-                aria-label={t("ui.mycobot.sourcesDone")}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <p className="px-4 pt-3 text-xs text-gray-500">{t("ui.mycobot.sourcesHelp")}</p>
-            <div className="flex flex-wrap gap-1.5 p-4">
-              {clasesDisponibles.length === 0 && (
-                <span className="text-xs text-gray-400">{t("ui.mycobot.sourcesEmpty")}</span>
-              )}
-              {clasesDisponibles.map((c) => {
-                const sel = isClaseSel(c.clase);
-                return (
-                  <button
-                    key={c.clase}
-                    type="button"
-                    onClick={() => toggleClaseSel(c.clase)}
-                    aria-pressed={sel}
-                    className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs transition-colors ${
-                      sel
-                        ? `${CLASE_COLOR[c.clase] ?? "border-gray-300 bg-gray-100 text-gray-700"} ring-1 ring-inset ring-current`
-                        : "border-gray-200 text-gray-400 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700"
-                    }`}
-                  >
-                    {sel ? (
-                      <Check className="h-3 w-3 shrink-0" />
-                    ) : (
-                      <span className="h-3 w-3 shrink-0 rounded-full border border-current opacity-40" />
-                    )}
-                    <span>{claseLabel(c.clase)}</span>
-                    <span className="opacity-60">{c.count.toLocaleString()}</span>
-                  </button>
-                );
-              })}
-            </div>
-            <div className="flex items-center justify-between border-t px-4 py-2.5 dark:border-gray-700">
-              <button
-                type="button"
-                onClick={() => {
-                  setClasesSel(null);
-                  writeClasesSel(null);
-                }}
-                className="text-xs text-gray-400 underline-offset-2 hover:text-gray-600 hover:underline"
-              >
-                {t("ui.mycobot.sourcesAll")}
-              </button>
-              <button
-                type="button"
-                onClick={() => setSourcesOpen(false)}
-                className="rounded-md bg-cyan-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-cyan-700"
-              >
-                {t("ui.mycobot.sourcesDone")}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modal de Fuentes del corpus (fuentes + clases, dos niveles). Es el mismo
+          que abren el comando /sources y el badge de cabecera; la selección se
+          guarda en las cookies compartidas mc_biblioteca_fuentes + mc_biblioteca_clases. */}
+      <FuentesModal
+        open={sourcesOpen}
+        onClose={() => setSourcesOpen(false)}
+        fuentesUrl={`${baseUrl}/fuentes`}
+      />
     </>
   );
 }
