@@ -5,6 +5,8 @@ import {
   Sparkles,
   ChevronRight,
   ChevronLeft,
+  Maximize2,
+  Minimize2,
   Send,
   Loader2,
   ExternalLink,
@@ -30,6 +32,8 @@ import {
 } from "lucide-react";
 import { marked } from "marked";
 import { useI18n } from "../i18n/i18n-context";
+import { useSidebarCollapse } from "../layout/sidebar-collapse-context";
+import { cn } from "../../lib/utils";
 import { apiErrorMessage } from "../../lib/api-error";
 import { readClasesSel, writeClasesSel, CLASES_CHANGED_EVENT } from "../../lib/biblioteca-clases";
 import { readFuentesSel } from "../../lib/biblioteca-fuentes";
@@ -224,6 +228,9 @@ const ONBOARD_STORAGE_KEY = "mycolegal:mycobot:onboarded";
 // poder saltar de una referencia a otra sin reiniciar el hilo.
 const THREAD_STORAGE_KEY = "mycolegal:mycobot:thread";
 
+// #563(a) — altura máxima del textarea de entrada antes de activar scroll interno.
+const MAX_INPUT_PX = 160;
+
 type View = "chat" | "history" | "resolucion";
 
 interface ViewerState {
@@ -250,7 +257,11 @@ interface ViewerState {
  */
 export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask", consultorUrl, appSlug }: MycoBotRailProps) {
   const { t } = useI18n();
+  const { collapsed } = useSidebarCollapse();
   const [open, setOpen] = useState(false);
+  // #563 — modo expandido: el rail ocupa toda la pantalla salvo el sidebar
+  // izquierdo, y muestra la lista de conversaciones a la izquierda.
+  const [expanded, setExpanded] = useState(false);
   const [view, setView] = useState<View>("chat");
   const [messages, setMessages] = useState<Msg[]>([]);
   const [conversacionId, setConversacionId] = useState<string | null>(null);
@@ -280,6 +291,9 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
   // #1 — globo de onboarding: null hasta hidratar, luego true/false.
   const [showOnboard, setShowOnboard] = useState(false);
   const threadRef = useRef<HTMLDivElement>(null);
+  // #563(a) — textarea de entrada auto-crece con el contenido (hasta un máximo,
+  // luego scroll interno). El hilo de arriba se reajusta solo por el layout flex.
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // Carga la selección de clases (cookie compartida) al montar, al abrir el modal y
   // cuando otro consumidor del mismo origen (la página de Biblioteca) la cambia.
@@ -593,9 +607,9 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
     }
   }, []);
 
-  // Abre el panel de historial y carga la lista de conversaciones.
-  const openHistory = useCallback(async () => {
-    setView("history");
+  // Carga la lista de conversaciones (sin cambiar de vista). La usan tanto el panel
+  // de historial (vista "history") como la columna izquierda del modo expandido.
+  const loadConversaciones = useCallback(async () => {
     setHistoryLoading(true);
     try {
       const res = await fetch(`${baseUrl}/conversaciones`);
@@ -607,6 +621,25 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
       setHistoryLoading(false);
     }
   }, [baseUrl]);
+
+  // Abre el panel de historial y carga la lista de conversaciones.
+  const openHistory = useCallback(async () => {
+    setView("history");
+    await loadConversaciones();
+  }, [loadConversaciones]);
+
+  // #563(b) — alterna el modo expandido. Al entrar, la lista de conversaciones vive
+  // a la izquierda (se carga) y el panel derecho vuelve al chat.
+  const toggleExpanded = useCallback(() => {
+    setExpanded((prev) => {
+      const next = !prev;
+      if (next) {
+        setView((v) => (v === "history" ? "chat" : v));
+        void loadConversaciones();
+      }
+      return next;
+    });
+  }, [loadConversaciones]);
 
   // Carga una conversación pasada como hilo activo.
   const loadConversation = useCallback(
@@ -700,6 +733,16 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
   useEffect(() => {
     if (view === "chat") threadRef.current?.scrollTo({ top: threadRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, loading, view]);
+
+  // #563(a) — auto-grow del textarea: crece con el contenido hasta MAX_INPUT_PX y a
+  // partir de ahí hace scroll interno. Se recalcula en cada cambio de `input` (incl.
+  // el reset a "" tras enviar, que lo devuelve a la altura mínima).
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, MAX_INPUT_PX)}px`;
+  }, [input, open, expanded]);
 
   if (!available) return null;
 
@@ -798,24 +841,50 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
         </>
       )}
 
-      {/* Panel abierto: rail lateral derecho, no modal */}
+      {/* Panel abierto: rail lateral derecho (o expandido a pantalla completa), no modal */}
       {open && (
-        <aside className="fixed right-0 top-0 z-[70] flex h-full w-full max-w-[380px] flex-col border-l bg-white shadow-2xl print:hidden">
+        <aside
+          className={cn(
+            "fixed top-0 z-[70] flex h-full flex-col border-l bg-white shadow-2xl transition-[left,max-width] duration-200 print:hidden",
+            expanded
+              ? cn(
+                  // Expandido: ocupa todo salvo el sidebar izquierdo (que respeta su
+                  // ancho según esté desplegado (220px) o compacto (64px)).
+                  "left-0 right-0 w-auto max-w-none",
+                  collapsed ? "lg:left-[64px]" : "lg:left-[220px]",
+                )
+              : "right-0 w-full max-w-[380px]",
+          )}
+        >
           <header className="flex items-center gap-2 border-b bg-cyan-600 px-4 py-3 text-white">
             <Sparkles className="h-4 w-4 shrink-0" />
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold leading-tight">{t("ui.mycobot.title")}</p>
               <p className="text-[11px] leading-tight text-cyan-100">{t("ui.mycobot.subtitle")}</p>
             </div>
+            {/* #563(b) — expandir / contraer el panel del chat. */}
             <button
               type="button"
-              onClick={() => (view === "history" ? setView("chat") : void openHistory())}
-              aria-label={t("ui.mycobot.history")}
-              title={t("ui.mycobot.history")}
-              className={`rounded p-1 hover:bg-white/10 ${view === "history" ? "bg-white/15" : ""}`}
+              onClick={toggleExpanded}
+              aria-label={expanded ? t("ui.mycobot.minimize") : t("ui.mycobot.expand")}
+              title={expanded ? t("ui.mycobot.minimize") : t("ui.mycobot.expand")}
+              className="hidden rounded p-1 hover:bg-white/10 lg:block"
             >
-              <History className="h-[18px] w-[18px]" />
+              {expanded ? <Minimize2 className="h-[18px] w-[18px]" /> : <Maximize2 className="h-[18px] w-[18px]" />}
             </button>
+            {/* En modo expandido la lista de conversaciones vive a la izquierda: el
+                botón de historial de la cabecera sería redundante. */}
+            {!expanded && (
+              <button
+                type="button"
+                onClick={() => (view === "history" ? setView("chat") : void openHistory())}
+                aria-label={t("ui.mycobot.history")}
+                title={t("ui.mycobot.history")}
+                className={`rounded p-1 hover:bg-white/10 ${view === "history" ? "bg-white/15" : ""}`}
+              >
+                <History className="h-[18px] w-[18px]" />
+              </button>
+            )}
             <button
               type="button"
               onClick={newConversation}
@@ -834,6 +903,63 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
               <ChevronRight className="h-5 w-5" />
             </button>
           </header>
+
+          {/* Cuerpo: en modo expandido, columna izquierda con la lista de
+              conversaciones + columna derecha (saldo, fuentes y chat/visor). En modo
+              normal solo existe la columna derecha, a todo el ancho del rail. */}
+          <div className="flex min-h-0 flex-1 overflow-hidden">
+            {expanded && (
+              <div className="hidden w-64 shrink-0 flex-col border-r bg-gray-50/70 md:flex">
+                <div className="flex shrink-0 items-center gap-2 border-b px-3 py-2">
+                  <History className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                  <span className="flex-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    {t("ui.mycobot.conversations")}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={newConversation}
+                    aria-label={t("ui.mycobot.newConversation")}
+                    title={t("ui.mycobot.newConversation")}
+                    className="rounded p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
+                  >
+                    <PlusCircle className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="min-h-0 flex-1 overflow-y-auto p-2">
+                  {historyLoading && (
+                    <div className="flex items-center gap-2 px-1 py-6 text-sm text-gray-500">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {t("ui.mycobot.thinking")}
+                    </div>
+                  )}
+                  {!historyLoading && conversaciones && conversaciones.length === 0 && (
+                    <p className="px-1 py-6 text-center text-xs text-gray-500">{t("ui.mycobot.noHistory")}</p>
+                  )}
+                  {!historyLoading && conversaciones && conversaciones.length > 0 && (
+                    <ul className="space-y-1">
+                      {conversaciones.map((c) => (
+                        <li key={c.id}>
+                          <button
+                            type="button"
+                            onClick={() => void loadConversation(c.id)}
+                            className={`w-full rounded-md px-2.5 py-2 text-left hover:bg-gray-200/70 ${
+                              c.id === conversacionId ? "bg-cyan-100/70" : ""
+                            }`}
+                          >
+                            <span className="block truncate text-[13px] text-gray-800">{c.titulo}</span>
+                            <span className="mt-0.5 block text-[11px] text-gray-400">
+                              {new Date(c.updatedAt).toLocaleDateString()} · {t("ui.mycobot.turnos", { n: c.turnos })}
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
 
           {/* Saldo del monedero de créditos de IA. Solo si la org tiene doctrina
               (Consultor): es lo que consume créditos. Sin doctrina, MycoBot solo
@@ -1287,6 +1413,7 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
               >
                 <div className="flex items-end gap-2">
                   <textarea
+                    ref={inputRef}
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => {
@@ -1295,10 +1422,13 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
                         void ask(input);
                       }
                     }}
-                    rows={2}
+                    rows={1}
                     placeholder={t("ui.mycobot.placeholder")}
                     aria-label={t("ui.mycobot.placeholder")}
-                    className="min-h-[40px] flex-1 resize-none rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+                    // #563(a) — `overflow-y-auto` + max-height activa el scroll interno
+                    // una vez alcanzada la altura máxima; la altura la fija el efecto
+                    // de auto-grow (inputRef) según el contenido.
+                    className="max-h-[160px] min-h-[40px] flex-1 resize-none overflow-y-auto rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
                   />
                   <button
                     type="submit"
@@ -1313,6 +1443,8 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
               </form>
             </>
           )}
+            </div>
+          </div>
         </aside>
       )}
 
