@@ -31,6 +31,7 @@ interface Message {
   source: string;
   authorName: string;
   authorUserId: string | null;
+  authorTgId: string | null;
   text: string | null;
   replyToId: string | null;
   createdAt: string;
@@ -299,6 +300,32 @@ export function ForoLauncher() {
   );
 }
 
+/** Avatar del autor: foto real de Telegram (cacheada) con fallback a iniciales. */
+function MessageAvatar({ name, tgId, isBot }: { name: string; tgId: string | null; isBot: boolean }) {
+  const [failed, setFailed] = useState(false);
+  const showImg = !!tgId && !isBot && !failed;
+  return (
+    <div
+      className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full text-[10px] font-semibold text-white"
+      style={{ backgroundColor: isBot ? GOLD : "#6b7280" }}
+    >
+      {isBot ? (
+        "🤖"
+      ) : showImg ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={`/api/foro/avatar/${tgId}`}
+          alt=""
+          className="h-full w-full object-cover"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        initials(name)
+      )}
+    </div>
+  );
+}
+
 /** Panel deslizante (drawer) con topics + hilo + SSE en vivo. */
 function ForoDrawerPanel({
   muted,
@@ -553,12 +580,7 @@ function ForoDrawerPanel({
           )}
           {messages.map((m) => (
             <div key={m.id} className="group flex gap-2.5">
-              <div
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white"
-                style={{ backgroundColor: m.source === "BOT" ? GOLD : "#6b7280" }}
-              >
-                {m.source === "BOT" ? "🤖" : initials(m.authorName)}
-              </div>
+              <MessageAvatar name={m.authorName} tgId={m.authorTgId} isBot={m.source === "BOT"} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline gap-2">
                   <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{m.authorName}</span>
@@ -575,14 +597,33 @@ function ForoDrawerPanel({
                     {m.text}
                   </p>
                 )}
-                {m.media.map((md) => (
-                  <span
-                    key={md.id}
-                    className="mt-1 inline-block rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-500 dark:bg-gray-800"
-                  >
-                    📎 {md.fileName || md.mime}
-                  </span>
-                ))}
+                {m.media.map((md) =>
+                  md.mime.startsWith("image/") ? (
+                    <a
+                      key={md.id}
+                      href={`/api/foro/media/${md.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={`/api/foro/media/${md.id}`}
+                        alt={md.fileName || ""}
+                        className="mt-1 max-h-48 max-w-full rounded-lg"
+                      />
+                    </a>
+                  ) : (
+                    <a
+                      key={md.id}
+                      href={`/api/foro/media/${md.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-1 inline-block rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600 hover:underline dark:bg-gray-800 dark:text-gray-300"
+                    >
+                      📎 {md.fileName || md.mime}
+                    </a>
+                  ),
+                )}
               </div>
               <button
                 onClick={() => report(m.id)}
