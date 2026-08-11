@@ -16,7 +16,11 @@
       "linkOpening": "S'obrirà Telegram per completar la connexió.",
       "mute": "Silenciar el fòrum",
       "unmute": "Reactivar avisos",
-      "mutedTooltip": "Fòrum silenciat. Prem per veure'l."
+      "mutedTooltip": "Fòrum silenciat. Prem per veure'l.",
+      "composerPlaceholder": "Escriu un missatge…",
+      "send": "Enviar",
+      "report": "Reportar missatge",
+      "reportPrompt": "Motiu del report?"
     },
     "driveLauncher": {
       "open": "Unitat de xarxa",

@@ -9,6 +9,7 @@ import {
   PanelLeftOpen,
   Settings,
   Sliders,
+  User,
 } from "lucide-react";
 import { NavLink as Link } from "../shared/nav-link";
 import { NotificationsBell } from "../shared/notifications-bell";
@@ -237,12 +238,7 @@ export function AppSidebar({
     );
   }
 
-  const initials = displayName
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+  // (avatar por icono de persona; ya no se calculan iniciales)
 
   return (
     <>
@@ -449,13 +445,9 @@ export function AppSidebar({
               onClick={() => setAccountOpen(true)}
               title={`${displayName} · ${t("ui.sidebar.openAccount")}`}
               aria-label={t("ui.sidebar.openAccount")}
-              className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold transition-opacity hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-cyan-400/50",
-                a.avatarBgClass,
-                a.avatarTextClass,
-              )}
+              className="flex h-6 w-6 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-white/5 hover:text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50"
             >
-              {initials}
+              <User className="h-4 w-4" />
             </button>
             <NotificationsBell
               currentAppSlug={appSlug}
@@ -494,14 +486,8 @@ export function AppSidebar({
               aria-label={t("ui.sidebar.openAccount")}
               className="flex w-full min-w-0 items-center gap-3 rounded-lg p-1 text-left transition-colors hover:bg-white/5 focus:outline-none focus:ring-2 focus:ring-cyan-400/50"
             >
-              <div
-                className={cn(
-                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
-                  a.avatarBgClass,
-                  a.avatarTextClass,
-                )}
-              >
-                {initials}
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center text-gray-400">
+                <User className="h-4 w-4" />
               </div>
               <div className="min-w-0 flex-1">
                 <p
@@ -518,8 +504,8 @@ export function AppSidebar({
                 </p>
               </div>
             </button>
-            {/* Campana + extras (Foro) en una fila bajo el email. */}
-            <div className="flex items-center gap-1">
+            {/* Campana + extras (Foro) centrados en una fila bajo el email. */}
+            <div className="flex items-center justify-center gap-1">
               <NotificationsBell
                 currentAppSlug={appSlug}
                 onNavigateInternal={(link) => router.push(link)}

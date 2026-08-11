@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import {
   Bell,
   BellOff,
+  Flag,
   Lock,
   MessageSquarePlus,
   MessageSquareX,
@@ -248,6 +249,8 @@ function ForoDrawerPanel({
   const [topics, setTopics] = useState<Topic[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [draft, setDraft] = useState("");
+  const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const timeFmt = useMemo(
     () =>
@@ -298,6 +301,40 @@ function ForoDrawerPanel({
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  const send = useCallback(async () => {
+    const text = draft.trim();
+    if (!text || !activeId || sending) return;
+    setSending(true);
+    try {
+      const r = await fetch("/api/foro/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topicId: activeId, text }),
+      });
+      if (r.ok) {
+        const j = await r.json();
+        const m = j?.data as Message | undefined;
+        if (m) setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, m]));
+        setDraft("");
+      }
+    } finally {
+      setSending(false);
+    }
+  }, [draft, activeId, sending]);
+
+  const report = useCallback(
+    async (id: string) => {
+      const motivo = typeof window !== "undefined" ? window.prompt(t("ui.foro.reportPrompt")) : null;
+      if (motivo == null) return;
+      await fetch("/api/foro/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messageId: id, motivo }),
+      });
+    },
+    [t],
+  );
 
   const active = topics.find((x) => x.id === activeId) ?? null;
 
@@ -361,7 +398,7 @@ function ForoDrawerPanel({
             <p className="pt-6 text-center text-sm text-gray-400">{t("ui.foro.noMessages")}</p>
           )}
           {messages.map((m) => (
-            <div key={m.id} className="flex gap-2.5">
+            <div key={m.id} className="group flex gap-2.5">
               <div
                 className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white"
                 style={{ backgroundColor: m.source === "BOT" ? GOLD : "#6b7280" }}
@@ -393,6 +430,14 @@ function ForoDrawerPanel({
                   </span>
                 ))}
               </div>
+              <button
+                onClick={() => report(m.id)}
+                title={t("ui.foro.report")}
+                aria-label={t("ui.foro.report")}
+                className="mt-0.5 shrink-0 text-gray-300 opacity-0 transition-opacity hover:text-gray-500 group-hover:opacity-100"
+              >
+                <Flag className="h-3.5 w-3.5" />
+              </button>
             </div>
           ))}
           <div ref={bottomRef} />
@@ -403,13 +448,27 @@ function ForoDrawerPanel({
           {active?.isReadOnly ? (
             <p className="text-center text-xs text-gray-400">{t("ui.foro.readOnly")}</p>
           ) : (
-            <div className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 opacity-60 dark:border-gray-700">
+            <div className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 dark:border-gray-700">
               <input
-                disabled
-                placeholder={t("ui.foro.composerSoon")}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    void send();
+                  }
+                }}
+                placeholder={t("ui.foro.composerPlaceholder")}
                 className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
               />
-              <Send className="h-4 w-4 text-gray-400" />
+              <button
+                onClick={() => void send()}
+                disabled={sending || !draft.trim()}
+                aria-label={t("ui.foro.send")}
+                className="text-gray-400 transition-colors hover:text-gray-700 disabled:opacity-40 dark:hover:text-gray-200"
+              >
+                <Send className="h-4 w-4" />
+              </button>
             </div>
           )}
         </footer>

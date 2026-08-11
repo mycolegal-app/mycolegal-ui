@@ -16,7 +16,11 @@
       "linkOpening": "Telegram irekiko da konexioa osatzeko.",
       "mute": "Foroa isilarazi",
       "unmute": "Abisuak berraktibatu",
-      "mutedTooltip": "Foroa isilarazita. Sakatu ikusteko."
+      "mutedTooltip": "Foroa isilarazita. Sakatu ikusteko.",
+      "composerPlaceholder": "Idatzi mezu bat…",
+      "send": "Bidali",
+      "report": "Mezua salatu",
+      "reportPrompt": "Salaketaren arrazoia?"
     },
     "driveLauncher": {
       "open": "Sareko unitatea",

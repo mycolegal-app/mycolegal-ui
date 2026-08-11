@@ -16,7 +16,11 @@
       "linkOpening": "Se abrirá Telegram para completar la conexión.",
       "mute": "Silenciar foro",
       "unmute": "Reactivar avisos",
-      "mutedTooltip": "Foro silenciado. Pulsa para ver."
+      "mutedTooltip": "Foro silenciado. Pulsa para ver.",
+      "composerPlaceholder": "Escribe un mensaje…",
+      "send": "Enviar",
+      "report": "Reportar mensaje",
+      "reportPrompt": "¿Motivo del reporte?"
     },
     "driveLauncher": {
       "open": "Unidad de red",
