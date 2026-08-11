@@ -20,7 +20,12 @@
       "composerPlaceholder": "Idatzi mezu bat…",
       "send": "Bidali",
       "report": "Mezua salatu",
-      "reportPrompt": "Salaketaren arrazoia?"
+      "reportPrompt": "Salaketaren arrazoia?",
+      "modReportedTitle": "Salatutako mezuak",
+      "modMotivo": "Arrazoia",
+      "modHide": "Ezkutatu",
+      "modDismiss": "Baztertu",
+      "modEmpty": "Ez dago txosten pendienterik"
     },
     "driveLauncher": {
       "open": "Sareko unitatea",

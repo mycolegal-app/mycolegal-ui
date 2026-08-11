@@ -37,6 +37,13 @@ interface Message {
   editedAt: string | null;
   media: { id: string; mime: string; fileName: string | null }[];
 }
+interface Report {
+  id: string;
+  motivo: string;
+  reporterUserId: string;
+  createdAt: string;
+  message: { id: string; authorName: string; text: string | null; createdAt: string; modState: string };
+}
 
 async function getData<T>(url: string): Promise<T | null> {
   try {
@@ -75,6 +82,7 @@ export function ForoLauncher() {
   const [linked, setLinked] = useState<boolean | null>(null);
   const [muted, setMuted] = useState(false);
   const [unread, setUnread] = useState(0);
+  const [modCount, setModCount] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [connecting, setConnecting] = useState(false);
@@ -119,6 +127,31 @@ export function ForoLauncher() {
       clearInterval(id);
     };
   }, [linked, muted]);
+
+  // Reportes pendientes (marca "!" del moderador). 403 → no es moderador.
+  useEffect(() => {
+    if (!linked) return;
+    let alive = true;
+    const load = async () => {
+      try {
+        const r = await fetch("/api/foro/moderation");
+        if (!r.ok) {
+          if (alive && r.status === 403) setModCount(0);
+          return;
+        }
+        const j = await r.json();
+        if (alive) setModCount(Array.isArray(j?.data) ? j.data.length : 0);
+      } catch {
+        /* noop */
+      }
+    };
+    load();
+    const id = setInterval(load, 45000);
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
+  }, [linked]);
 
   const toggleMute = useCallback(async () => {
     const next = !muted;
@@ -193,12 +226,25 @@ export function ForoLauncher() {
             {unread > 9 ? "9+" : unread}
           </span>
         )}
+        {linked && modCount > 0 && (
+          <span
+            className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold leading-none text-white ring-1 ring-black/10"
+            title={t("ui.foro.modReportedTitle")}
+          >
+            !
+          </span>
+        )}
       </button>
 
       {drawerOpen &&
         typeof document !== "undefined" &&
         createPortal(
-          <ForoDrawerPanel muted={muted} onToggleMute={toggleMute} onClose={() => setDrawerOpen(false)} />,
+          <ForoDrawerPanel
+            muted={muted}
+            onToggleMute={toggleMute}
+            onClose={() => setDrawerOpen(false)}
+            onModCount={setModCount}
+          />,
           document.body,
         )}
 
@@ -258,15 +304,20 @@ function ForoDrawerPanel({
   muted,
   onToggleMute,
   onClose,
+  onModCount,
 }: {
   muted: boolean;
   onToggleMute: () => void;
   onClose: () => void;
+  onModCount: (n: number) => void;
 }) {
   const { t, language } = useI18n();
   const [topics, setTopics] = useState<Topic[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [modReports, setModReports] = useState<Report[]>([]);
+  const [canModerate, setCanModerate] = useState(false);
+  const [modView, setModView] = useState(false);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -320,6 +371,45 @@ function ForoDrawerPanel({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/foro/moderation")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (!alive || !j) return;
+        setCanModerate(true);
+        const list = (j.data as Report[]) ?? [];
+        setModReports(list);
+        onModCount(list.length);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [onModCount]);
+
+  const resolveReport = useCallback(
+    async (reportId: string, action: "OCULTAR" | "DESCARTAR") => {
+      const rep = modReports.find((x) => x.id === reportId);
+      const r = await fetch("/api/foro/moderation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reportId, action }),
+      });
+      if (!r.ok) return;
+      setModReports((rs) => {
+        const next = rs.filter((x) => x.id !== reportId);
+        onModCount(next.length);
+        if (next.length === 0) setModView(false);
+        return next;
+      });
+      if (action === "OCULTAR" && rep) {
+        setMessages((ms) => ms.filter((m) => m.id !== rep.message.id));
+      }
+    },
+    [modReports, onModCount],
+  );
+
   const send = useCallback(async () => {
     const text = draft.trim();
     if (!text || !activeId || sending) return;
@@ -368,6 +458,19 @@ function ForoDrawerPanel({
           <h2 className="flex-1 text-sm font-semibold text-gray-900 dark:text-gray-100">
             {t("ui.foro.title")}
           </h2>
+          {canModerate && modReports.length > 0 && (
+            <button
+              onClick={() => setModView((v) => !v)}
+              title={t("ui.foro.modReportedTitle")}
+              aria-label={t("ui.foro.modReportedTitle")}
+              className={`relative ${modView ? "text-red-600" : "text-gray-400 hover:text-red-600"}`}
+            >
+              <Flag className="h-4 w-4" />
+              <span className="absolute -right-1.5 -top-1.5 flex h-3.5 min-w-[0.875rem] items-center justify-center rounded-full bg-red-500 px-0.5 text-[9px] font-bold text-white">
+                {modReports.length}
+              </span>
+            </button>
+          )}
           <button
             onClick={onToggleMute}
             title={muted ? t("ui.foro.unmute") : t("ui.foro.mute")}
@@ -384,6 +487,39 @@ function ForoDrawerPanel({
             <X className="h-4 w-4" />
           </button>
         </header>
+
+        {modView ? (
+          <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
+            {modReports.length === 0 && (
+              <p className="pt-6 text-center text-sm text-gray-400">{t("ui.foro.modEmpty")}</p>
+            )}
+            {modReports.map((rep) => (
+              <div key={rep.id} className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+                <div className="text-sm text-gray-800 dark:text-gray-200">
+                  <span className="font-medium">{rep.message.authorName}</span>: {rep.message.text || "—"}
+                </div>
+                <div className="mt-1 text-xs text-gray-500">
+                  {t("ui.foro.modMotivo")}: {rep.motivo || "—"}
+                </div>
+                <div className="mt-2 flex gap-2">
+                  <button
+                    onClick={() => resolveReport(rep.id, "OCULTAR")}
+                    className="inline-flex items-center gap-1 rounded-md bg-red-600 px-2.5 py-1 text-xs text-white hover:bg-red-700"
+                  >
+                    {t("ui.foro.modHide")}
+                  </button>
+                  <button
+                    onClick={() => resolveReport(rep.id, "DESCARTAR")}
+                    className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  >
+                    {t("ui.foro.modDismiss")}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <>
 
         {/* Selector de topics (chips) */}
         <div className="flex gap-1 overflow-x-auto border-b border-gray-200 px-3 py-2 dark:border-gray-800">
@@ -490,6 +626,8 @@ function ForoDrawerPanel({
             </div>
           )}
         </footer>
+          </>
+        )}
       </div>
     </div>
   );

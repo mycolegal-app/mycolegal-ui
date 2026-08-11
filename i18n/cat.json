@@ -20,7 +20,12 @@
       "composerPlaceholder": "Escriu un missatge…",
       "send": "Enviar",
       "report": "Reportar missatge",
-      "reportPrompt": "Motiu del report?"
+      "reportPrompt": "Motiu del report?",
+      "modReportedTitle": "Missatges reportats",
+      "modMotivo": "Motiu",
+      "modHide": "Amagar",
+      "modDismiss": "Descartar",
+      "modEmpty": "No hi ha informes pendents"
     },
     "driveLauncher": {
       "open": "Unitat de xarxa",

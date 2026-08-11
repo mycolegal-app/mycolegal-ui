@@ -20,7 +20,12 @@
       "composerPlaceholder": "Escribe un mensaje…",
       "send": "Enviar",
       "report": "Reportar mensaje",
-      "reportPrompt": "¿Motivo del reporte?"
+      "reportPrompt": "¿Motivo del reporte?",
+      "modReportedTitle": "Mensajes reportados",
+      "modMotivo": "Motivo",
+      "modHide": "Ocultar",
+      "modDismiss": "Descartar",
+      "modEmpty": "No hay reportes pendientes"
     },
     "driveLauncher": {
       "open": "Unidad de red",
