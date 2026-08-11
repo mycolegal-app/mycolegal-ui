@@ -167,10 +167,20 @@ export function ForoLauncher() {
 
   const acceptAndConnect = useCallback(async () => {
     setConnecting(true);
+    // Abrimos la pestaña YA, dentro del gesto de clic, para que el bloqueador de
+    // popups no la bloquee; le ponemos la URL cuando llega el deep-link (tras el
+    // await). Con `noopener` window.open devuelve null, así que no lo usamos aquí.
+    const win = window.open("about:blank", "_blank");
     try {
       const r = await fetch("/api/foro/link/token", { method: "POST" });
       const j = await r.json();
-      if (j?.data?.deepLink) window.open(j.data.deepLink, "_blank", "noopener");
+      const deepLink = j?.data?.deepLink as string | undefined;
+      if (deepLink) {
+        if (win) win.location.href = deepLink;
+        else window.location.href = deepLink; // fallback si el popup fue bloqueado
+      } else if (win) {
+        win.close();
+      }
       setDialogOpen(false);
       // Poll de estado hasta que el usuario complete /start en Telegram (~2 min):
       // así el icono pasa a "vinculado" sin recargar la app.
