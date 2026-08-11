@@ -1,5 +1,23 @@
 {
   "ui": {
+    "foro": {
+      "title": "Komunitatea",
+      "close": "Itxi",
+      "empty": "Oraindik ez dago gairik",
+      "noMessages": "Ez dago mezurik gai honetan",
+      "edited": "editatua",
+      "readOnly": "Gai hau irakurtzeko soilik da",
+      "composerSoon": "Aplikaziotik argitaratzea: laster",
+      "notLinkedTooltip": "Ez duzu zure Telegram lotu. Sakatu konektatzeko.",
+      "linkTitle": "Komunitatearen foroan parte hartu",
+      "linkConditions": "Zure Telegram kontua konektatzean MycoLegal-en Erabiltzaileen Klubaren taldera batzen zara. Argitaratzen dituzun mezuak Telegram eta plataformaren artean sinkronizatzen dira eta pribatutasun-politikaren arabera gordetzen dira. Parte hartu errespetuz eta konfidentzialtasun profesionalez; ez partekatu hirugarrenen datu pertsonalik ez protokoloaren sekretupeko informaziorik.",
+      "linkAccept": "Onartu eta Telegram konektatu",
+      "linkCancel": "Utzi",
+      "linkOpening": "Telegram irekiko da konexioa osatzeko.",
+      "mute": "Foroa isilarazi",
+      "unmute": "Abisuak berraktibatu",
+      "mutedTooltip": "Foroa isilarazita. Sakatu ikusteko."
+    },
     "driveLauncher": {
       "open": "Sareko unitatea",
       "title": "Sareko unitatea",

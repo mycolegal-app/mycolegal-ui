@@ -1,5 +1,23 @@
 {
   "ui": {
+    "foro": {
+      "title": "Comunitat",
+      "close": "Tancar",
+      "empty": "Encara no hi ha temes",
+      "noMessages": "No hi ha missatges en aquest tema",
+      "edited": "editat",
+      "readOnly": "Aquest tema és només de lectura",
+      "composerSoon": "Publicar des de l'app: pròximament",
+      "notLinkedTooltip": "No has vinculat el teu Telegram. Prem per connectar.",
+      "linkTitle": "Participar al fòrum de la comunitat",
+      "linkConditions": "En connectar el teu compte de Telegram t'uneixes al grup del Club d'Usuaris de MycoLegal. Els missatges que publiquis se sincronitzen entre Telegram i la plataforma i es conserven d'acord amb la política de privacitat. Participa amb respecte i confidencialitat professional; no comparteixis dades personals de tercers ni informació subjecta a secret del protocol.",
+      "linkAccept": "Acceptar i connectar Telegram",
+      "linkCancel": "Cancel·lar",
+      "linkOpening": "S'obrirà Telegram per completar la connexió.",
+      "mute": "Silenciar el fòrum",
+      "unmute": "Reactivar avisos",
+      "mutedTooltip": "Fòrum silenciat. Prem per veure'l."
+    },
     "driveLauncher": {
       "open": "Unitat de xarxa",
       "title": "Unitat de xarxa",

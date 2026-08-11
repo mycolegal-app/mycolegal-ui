@@ -1,5 +1,23 @@
 {
   "ui": {
+    "foro": {
+      "title": "Comunidade",
+      "close": "Pechar",
+      "empty": "Aínda non hai temas",
+      "noMessages": "Non hai mensaxes neste tema",
+      "edited": "editado",
+      "readOnly": "Este tema é só de lectura",
+      "composerSoon": "Publicar desde a app: proximamente",
+      "notLinkedTooltip": "Non vinculaches o teu Telegram. Preme para conectar.",
+      "linkTitle": "Participar no foro da comunidade",
+      "linkConditions": "Ao conectar a túa conta de Telegram úneste ao grupo do Club de Usuarios de MycoLegal. As mensaxes que publiques sincronízanse entre Telegram e a plataforma e consérvanse conforme á política de privacidade. Participa con respecto e confidencialidade profesional; non compartas datos persoais de terceiros nin información suxeita a segredo do protocolo.",
+      "linkAccept": "Aceptar e conectar Telegram",
+      "linkCancel": "Cancelar",
+      "linkOpening": "Abrirase Telegram para completar a conexión.",
+      "mute": "Silenciar o foro",
+      "unmute": "Reactivar avisos",
+      "mutedTooltip": "Foro silenciado. Preme para velo."
+    },
     "driveLauncher": {
       "open": "Unidade de rede",
       "title": "Unidade de rede",

@@ -487,46 +487,47 @@ export function AppSidebar({
           </div>
         ) : (
           <div className="space-y-3 border-t border-white/10 px-4 py-4">
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setAccountOpen(true)}
-                title={t("ui.sidebar.openAccount")}
-                aria-label={t("ui.sidebar.openAccount")}
-                className="flex min-w-0 flex-1 items-center gap-3 rounded-lg p-1 text-left transition-colors hover:bg-white/5 focus:outline-none focus:ring-2 focus:ring-cyan-400/50"
+            <button
+              type="button"
+              onClick={() => setAccountOpen(true)}
+              title={t("ui.sidebar.openAccount")}
+              aria-label={t("ui.sidebar.openAccount")}
+              className="flex w-full min-w-0 items-center gap-3 rounded-lg p-1 text-left transition-colors hover:bg-white/5 focus:outline-none focus:ring-2 focus:ring-cyan-400/50"
+            >
+              <div
+                className={cn(
+                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
+                  a.avatarBgClass,
+                  a.avatarTextClass,
+                )}
               >
-                <div
-                  className={cn(
-                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
-                    a.avatarBgClass,
-                    a.avatarTextClass,
-                  )}
+                {initials}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p
+                  className="truncate text-sm font-medium text-white"
+                  title={displayName}
                 >
-                  {initials}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p
-                    className="truncate text-sm font-medium text-white"
-                    title={displayName}
-                  >
-                    {displayName}
-                  </p>
-                  <p
-                    className="truncate text-xs text-gray-400"
-                    title={user.email}
-                  >
-                    {user.email}
-                  </p>
-                </div>
-              </button>
+                  {displayName}
+                </p>
+                <p
+                  className="truncate text-[11px] text-gray-400"
+                  title={user.email}
+                >
+                  {user.email}
+                </p>
+              </div>
+            </button>
+            {/* Campana + extras (Foro) en una fila bajo el email. */}
+            <div className="flex items-center gap-1">
               <NotificationsBell
                 currentAppSlug={appSlug}
                 onNavigateInternal={(link) => router.push(link)}
                 verticalAlign="bottom"
                 align="left"
               />
+              {userFooterExtra}
             </div>
-            {userFooterExtra}
             <UserAccountDialog
               open={accountOpen}
               onOpenChange={setAccountOpen}
