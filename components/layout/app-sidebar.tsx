@@ -80,6 +80,10 @@ export interface AppSidebarProps {
   /** Optional content rendered after navItems and before the system separator
    *  (e.g. a `<SidebarFlyout>` for Mantenimientos, or a labelled sub-section). */
   extraNav?: ReactNode;
+  /** Optional node rendered in the user footer block, next to the notifications
+   *  bell (both collapsed and expanded layouts). Use for an app-specific trigger
+   *  such as the Foro/Comunidad icon with its unread badge. */
+  userFooterExtra?: ReactNode;
   /** Optional content rendered in the system block (below the divider, next to
    *  Admin/Configuración and above Manual). Use for admin-level flyouts that
    *  should live in the system area rather than the product nav. */
@@ -177,6 +181,7 @@ export function AppSidebar({
   accent,
   navItems,
   extraNav,
+  userFooterExtra,
   systemNav,
   showAdmin,
   adminHref = "/admin",
@@ -458,6 +463,7 @@ export function AppSidebar({
               verticalAlign="bottom"
               align="right"
             />
+            {userFooterExtra}
             <button
               onClick={() => {
                 fetch("/api/auth/logout", { method: "POST" }).then(() => {
@@ -520,6 +526,7 @@ export function AppSidebar({
                 align="left"
               />
             </div>
+            {userFooterExtra}
             <UserAccountDialog
               open={accountOpen}
               onOpenChange={setAccountOpen}
