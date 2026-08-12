@@ -693,7 +693,13 @@
       "helpMenuAsk": "Galdetu IAri",
       "helpMenuReport": "Jakinarazi gorabehera bat",
       "searchAria": "Bilatu",
-      "searchUnavailable": "Bilaketa ez dago erabilgarri aplikazio honetan"
+      "searchUnavailable": "Bilaketa ez dago erabilgarri aplikazio honetan",
+      "helpMenuPrivacy": "Pribatutasuna eta datuen babesa",
+      "privacyTitle": "Zure informazioa, babestua eta zure kontrolpean",
+      "privacyRgpd": "RGPD eta LOPD betetze zorrotza.",
+      "privacyOwner": "Zure informazioa zurea da soilik: titularraren erabilera esklusiboa.",
+      "privacyNotraining": "Ez dugu IA modelorik entrenatzen zure edukiekin.",
+      "privacyLink": "Ikusi Pribatutasun Politika eta DPA"
     },
     "sidebar": {
       "goHome": "Hasierara joan",

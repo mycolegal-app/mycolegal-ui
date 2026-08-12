@@ -693,7 +693,13 @@
       "helpMenuAsk": "Preguntar á IA",
       "helpMenuReport": "Reportar unha incidencia",
       "searchAria": "Buscar",
-      "searchUnavailable": "Busca non dispoñible nesta aplicación"
+      "searchUnavailable": "Busca non dispoñible nesta aplicación",
+      "helpMenuPrivacy": "Privacidade e protección de datos",
+      "privacyTitle": "A túa información, protexida e baixo o teu control",
+      "privacyRgpd": "Cumprimento estrito do RGPD e da LOPD.",
+      "privacyOwner": "A túa información é só túa: uso exclusivo do seu titular.",
+      "privacyNotraining": "Non adestramos modelos de IA cos teus contidos.",
+      "privacyLink": "Ver Política de Privacidade e DPA"
     },
     "sidebar": {
       "goHome": "Ir ao inicio",

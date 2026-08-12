@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { HelpCircle, PlayCircle, BookOpen, Sparkles, Bug } from "lucide-react";
+import { HelpCircle, PlayCircle, BookOpen, Sparkles, Bug, ShieldCheck, X, Check } from "lucide-react";
 import { NavLink as Link } from "./nav-link";
 import { useI18n } from "../i18n/i18n-context";
 
@@ -22,14 +22,19 @@ interface HelpMenuProps {
   showAsk?: boolean;
   /** "Reportar una incidencia" — requiere <IncidentReporter> montado. */
   showReport?: boolean;
+  /** "Privacidad y protección de datos" — abre un panel con las garantías. */
+  showPrivacy?: boolean;
+  /** Destino de la Política de Privacidad / DPA (para el enlace del panel). */
+  privacyHref?: string;
 }
 
 const ITEM =
   "flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-gray-700 hover:bg-gray-50";
 
-export function HelpMenu({ manualHref = "/manual", showIntro = true, showAsk = false, showReport = false }: HelpMenuProps) {
+export function HelpMenu({ manualHref = "/manual", showIntro = true, showAsk = false, showReport = false, showPrivacy = false, privacyHref = "/legal/privacidad" }: HelpMenuProps) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -93,6 +98,51 @@ export function HelpMenu({ manualHref = "/manual", showIntro = true, showAsk = f
               {t("ui.header.helpMenuReport")}
             </button>
           )}
+          {showPrivacy && (
+            <button type="button" role="menuitem" onClick={() => { setPrivacyOpen(true); setOpen(false); }} className={ITEM}>
+              <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-600" />
+              {t("ui.header.helpMenuPrivacy")}
+            </button>
+          )}
+        </div>
+      )}
+
+      {privacyOpen && (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/55 p-4 backdrop-blur-[2px]"
+          onClick={() => setPrivacyOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="w-full max-w-md overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 px-5 pb-1 pt-4">
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-50 text-emerald-600">
+                <ShieldCheck className="h-5 w-5" />
+              </span>
+              <h2 className="flex-1 text-[15px] font-bold tracking-tight text-gray-900">
+                {t("ui.header.privacyTitle")}
+              </h2>
+              <button type="button" onClick={() => setPrivacyOpen(false)} className="rounded-md p-1 text-gray-400 hover:text-gray-600" aria-label="Cerrar">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <ul className="flex flex-col gap-2.5 px-5 py-4 text-[13.5px] text-gray-600">
+              {["ui.header.privacyRgpd", "ui.header.privacyOwner", "ui.header.privacyNotraining"].map((k) => (
+                <li key={k} className="flex items-start gap-2.5">
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                  <span>{t(k)}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="border-t border-gray-100 px-5 py-3">
+              <a href={privacyHref} target="_blank" rel="noopener noreferrer" className="text-[13px] font-semibold text-cyan-700 hover:underline">
+                {t("ui.header.privacyLink")} →
+              </a>
+            </div>
+          </div>
         </div>
       )}
     </div>
