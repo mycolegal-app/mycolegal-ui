@@ -10,7 +10,7 @@
       "composerSoon": "Publicar desde la app: próximamente",
       "notLinkedTooltip": "No has vinculado tu Telegram. Pulsa para conectar.",
       "linkTitle": "Participar en el foro de la comunidad",
-      "linkConditions": "Al conectar tu cuenta de Telegram te unes al grupo del Club de Usuarios de MycoLegal. Los mensajes que publiques se sincronizan entre Telegram y la plataforma y se conservan conforme a la política de privacidad. Participa con respeto y confidencialidad profesional; no compartas datos personales de terceros ni información sujeta a secreto del protocolo.",
+      "linkConditions": "Al conectar tu cuenta de Telegram te unes al grupo del Club de Usuarios de MycoLegal. Los mensajes que publiques se sincronizan entre Telegram y la plataforma y se conservan conforme a la política de privacidad. Participa con respeto y confidencialidad profesional; no compartas datos personales de terceros ni información sujeta a secreto del protocolo. Como suscriptor, MycoBot (IA) podrá recordar y citar por tu nombre tus mensajes de la comunidad para responder a otros miembros; puedes desactivarlo cuando quieras con /consent off en Telegram.",
       "linkAccept": "Aceptar y conectar Telegram",
       "linkCancel": "Cancelar",
       "linkOpening": "Se abrirá Telegram para completar la conexión.",

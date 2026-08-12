@@ -10,7 +10,7 @@
       "composerSoon": "Aplikaziotik argitaratzea: laster",
       "notLinkedTooltip": "Ez duzu zure Telegram lotu. Sakatu konektatzeko.",
       "linkTitle": "Komunitatearen foroan parte hartu",
-      "linkConditions": "Zure Telegram kontua konektatzean MycoLegal-en Erabiltzaileen Klubaren taldera batzen zara. Argitaratzen dituzun mezuak Telegram eta plataformaren artean sinkronizatzen dira eta pribatutasun-politikaren arabera gordetzen dira. Parte hartu errespetuz eta konfidentzialtasun profesionalez; ez partekatu hirugarrenen datu pertsonalik ez protokoloaren sekretupeko informaziorik.",
+      "linkConditions": "Zure Telegram kontua konektatzean MycoLegal-en Erabiltzaileen Klubaren taldera batzen zara. Argitaratzen dituzun mezuak Telegram eta plataformaren artean sinkronizatzen dira eta pribatutasun-politikaren arabera gordetzen dira. Parte hartu errespetuz eta konfidentzialtasun profesionalez; ez partekatu hirugarrenen datu pertsonalik ez protokoloaren sekretupeko informaziorik. Harpidedun gisa, MycoBot-ek (IA) zure komunitateko mezuak gogoratu eta zure izenez aipatu ahal izango ditu beste kideei erantzuteko; noiznahi desaktiba dezakezu Telegram-en /consent off idatziz.",
       "linkAccept": "Onartu eta Telegram konektatu",
       "linkCancel": "Utzi",
       "linkOpening": "Telegram irekiko da konexioa osatzeko.",

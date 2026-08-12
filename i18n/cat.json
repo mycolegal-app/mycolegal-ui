@@ -10,7 +10,7 @@
       "composerSoon": "Publicar des de l'app: pròximament",
       "notLinkedTooltip": "No has vinculat el teu Telegram. Prem per connectar.",
       "linkTitle": "Participar al fòrum de la comunitat",
-      "linkConditions": "En connectar el teu compte de Telegram t'uneixes al grup del Club d'Usuaris de MycoLegal. Els missatges que publiquis se sincronitzen entre Telegram i la plataforma i es conserven d'acord amb la política de privacitat. Participa amb respecte i confidencialitat professional; no comparteixis dades personals de tercers ni informació subjecta a secret del protocol.",
+      "linkConditions": "En connectar el teu compte de Telegram t'uneixes al grup del Club d'Usuaris de MycoLegal. Els missatges que publiquis se sincronitzen entre Telegram i la plataforma i es conserven d'acord amb la política de privacitat. Participa amb respecte i confidencialitat professional; no comparteixis dades personals de tercers ni informació subjecta a secret del protocol. Com a subscriptor, MycoBot (IA) podrà recordar i citar amb el teu nom els teus missatges de la comunitat per respondre altres membres; pots desactivar-ho quan vulguis amb /consent off a Telegram.",
       "linkAccept": "Acceptar i connectar Telegram",
       "linkCancel": "Cancel·lar",
       "linkOpening": "S'obrirà Telegram per completar la connexió.",
