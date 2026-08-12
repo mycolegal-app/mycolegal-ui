@@ -70,6 +70,10 @@ export function FirstRunWelcome({ appSlug, appName, logo, steps, adminUrl = "/ad
   ]);
   const [submitting, setSubmitting] = useState(false);
   const [teamDone, setTeamDone] = useState<null | "invited" | "later">(null);
+  // "No volver a mostrar": marcada por defecto (una bienvenida se ve una vez). Si
+  // el usuario la desmarca, NO se marca el tour como visto → reaparece la próxima
+  // sesión. Solo gobierna el tour de la app; el paso de equipo se marca siempre.
+  const [remember, setRemember] = useState(true);
 
   // Decide si mostrarse a partir del estado central de onboarding.
   useEffect(() => {
@@ -149,7 +153,9 @@ export function FirstRunWelcome({ appSlug, appName, logo, steps, adminUrl = "/ad
       } else if (showTeam) {
         setTeamDone("later");
       }
-      if (showWelcome) await mark(`welcome:${appSlug}`);
+      // El tour solo se "recuerda" si la casilla está marcada; el paso de equipo
+      // (decisión puntual del org_admin) se marca siempre que se complete/posponga.
+      if (showWelcome && remember) await mark(`welcome:${appSlug}`);
       if (showTeam) await mark("team-onboarding");
     } finally {
       setSubmitting(false);
@@ -245,6 +251,21 @@ export function FirstRunWelcome({ appSlug, appName, logo, steps, adminUrl = "/ad
               : current.text}
           </p>
         </div>
+
+        {/* "No volver a mostrar" — solo en el tour de la app (no en el paso de equipo). */}
+        {!isTeamStep && (
+          <div className="px-5 pt-2">
+            <label className="inline-flex cursor-pointer select-none items-center gap-2 text-[12px] text-gray-500">
+              <input
+                type="checkbox"
+                checked={remember}
+                onChange={(e) => setRemember(e.target.checked)}
+                className="h-3.5 w-3.5 rounded border-gray-300 accent-cyan-600"
+              />
+              No volver a mostrar
+            </label>
+          </div>
+        )}
 
         {/* Pie: dots + navegación */}
         <div className="mt-auto flex items-center gap-3 px-5 pb-5 pt-3">
