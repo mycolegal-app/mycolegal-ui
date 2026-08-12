@@ -229,6 +229,13 @@ const ONBOARD_STORAGE_KEY = "mycolegal:mycobot:onboarded";
 // (vive en la pestaña/sesión, no entre días) para rehidratarlo tras la recarga y
 // poder saltar de una referencia a otra sin reiniciar el hilo.
 const THREAD_STORAGE_KEY = "mycolegal:mycobot:thread";
+// #1 (consultor) — al pinchar una cita colapsamos el rail y navegamos full-page a
+// la ficha de la resolución para no taparla. Este flag (sesión) marca que, al
+// VOLVER a la Biblioteca (`/resoluciones`), hay que REABRIR el rail para devolver
+// al usuario a la conversación rehidratada — sin él, el rail se quedaba colapsado
+// (open=false persistido) y el usuario veía la pantalla inicial creyendo que había
+// perdido la respuesta. En la propia ficha `/resoluciones/[id]` NO se reabre.
+const REOPEN_STORAGE_KEY = "mycolegal:mycobot:reopen";
 
 // #563(a) — altura máxima del textarea de entrada antes de activar scroll interno.
 const MAX_INPUT_PX = 160;
@@ -387,6 +394,15 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
     }
   }, []);
 
+  const setOpenPersisted = useCallback((next: boolean) => {
+    setOpen(next);
+    try {
+      window.localStorage.setItem(OPEN_STORAGE_KEY, String(next));
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   // Rehidrata el hilo activo tras una navegación full-page (solo Consultor).
   // Restaura mensajes + conversacionId desde sessionStorage, así el usuario puede
   // colapsar el rail al abrir una resolución y luego volver a la conversación
@@ -400,11 +416,22 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
       if (Array.isArray(saved.messages) && saved.messages.length) {
         setMessages(saved.messages);
         setConversacionId(saved.conversacionId ?? null);
+        // Si venimos de abrir una cita y hemos vuelto a la Biblioteca, reabrimos el
+        // rail sobre la conversación. En la ficha `/resoluciones/[id]` dejamos el
+        // flag intacto (rail colapsado) hasta que se pise la Biblioteca al volver.
+        if (window.sessionStorage.getItem(REOPEN_STORAGE_KEY) === "true") {
+          const onLibrary =
+            window.location.pathname.replace(/\/+$/, "") === "/resoluciones";
+          if (onLibrary) {
+            window.sessionStorage.removeItem(REOPEN_STORAGE_KEY);
+            setOpenPersisted(true);
+          }
+        }
       }
     } catch {
       /* sessionStorage bloqueado o JSON corrupto: empieza hilo limpio */
     }
-  }, [consultorUrl]);
+  }, [consultorUrl, setOpenPersisted]);
 
   // Persiste el hilo activo en cada cambio (solo Consultor). Solo escribe: el
   // borrado es explícito en newConversation(), para no limpiar la clave en el
@@ -420,15 +447,6 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
       /* ignore */
     }
   }, [consultorUrl, messages, conversacionId]);
-
-  const setOpenPersisted = useCallback((next: boolean) => {
-    setOpen(next);
-    try {
-      window.localStorage.setItem(OPEN_STORAGE_KEY, String(next));
-    } catch {
-      /* ignore */
-    }
-  }, []);
 
   const ask = useCallback(
     async (pregunta: string) => {
@@ -766,6 +784,13 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
     if (index < 0 || index >= citas.length) return;
     if (inConsultor) {
       const fuentes = citas.map((x) => x.resolucionId).join(",");
+      // Colapsa el rail para no tapar la ficha, pero deja marcado que al volver a
+      // la Biblioteca hay que reabrirlo sobre la conversación (ver REOPEN_STORAGE_KEY).
+      try {
+        window.sessionStorage.setItem(REOPEN_STORAGE_KEY, "true");
+      } catch {
+        /* ignore */
+      }
       setOpenPersisted(false);
       window.location.href = `/resoluciones/${citas[index].resolucionId}?fuentes=${encodeURIComponent(fuentes)}&fi=${index}`;
     } else {
