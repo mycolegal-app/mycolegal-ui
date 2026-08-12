@@ -462,6 +462,23 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
         return;
       }
 
+      // Comando especial /new (alias /nuevo, /clear): inicia una conversación
+      // nueva, igual que el botón ➕ (mismo efecto que newConversation()). Se
+      // resuelve EN CLIENTE. Paridad con el /new del DM de Telegram.
+      if (q === "/new" || q === "/nuevo" || q === "/clear") {
+        setInput("");
+        setMessages([]);
+        setConversacionId(null);
+        setViewer(null);
+        setView("chat");
+        try {
+          window.sessionStorage.removeItem(THREAD_STORAGE_KEY);
+        } catch {
+          /* ignore */
+        }
+        return;
+      }
+
       setView("chat");
 
       // Comando especial /help (alias /ayuda): ayuda sobre el propio MycoBot.

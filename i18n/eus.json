@@ -943,7 +943,7 @@
       "helpScope": "Gai hauetara mugatzen naiz; ez naiz erabilera orokorreko laguntzailea.",
       "helpCite": "Doktrina erabiltzen dudanean, erantzun bakoitzak aipatutako ebazpenak ditu: sakatu bat fitxa irekitzeko.",
       "helpManual": "Galdera mota guztiak adibideekin ikusteko, ireki eskuliburuko «MycoBot-i galdetu» atala.",
-      "helpCommands": "Komandoak: /help laguntza hau ikusteko · /sources Liburutegiko zein klase hartzen ditudan aukeratzeko.",
+      "helpCommands": "Komandoak: /help (laguntza hau) · /new (hutsetik hasi) · /sources (Liburutegiko zein klase hartzen ditudan aukeratzeko).",
       "chipDoctrina": "Onartu gabeko hipoteka unilaterala inskribagarria al da?",
       "chipAyuda": "Nola funtzionatzen du aplikazio honek?",
       "chipDatosNotaria": "Zenbat espediente ditut iraungita?",
