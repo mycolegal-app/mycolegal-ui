@@ -1395,6 +1395,13 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
                                       <span className="font-mono text-[11px] text-cyan-700">
                                         [{j + 1}] {label}
                                       </span>
+                                      {/* #2 — fecha de la resolución citada, visible ANTES de pinchar
+                                          (mismo formato que el visor de la ficha). */}
+                                      {c.fecha && (
+                                        <span className="text-[10px] tabular-nums text-gray-400">
+                                          {new Date(c.fecha).toLocaleDateString()}
+                                        </span>
+                                      )}
                                     </span>
                                     {c.titulo && (
                                       <span className="block truncate text-[11px] text-gray-500">{c.titulo}</span>
