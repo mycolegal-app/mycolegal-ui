@@ -10,6 +10,14 @@ import tailwindAnimate from 'tailwindcss-animate';
  */
 const preset = {
   content: [] as string[],
+  // La app es light-only: los tokens del design system (--mc-background/foreground)
+  // nunca se invierten y no existe ningún toggle `.dark` en el DOM. Con el default
+  // `'media'`, cualquier variante `dark:` suelta en un componente se activaba sola
+  // cuando el SO del usuario estaba en modo oscuro (p.ej. panel de alertas navy con
+  // texto oscuro ilegible, incidencia #568). Fijando `'class'` esas variantes quedan
+  // inertes salvo que algún día se añada `.dark` explícitamente, y la UI se renderiza
+  // consistentemente en claro en todas las apps.
+  darkMode: 'class' as const,
   theme: {
     extend: {
       /* ----------------------------------------------------------------
