@@ -42,6 +42,19 @@ interface LoginFormProps {
   forgotPasswordUrl?: string;
 }
 
+/**
+ * Destino post-login preservado por el guard de 401 (`?returnTo=`, p.ej. el
+ * `/foro/vincular?t=…` del /link). Se valida para evitar open-redirect: solo
+ * rutas relativas del mismo origen (empiezan por "/" pero no "//" ni "/\"").
+ * Devuelve null si no hay o no es segura → se usa el `redirectTo` por defecto.
+ */
+function safeReturnTo(): string | null {
+  if (typeof window === "undefined") return null;
+  const rt = new URLSearchParams(window.location.search).get("returnTo");
+  if (!rt || !rt.startsWith("/") || rt.startsWith("//") || rt.startsWith("/\\")) return null;
+  return rt;
+}
+
 export function LoginForm({
   appName,
   appLogoSvg,
@@ -116,7 +129,7 @@ export function LoginForm({
       } else if (forcedChange) {
         window.location.href = "/change-password";
       } else {
-        window.location.href = redirectTo;
+        window.location.href = safeReturnTo() ?? redirectTo;
       }
     } catch {
       setError(t("ui.login.errConnection"));
@@ -150,7 +163,7 @@ export function LoginForm({
       } else if (forcedChange) {
         window.location.href = "/change-password";
       } else {
-        window.location.href = redirectTo;
+        window.location.href = safeReturnTo() ?? redirectTo;
       }
     } catch {
       setError(t("ui.login.errConnection"));

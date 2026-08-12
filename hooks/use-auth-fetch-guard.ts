@@ -62,7 +62,12 @@ export function useAuthFetchGuard(loginPath = "/login") {
       // Avoid infinite loops if we're already on the login page
       if (window.location.pathname === loginPath) return response;
 
-      window.location.href = loginPath;
+      // Preserva el destino (ruta + query, p.ej. `?t=<token>` del /link del foro)
+      // para volver a él tras autenticarse. Sin esto, cualquier deep-link que
+      // caduque la sesión aterriza en el home. El login valida returnTo antes de
+      // usarlo (solo ruta relativa mismo-origen → sin open-redirect).
+      const returnTo = window.location.pathname + window.location.search;
+      window.location.href = `${loginPath}?returnTo=${encodeURIComponent(returnTo)}`;
       return response;
     }
 
