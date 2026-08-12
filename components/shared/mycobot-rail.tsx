@@ -175,6 +175,8 @@ interface ConversacionResumen {
   titulo: string;
   updatedAt: string;
   turnos: number;
+  /** Conversación originada en el DM 1:1 con MycoBot en Telegram. */
+  esTelegram?: boolean;
 }
 
 // Ficha de resolución para el visor in-rail (GET …/{id}).
@@ -949,6 +951,12 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
                             <span className="block truncate text-[13px] text-gray-800">{c.titulo}</span>
                             <span className="mt-0.5 block text-[11px] text-gray-400">
                               {new Date(c.updatedAt).toLocaleDateString()} · {t("ui.mycobot.turnos", { n: c.turnos })}
+                              {c.esTelegram && (
+                                <span className="ml-1.5 inline-flex items-center gap-0.5 rounded bg-sky-100 px-1 align-middle font-medium text-sky-700">
+                                  <Send className="h-2.5 w-2.5" />
+                                  Telegram
+                                </span>
+                              )}
                             </span>
                           </button>
                         </li>
@@ -1044,6 +1052,12 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
                         <span className="block truncate text-sm text-gray-800">{c.titulo}</span>
                         <span className="mt-0.5 block text-[11px] text-gray-400">
                           {new Date(c.updatedAt).toLocaleDateString()} · {t("ui.mycobot.turnos", { n: c.turnos })}
+                          {c.esTelegram && (
+                            <span className="ml-1.5 inline-flex items-center gap-0.5 rounded bg-sky-100 px-1 align-middle font-medium text-sky-700">
+                              <Send className="h-2.5 w-2.5" />
+                              Telegram
+                            </span>
+                          )}
                         </span>
                       </button>
                     </li>
