@@ -19,6 +19,8 @@ export { Toaster } from './components/ui/toaster';
 // Shared Components
 export { PageHeader } from './components/shared/page-header';
 export { DataTable } from './components/shared/data-table';
+export { FirstRunWelcome } from './components/shared/first-run-welcome';
+export type { WelcomeStep } from './components/shared/first-run-welcome';
 export { AlertBanner } from './components/shared/alert-banner';
 export { LoadingSpinner } from './components/shared/loading-spinner';
 export { EmptyState } from './components/shared/empty-state';
