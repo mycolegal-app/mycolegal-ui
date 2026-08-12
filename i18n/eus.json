@@ -688,6 +688,10 @@
     "header": {
       "helpAria": "Laguntza",
       "helpTitle": "Eskuliburua ireki",
+      "helpMenuIntro": "Ikusi sarrera",
+      "helpMenuManual": "Eskuliburua",
+      "helpMenuAsk": "Galdetu IAri",
+      "helpMenuReport": "Jakinarazi gorabehera bat",
       "searchAria": "Bilatu",
       "searchUnavailable": "Bilaketa ez dago erabilgarri aplikazio honetan"
     },

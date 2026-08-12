@@ -688,6 +688,10 @@
     "header": {
       "helpAria": "Axuda",
       "helpTitle": "Abrir manual",
+      "helpMenuIntro": "Ver a introdución",
+      "helpMenuManual": "Manual",
+      "helpMenuAsk": "Preguntar á IA",
+      "helpMenuReport": "Reportar unha incidencia",
       "searchAria": "Buscar",
       "searchUnavailable": "Busca non dispoñible nesta aplicación"
     },

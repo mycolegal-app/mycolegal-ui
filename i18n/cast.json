@@ -689,6 +689,10 @@
     "header": {
       "helpAria": "Ayuda",
       "helpTitle": "Abrir manual",
+      "helpMenuIntro": "Ver la introducción",
+      "helpMenuManual": "Manual",
+      "helpMenuAsk": "Preguntar a la IA",
+      "helpMenuReport": "Reportar una incidencia",
       "searchAria": "Buscar",
       "searchUnavailable": "Búsqueda no disponible en esta aplicación"
     },

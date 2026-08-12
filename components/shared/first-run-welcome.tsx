@@ -74,6 +74,9 @@ export function FirstRunWelcome({ appSlug, appName, logo, steps, adminUrl = "/ad
   // el usuario la desmarca, NO se marca el tour como visto → reaparece la próxima
   // sesión. Solo gobierna el tour de la app; el paso de equipo se marca siempre.
   const [remember, setRemember] = useState(true);
+  // Relanzado a mano desde el (?) del toolbar (evento `mycolegal:open-firstrun`):
+  // muestra SOLO el tour de la app (no el paso de equipo, que es una acción puntual).
+  const [forced, setForced] = useState(false);
 
   // Decide si mostrarse a partir del estado central de onboarding.
   useEffect(() => {
@@ -103,15 +106,32 @@ export function FirstRunWelcome({ appSlug, appName, logo, steps, adminUrl = "/ad
     };
   }, [appSlug]);
 
-  // Lista efectiva de pasos: tour de la app (si no visto) + paso de equipo (si org_admin).
+  // Relanzar el tour desde el (?) del toolbar. Fuerza la reapertura del tour de la
+  // app (ignorando el flag "visto") empezando por el principio; nunca reabre el
+  // paso de alta de equipo.
+  useEffect(() => {
+    const handler = () => {
+      setForced(true);
+      setI(0);
+      setOpen(true);
+    };
+    window.addEventListener("mycolegal:open-firstrun", handler);
+    return () => window.removeEventListener("mycolegal:open-firstrun", handler);
+  }, []);
+
+  // Lista efectiva de pasos: en modo relanzado, solo el tour de la app. En
+  // arranque, tour (si no visto) + paso de equipo (si org_admin).
   const effectiveSteps = useMemo(() => {
+    if (forced) return steps;
     const list: WelcomeStep[] = [];
     if (showWelcome) list.push(...steps);
     if (showTeam) list.push({ key: "team", title: "Da de alta a tu equipo", text: "" });
     return list;
-  }, [showWelcome, showTeam, steps]);
+  }, [forced, showWelcome, showTeam, steps]);
 
-  if (!ready || !open || effectiveSteps.length === 0) return null;
+  // `ready` solo gobierna la apertura AUTOMÁTICA (evita parpadeo antes del fetch);
+  // el relanzado manual (`forced`) puede abrir sin esperar.
+  if ((!ready && !forced) || !open || effectiveSteps.length === 0) return null;
 
   const current = effectiveSteps[Math.min(i, effectiveSteps.length - 1)];
   const isTeamStep = current.key === "team";
@@ -153,15 +173,19 @@ export function FirstRunWelcome({ appSlug, appName, logo, steps, adminUrl = "/ad
       } else if (showTeam) {
         setTeamDone("later");
       }
-      // El tour solo se "recuerda" si la casilla está marcada; el paso de equipo
-      // (decisión puntual del org_admin) se marca siempre que se complete/posponga.
-      if (showWelcome && remember) await mark(`welcome:${appSlug}`);
-      if (showTeam) await mark("team-onboarding");
+      // En relanzado manual (forced) no se re-marca nada: el tour ya se vio y el
+      // paso de equipo no forma parte del replay. El tour solo se "recuerda" si la
+      // casilla está marcada; el paso de equipo se marca siempre al completarse/posponerse.
+      if (!forced) {
+        if (showWelcome && remember) await mark(`welcome:${appSlug}`);
+        if (showTeam) await mark("team-onboarding");
+      }
     } finally {
       setSubmitting(false);
+      const withTeam = showTeam && !forced;
       // Pequeña pausa para que se vea el acuse del alta.
-      setTimeout(() => setOpen(false), showTeam ? 900 : 0);
-      if (!showTeam) setOpen(false);
+      setTimeout(() => { setOpen(false); setForced(false); }, withTeam ? 900 : 0);
+      if (!withTeam) { setOpen(false); setForced(false); }
     }
   }
 
