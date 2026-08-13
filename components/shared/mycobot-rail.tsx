@@ -173,9 +173,6 @@ interface Msg {
   error?: boolean;
   /** Pasos que siguió el bucle agéntico (para «Ver proceso»). */
   steps?: StepRecord[];
-  /** Razonamiento del modelo (thought summary), streameado en vivo y plegado
-   *  luego dentro de «Ver proceso». */
-  reasoning?: string;
 }
 
 // Resumen de conversación (GET …/conversaciones).
@@ -287,9 +284,6 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
   const [loading, setLoading] = useState(false);
   // Paso en curso del bucle agéntico que se muestra en vivo (línea que se sustituye).
   const [stepLive, setStepLive] = useState<{ label: string; query?: string; hint?: string; error?: boolean } | null>(null);
-  // Streaming en vivo del turno en curso: razonamiento y respuesta según llegan.
-  const [liveReasoning, setLiveReasoning] = useState("");
-  const [liveAnswer, setLiveAnswer] = useState("");
   // Mensajes cuyo «Ver proceso» está desplegado (por índice de mensaje).
   const [openProcess, setOpenProcess] = useState<Set<number>>(new Set());
   // Índice del mensaje cuya respuesta se acaba de copiar al portapapeles (feedback ✓).
@@ -529,11 +523,8 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
       setMessages((m) => [...m, { role: "user", text: q }]);
       setLoading(true);
       setStepLive(null);
-      setLiveReasoning("");
-      setLiveAnswer("");
       const steps: StepRecord[] = [];
       let answerText = "";
-      let reasoningText = "";
       try {
         const res = await fetch(askUrl, {
           method: "POST",
@@ -616,15 +607,9 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
                   if (lastTool) lastTool.error = true;
                   setStepLive({ label: s.label, error: true });
                 }
-              } else if (s.type === "reasoning") {
-                // Razonamiento del modelo en vivo: se va acumulando y mostrando.
-                reasoningText += (s as { text?: string }).text ?? "";
-                setLiveReasoning(reasoningText);
               }
             } else if (ev.event === "token") {
-              const piece = (ev.data as { text?: string }).text ?? "";
-              answerText += piece;
-              setLiveAnswer(answerText);
+              answerText += (ev.data as { text?: string }).text ?? "";
             } else if (ev.event === "done") {
               final = ev.data as DonePayload;
             } else if (ev.event === "error") {
@@ -649,7 +634,6 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
             skill: final?.skill,
             sinResultado: !!final?.sinResultado,
             steps: steps.length ? steps.slice() : undefined,
-            reasoning: reasoningText.trim() || undefined,
           },
         ]);
       } catch {
@@ -658,8 +642,6 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
       } finally {
         setLoading(false);
         setStepLive(null);
-        setLiveReasoning("");
-        setLiveAnswer("");
         void refreshBalance(); // la consulta puede haber gastado créditos
       }
     },
@@ -801,10 +783,10 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
     return () => window.removeEventListener("mycolegal:open-mycobot", handler);
   }, [ask, openHistory, setOpenPersisted]);
 
-  // Auto-scroll al final del hilo (sigue también el streaming en vivo).
+  // Auto-scroll al final del hilo.
   useEffect(() => {
     if (view === "chat") threadRef.current?.scrollTo({ top: threadRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, loading, view, liveAnswer, liveReasoning]);
+  }, [messages, loading, view]);
 
   // #563(a) — auto-grow del textarea: crece con el contenido hasta MAX_INPUT_PX y a
   // partir de ahí hace scroll interno. Se recalcula en cada cambio de `input` (incl.
@@ -1355,7 +1337,7 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
                           </button>
                         </div>
                       )}
-                      {m.role === "bot" && !m.error && ((m.steps && m.steps.length > 0) || m.reasoning) && (
+                      {m.role === "bot" && !m.error && m.steps && m.steps.length > 0 && (
                         <div className="mt-2">
                           <button
                             type="button"
@@ -1369,36 +1351,20 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
                             }
                             className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-gray-600"
                           >
-                            {openProcess.has(i)
-                              ? "▾ Ocultar proceso"
-                              : `▸ Ver proceso${m.steps?.length ? ` · ${m.steps.length} pasos` : ""}`}
+                            {openProcess.has(i) ? "▾ Ocultar proceso" : `▸ Ver proceso · ${m.steps.length} pasos`}
                           </button>
                           {openProcess.has(i) && (
-                            <div className="mt-1 space-y-2 border-l-2 border-gray-200 pl-2">
-                              {m.steps && m.steps.length > 0 && (
-                                <ol className="space-y-1">
-                                  {m.steps.map((s, k) => (
-                                    <li key={k} className="text-[11px] leading-snug">
-                                      <span className={s.error ? "text-red-500" : "text-gray-600"}>{s.label}</span>
-                                      {s.hint && <span className="text-gray-400"> · {s.hint}</span>}
-                                      {s.query && (
-                                        <span className="block truncate italic text-gray-400">“{s.query}”</span>
-                                      )}
-                                    </li>
-                                  ))}
-                                </ol>
-                              )}
-                              {m.reasoning && (
-                                <div>
-                                  <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
-                                    {t("ui.mycobot.reasoning")}
-                                  </p>
-                                  <div className="whitespace-pre-wrap text-[11px] leading-snug text-gray-500">
-                                    {m.reasoning}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
+                            <ol className="mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
+                              {m.steps.map((s, k) => (
+                                <li key={k} className="text-[11px] leading-snug">
+                                  <span className={s.error ? "text-red-500" : "text-gray-600"}>{s.label}</span>
+                                  {s.hint && <span className="text-gray-400"> · {s.hint}</span>}
+                                  {s.query && (
+                                    <span className="block truncate italic text-gray-400">“{s.query}”</span>
+                                  )}
+                                </li>
+                              ))}
+                            </ol>
                           )}
                         </div>
                       )}
@@ -1528,41 +1494,19 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
                   </div>
                 ))}
                 {loading && (
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-start gap-2 px-1 text-sm text-gray-500">
-                      <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin" />
-                      {stepLive ? (
-                        // Línea viva: el paso en curso (se sustituye por el siguiente).
-                        <span className="min-w-0">
-                          <span className={stepLive.error ? "text-red-500" : ""}>{stepLive.label}</span>
-                          {stepLive.hint && <span className="text-gray-400"> · {stepLive.hint}</span>}
-                          {stepLive.query && (
-                            <span className="block truncate text-[12px] italic text-gray-400">“{stepLive.query}”</span>
-                          )}
-                        </span>
-                      ) : (
-                        <span>{t("ui.mycobot.thinking")}</span>
-                      )}
-                    </div>
-                    {/* Razonamiento del modelo en vivo (se pliega en «Ver proceso» al terminar). */}
-                    {liveReasoning && (
-                      <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
-                        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
-                          {t("ui.mycobot.reasoningLive")}
-                        </p>
-                        <div className="max-h-40 overflow-y-auto whitespace-pre-wrap text-[12px] leading-snug text-gray-500">
-                          {liveReasoning}
-                        </div>
-                      </div>
-                    )}
-                    {/* Respuesta que se va escribiendo (Markdown, sin citas aún). */}
-                    {liveAnswer && (
-                      <div className="flex justify-start">
-                        <div
-                          className="max-w-[92%] rounded-lg bg-gray-100 px-3 py-2 text-sm leading-relaxed text-gray-800 [&_code]:rounded [&_code]:bg-gray-200 [&_code]:px-1 [&_li]:mt-0.5 [&_ol]:my-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-4"
-                          dangerouslySetInnerHTML={{ __html: renderMarkdown(liveAnswer) }}
-                        />
-                      </div>
+                  <div className="flex items-start gap-2 px-1 text-sm text-gray-500">
+                    <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin" />
+                    {stepLive ? (
+                      // Línea viva: el paso en curso (se sustituye por el siguiente).
+                      <span className="min-w-0">
+                        <span className={stepLive.error ? "text-red-500" : ""}>{stepLive.label}</span>
+                        {stepLive.hint && <span className="text-gray-400"> · {stepLive.hint}</span>}
+                        {stepLive.query && (
+                          <span className="block truncate text-[12px] italic text-gray-400">“{stepLive.query}”</span>
+                        )}
+                      </span>
+                    ) : (
+                      <span>{t("ui.mycobot.thinking")}</span>
                     )}
                   </div>
                 )}

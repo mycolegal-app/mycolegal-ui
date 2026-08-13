@@ -944,8 +944,6 @@
       "skill_agente": "Datos",
       "copy": "Copiar",
       "copied": "Copiado",
-      "reasoning": "Razonamiento",
-      "reasoningLive": "Razonando…",
       "outOfScope": "Solo puedo ayudarte con doctrina notarial, registral o fiscal y con el uso de las aplicaciones de MyCoLegal.",
       "corpusBadge": "{count} resoluciones en la base de doctrina",
       "welcomeTitle": "Hola, soy MycoBot 👋",
