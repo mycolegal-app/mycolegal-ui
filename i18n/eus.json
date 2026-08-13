@@ -943,6 +943,8 @@
       "skill_agente": "Datuak",
       "copy": "Kopiatu",
       "copied": "Kopiatuta",
+      "reasoning": "Arrazoiketa",
+      "reasoningLive": "Arrazoitzen…",
       "outOfScope": "Notariotza-, erregistro- edo zerga-doktrinan eta MyCoLegal aplikazioen erabileran baino ezin dizut lagundu.",
       "corpusBadge": "{count} ebazpen doktrina-basean",
       "welcomeTitle": "Kaixo, MycoBot naiz 👋",
