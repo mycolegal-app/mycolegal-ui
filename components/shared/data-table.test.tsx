@@ -202,6 +202,93 @@ describe("DataTable · estados de error", () => {
   });
 });
 
+describe("DataTable · invariantes del refactor (fuente única)", () => {
+  it("modo servidor: la carga inicial es UN solo fetch (sin doble probe+page)", async () => {
+    const srv = installServer(makeRows(1000));
+    render(<DataTable columns={columns} source={{ endpoint: "/api/x" }} pageSize={20} />);
+    await waitFor(() => expect(dataRowCount()).toBe(20));
+    expect(srv.calls.length).toBe(1);
+    expect(srv.calls[0].get("pageSize")).toBe("200");
+  });
+
+  it("nunca pide más de 200 filas por página aunque se seleccione un tamaño mayor", async () => {
+    const srv = installServer(makeRows(1000));
+    render(
+      <DataTable columns={columns} source={{ endpoint: "/api/x" }} pageSize={20} pageSizeOptions={[20, 500]} />,
+    );
+    await waitFor(() => expect(dataRowCount()).toBe(20));
+    fireEvent.change(screen.getByLabelText("ui.dataTable.rowsPerPage"), { target: { value: "500" } });
+    await waitFor(() =>
+      expect(srv.calls.some((c) => c.get("pageSize") === "200" && c.get("page") === "1")).toBe(true),
+    );
+    expect(srv.calls.every((c) => Number(c.get("pageSize")) <= 200)).toBe(true);
+  });
+
+  it("cambiar de filtro estando en página posterior aterriza en la página 1 (no vacía)", async () => {
+    const rows = [...makeRows(1000, "ALL"), ...makeRows(36, "DOCTRINA").map((r) => ({ ...r, id: "d" + r.id }))];
+    installServer(rows);
+    const { rerender } = render(
+      <DataTable columns={columns} source={{ endpoint: "/api/x", extraParams: { clase: undefined } }} pageSize={20} />,
+    );
+    await waitFor(() => expect(dataRowCount()).toBe(20));
+    fireEvent.click(screen.getByRole("button", { name: /Siguiente/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Siguiente/i }));
+    await waitFor(() => expect(paginaText()).toMatch(/Página 3/));
+
+    rerender(
+      <DataTable columns={columns} source={{ endpoint: "/api/x", extraParams: { clase: "DOCTRINA" } }} pageSize={20} />,
+    );
+    await waitFor(() => expect(paginaText()).toMatch(/Página 1 de 2/));
+    expect(dataRowCount()).toBe(20);
+  });
+
+  it("catálogo pequeño con clientCacheMax explícito: 1 fetch, 'Todos' sin refetch, orden en memoria", async () => {
+    const srv = installServer(makeRows(411, "ACTO"));
+    render(
+      <DataTable
+        columns={columns}
+        source={{ endpoint: "/api/x", clientCacheMax: 1000, sortableColumns: [] }}
+        initialSort={{ id: "name", desc: false }}
+        pageSize={20}
+        pageSizeOptions={[20, 50, 100]}
+      />,
+    );
+    await waitFor(() => expect(dataRowCount()).toBe(20));
+    expect(srv.calls.length).toBe(1); // un solo fetch primario trae los 411
+    expect(paginaText()).toMatch(/de 21/); // 411/20 = 21 páginas
+
+    // "Todos" (value=411) muestra los 411 SIN fetch adicional
+    const before = srv.calls.length;
+    fireEvent.change(screen.getByLabelText("ui.dataTable.rowsPerPage"), { target: { value: "411" } });
+    await waitFor(() => expect(dataRowCount()).toBe(411));
+    expect(srv.calls.length).toBe(before);
+
+    // orden en memoria por una columna NO declarada en sortableColumns
+    fireEvent.click(screen.getByRole("button", { name: /Nombre/i })); // asc→desc
+    await waitFor(() => {
+      const first = screen.getAllByRole("row").find((r) => within(r).queryAllByRole("cell").length > 0);
+      return expect(within(first!).getByText("row-0411")).toBeTruthy();
+    });
+    expect(srv.calls.length).toBe(before); // el orden cliente no dispara fetch
+  });
+
+  it("si el total encoge por debajo de la página actual, reconduce (clamp) sin dejar vacío", async () => {
+    const rows = makeRows(1000);
+    installServer(rows);
+    const { rerender } = render(
+      <DataTable columns={columns} source={{ endpoint: "/api/x", refreshKey: 1 }} pageSize={20} />,
+    );
+    await waitFor(() => expect(dataRowCount()).toBe(20));
+    for (let i = 0; i < 9; i++) fireEvent.click(screen.getByRole("button", { name: /Siguiente/i }));
+    await waitFor(() => expect(paginaText()).toMatch(/Página 10/));
+
+    rows.splice(25); // el dataset encoge a 25 filas
+    rerender(<DataTable columns={columns} source={{ endpoint: "/api/x", refreshKey: 2 }} pageSize={20} />);
+    await waitFor(() => expect(paginaText()).toMatch(/de 2/));
+    expect(dataRowCount()).toBeGreaterThan(0);
+  });
+});
+
 describe("DataTable · BUG total>0 con 0 filas (carrera de offset)", () => {
   it("un cambio de filtro estando en página posterior NUNCA deja total>0 con 0 filas", async () => {
     // 1000 filas ALL (servidor). Al filtrar clase=DOCTRINA quedan 36.
@@ -211,11 +298,10 @@ describe("DataTable · BUG total>0 con 0 filas (carrera de offset)", () => {
     const { rerender } = render(
       <DataTable columns={columns} source={{ endpoint: "/api/x", extraParams: { clase: undefined } }} pageSize={20} />,
     );
-    // probe inicial (clase=ALL → total 1036 > 200 → servidor) + fetch de página
+    // carga primaria (clase=ALL → total 1036 > 200 → servidor). Sirve la 1ª
+    // página desde el propio fetch primario: SIN doble fetch.
     await waitFor(() => expect(srv.pending.some((p) => !p.params.get("clase"))).toBe(true));
     srv.flush((p) => p.get("pageSize") === "200" && !p.get("clase"));
-    await waitFor(() => expect(srv.pending.some((p) => p.params.get("pageSize") === "20")).toBe(true));
-    srv.flush((p) => p.get("page") === "1" && p.get("pageSize") === "20");
     await waitFor(() => expect(dataRowCount()).toBe(20));
 
     // navegar a página 2 y luego 3; la de página 3 queda EN VUELO (offset viejo)
@@ -226,7 +312,7 @@ describe("DataTable · BUG total>0 con 0 filas (carrera de offset)", () => {
     await waitFor(() => expect(srv.pending.some((p) => p.params.get("page") === "3")).toBe(true));
     // NO resolvemos page=3: queda pendiente con skip=40 (clase=ALL)
 
-    // cambiar filtro a DOCTRINA (probe rápido, total 36 → cliente)
+    // cambiar filtro a DOCTRINA (primaria rápida, total 36 → cliente, página 1)
     rerender(
       <DataTable columns={columns} source={{ endpoint: "/api/x", extraParams: { clase: "DOCTRINA" } }} pageSize={20} />,
     );

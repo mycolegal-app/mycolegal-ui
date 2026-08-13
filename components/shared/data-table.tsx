@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from "react";
 import {
   type ColumnDef,
+  type OnChangeFn,
   type SortingState,
   type ColumnFiltersState,
   type VisibilityState,
@@ -24,26 +25,30 @@ export interface RemoteDataSource {
   /** Extra query params (filters like estado, tipo, etc.). DataTable adds `page`, `pageSize`, `search`. */
   extraParams?: Record<string, string | number | boolean | null | undefined>;
   /**
-   * Threshold to auto-switch from client-side to server-side mode. Default 200.
-   * If the first fetch reports `total <= threshold`, DataTable loads the full
-   * dataset once and lets TanStack handle paginate/sort/filter in memory.
-   * Otherwise it switches to server-side pagination and pushes `search` to
-   * the API so queries hit the full population.
+   * Umbral de estrategia. Si el primer fetch reporta `total ≤ clientCacheMax`,
+   * el dataset se carga UNA vez (acotado a este número) y se ordena/pagina en
+   * memoria; por encima, paginación en servidor pura (una página por fetch).
+   * Se topa duro a 200: jamás se cargan miles de registros en cliente.
+   * Alias histórico: `threshold`. Default 200.
    */
+  clientCacheMax?: number;
+  /** @deprecated Alias de `clientCacheMax`. */
   threshold?: number;
+  /**
+   * Adaptador de respuesta para endpoints cuyo envoltorio no es
+   * `{ data, meta: { total } }`. Debe devolver `{ rows, total }`.
+   */
+  mapResponse?: (json: unknown) => { rows: unknown[]; total: number };
   /** Bump to force a refetch (e.g. after creating/updating a row). */
   refreshKey?: string | number;
   /** Query param name for the search term. Default `search`. */
   searchParam?: string;
   /**
-   * Server-side sorting (only relevant when the dataset is large enough to run
-   * in server mode). List the column ids the endpoint knows how to sort by;
-   * only those headers become clickable in server mode, and clicking one sends
-   * `sort=<columnId>&order=asc|desc` to the API (param names overridable below)
-   * plus resets to page 1. In client mode (under `threshold`) TanStack keeps
-   * sorting the fully-loaded set, so this is ignored. When omitted, server-mode
-   * headers are not sortable — avoids the misleading "sorts only this page"
-   * behaviour you'd otherwise get from client-side sorting over a server slice.
+   * Columnas que el ENDPOINT sabe ordenar (envía `sort=<id>&order=asc|desc`).
+   * En estrategia servidor, solo estas cabeceras son clicables. En estrategia
+   * cliente (dataset pequeño cacheado) se ordena en memoria cualquier columna.
+   * Omitida ⇒ en servidor no hay orden por cabecera (evita el engañoso "ordena
+   * solo esta página").
    */
   sortableColumns?: string[];
   /** Query param name for the sort column. Default `sort`. */
@@ -133,26 +138,90 @@ interface DataTableProps<TData, TValue> {
   paginatorExtras?: ReactNode;
 }
 
-type Mode = "init" | "client" | "server";
+// Estrategia de rebanado del dataset actual. NO es un conmutador de propiedad
+// del estado (como el viejo `mode`): el estado (página/tamaño/orden/búsqueda) es
+// SIEMPRE del reducer de abajo. La estrategia solo decide DÓNDE se calcula la
+// rebanada visible: en memoria (cliente, dataset pequeño ya cacheado) o pidiendo
+// una página al servidor (dataset grande).
+type Strategy = "unknown" | "client" | "server";
+
+/** Por defecto: datasets con `total ≤` esto se cargan una vez y se ordenan/
+ *  paginan en memoria; por encima, servidor puro. Configurable por `source`. */
+const DEFAULT_CLIENT_CACHE_MAX = 200;
+/** Techo DURO del client-cache aunque un caller pida más: un catálogo curado
+ *  puede optar a cargarse entero (p.ej. ~411 actos), pero jamás decenas de
+ *  miles. `clientCacheMax` es también el tope de `pageSize` y del fetch
+ *  primario, así que ninguna request supera este número de filas. */
+const MAX_CLIENT_CACHE = 1000;
+
+type SortSpec = { id: string; desc: boolean } | null;
 
 interface SourceState<T> {
+  /** Filas VISIBLES de la página actual (ya rebanadas). */
   data: T[];
+  /** Total de la población filtrada (del servidor). Base del cálculo local. */
   total: number;
-  mode: Mode;
   loading: boolean;
   /**
-   * Fetch error: `"forbidden"` for HTTP 403 (no permission), `"error"` for any
-   * other non-2xx / network failure, `null` when the last fetch succeeded.
-   * Without this a 403 left `data:[]` and rendered as "no data" — a silent 403
-   * indistinguishable from an empty list.
+   * `"forbidden"` para HTTP 403, `"error"` para cualquier otro fallo/red/timeout,
+   * `null` si el último fetch fue bien. Sin esto un 403 se veía como "sin datos".
    */
   error: "forbidden" | "error" | null;
   pageIndex: number;
   pageSize: number;
+  sort: SortSpec;
+  searchInput: string;
+  /** `"client"` cuando el dataset cabe en memoria; controla la opción "Todos". */
+  strategy: Strategy;
+}
+
+interface Query {
+  pageIndex: number;
+  pageSize: number;
+  sort: SortSpec;
   searchInput: string;
   searchDebounced: string;
-  /** `<columnId>:<asc|desc>` when sorting server-side, else null. */
-  serverSort: string | null;
+}
+
+type QueryAction =
+  | { type: "setPage"; pageIndex: number }
+  | { type: "setPageSize"; pageSize: number }
+  | { type: "setSort"; sort: SortSpec }
+  | { type: "setSearchInput"; value: string }
+  | { type: "commitSearch"; value: string }
+  | { type: "clampPage"; lastPage: number };
+
+// Reducer = única fuente de verdad. La clave de la robustez: cambiar filtro/
+// orden/tamaño/búsqueda resetea `pageIndex` a 0 EN EL MISMO update (atómico), así
+// que el efecto de carga nunca ve una página vieja junto a un filtro nuevo — la
+// carrera "total>0 con 0 filas" es imposible por construcción.
+function queryReducer(s: Query, a: QueryAction): Query {
+  switch (a.type) {
+    case "setPage":
+      return s.pageIndex === a.pageIndex ? s : { ...s, pageIndex: Math.max(0, a.pageIndex) };
+    case "setPageSize":
+      return { ...s, pageSize: a.pageSize, pageIndex: 0 };
+    case "setSort":
+      return { ...s, sort: a.sort, pageIndex: 0 };
+    case "setSearchInput":
+      return { ...s, searchInput: a.value };
+    case "commitSearch":
+      return s.searchDebounced === a.value ? s : { ...s, searchDebounced: a.value, pageIndex: 0 };
+    case "clampPage":
+      return s.pageIndex === a.lastPage ? s : { ...s, pageIndex: a.lastPage };
+  }
+}
+
+function compareRows<T>(a: T, b: T, sort: { id: string; desc: boolean }): number {
+  const av = (a as Record<string, unknown>)[sort.id];
+  const bv = (b as Record<string, unknown>)[sort.id];
+  let r: number;
+  if (av == null && bv == null) r = 0;
+  else if (av == null) r = -1;
+  else if (bv == null) r = 1;
+  else if (typeof av === "number" && typeof bv === "number") r = av - bv;
+  else r = String(av).localeCompare(String(bv));
+  return sort.desc ? -r : r;
 }
 
 function useRemoteSource<T>(
@@ -165,99 +234,82 @@ function useRemoteSource<T>(
   setSearchInput: (v: string) => void;
   setPageIndex: (idx: number) => void;
   setPageSize: (size: number) => void;
-  setServerSort: (v: string | null) => void;
+  setSort: (v: SortSpec) => void;
   retry: () => void;
 } {
-  const threshold = source?.threshold ?? 200;
   const searchParam = source?.searchParam ?? "search";
   const sortParam = source?.sortParam ?? "sort";
   const orderParam = source?.orderParam ?? "order";
+  const endpoint = source?.endpoint;
   const extraParams = source?.extraParams;
   const extraParamsKey = useMemo(() => JSON.stringify(extraParams ?? {}), [extraParams]);
   const refreshKey = source?.refreshKey;
-  const endpoint = source?.endpoint;
+  // Honra el valor explícito del caller (o el alias `threshold`) hasta el techo
+  // duro. Es el ÚNICO límite: fetch primario, tope de página y caché cliente.
+  const clientCacheMax = Math.min(
+    source?.clientCacheMax ?? source?.threshold ?? DEFAULT_CLIENT_CACHE_MAX,
+    MAX_CLIENT_CACHE,
+  );
+  const cappedInitial = Math.min(initialPageSize, clientCacheMax);
 
-  const [data, setData] = useState<T[]>([]);
-  const [total, setTotal] = useState(0);
-  const [mode, setMode] = useState<Mode>("init");
+  const cappedInitialSort: SortSpec = initialSort
+    ? { id: initialSort.id, desc: initialSort.desc ?? false }
+    : null;
+  const [query, dispatch] = useReducer(queryReducer, undefined, () => ({
+    pageIndex: 0,
+    pageSize: cappedInitial,
+    sort: cappedInitialSort,
+    searchInput: "",
+    searchDebounced: "",
+  }));
+  const { pageIndex, pageSize, sort, searchInput, searchDebounced } = query;
+
+  // Estado de resultado (independiente del query).
+  const [serverRows, setServerRows] = useState<T[]>([]);
+  const [serverTotal, setServerTotal] = useState(0);
+  const [cache, setCache] = useState<T[] | null>(null); // dataset completo (modo cliente)
+  const [strategy, setStrategy] = useState<Strategy>("unknown");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<"forbidden" | "error" | null>(null);
-  const [pageIndex, setPageIndexState] = useState(0);
-  const [pageSize, setPageSizeState] = useState(initialPageSize);
-  const [searchInput, setSearchInputState] = useState("");
-  const [searchDebounced, setSearchDebounced] = useState("");
-  // Disparador de reintento manual (botón "Reintentar" del estado de error).
-  // Bumpearlo re-lanza el probe con los mismos filtros.
   const [retryTick, setRetryTick] = useState(0);
-  // Seed the server sort from `initialSort` so the very first probe already
-  // carries it and no re-probe (e.g. an `extraParams` change right after mount)
-  // can lose it. Previously serverSort started null and only got the initial
-  // order via an effect that races the init→server mode transition; when
-  // `extraParams` flipped during mount (a common pattern, e.g. resolving the
-  // logged-in user then adjusting a filter) that race dropped the order and
-  // subsequent header clicks stopped emitting a server sort.
-  const initialServerSort =
-    initialSort ? `${initialSort.id}:${initialSort.desc ? "desc" : "asc"}` : null;
-  const [serverSort, setServerSortState] = useState<string | null>(initialServerSort);
-  // Ref so the (memoised) fetcher always reads the current sort without being
-  // re-created on every sort change.
-  const serverSortRef = useRef<string | null>(initialServerSort);
-  const setServerSort = useCallback((v: string | null) => {
-    if (serverSortRef.current === v) return;
-    serverSortRef.current = v;
-    setServerSortState(v);
-  }, []);
-  const reqCounter = useRef(0);
-  // Separate sequence for probes. The mode (client/server) decision must be
-  // driven by the *latest probe*, independently of the data-staleness check
-  // below: if a probe's response arrives after a newer request bumped
-  // `reqCounter`, skipping its `setMode` used to leave `mode` wedged at "init"
-  // (a re-probe sets "init" first), which in turn stalled server-side sorting
-  // and pagination (#339). Gating the mode decision on `probeSeq` instead
-  // guarantees mode always resolves.
-  const probeSeq = useRef(0);
 
-  // Debounce search input → searchDebounced (sent to server in server mode,
-  // used as globalFilter in client mode).
-  useEffect(() => {
-    if (!source) return;
-    const h = setTimeout(() => setSearchDebounced(searchInput.trim()), 300);
-    return () => clearTimeout(h);
-  }, [searchInput, source]);
+  // Identidad del dataset = filtros + búsqueda (NO página/orden). Si cambia,
+  // hay que recargar y redecidir estrategia. Si solo cambia página/orden dentro
+  // del MISMO dataset, en cliente se re-rebana en memoria (sin fetch).
+  const datasetKey = `${endpoint ?? ""}|${extraParamsKey}|${searchDebounced}|${refreshKey ?? ""}|${retryTick}`;
 
-  // Reset to page 1 when filters or sort change.
-  useEffect(() => {
-    if (!source) return;
-    setPageIndexState(0);
-  }, [extraParamsKey, searchDebounced, serverSort, source]);
+  const seqRef = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
+  // Última "clave de filtro" (extraParams + búsqueda) para resetear a página 1
+  // cuando cambia el FILTRO (prop externa), pero NO en un simple refresh/retry.
+  const prevFilterKeyRef = useRef<string>(`${extraParamsKey}|${searchDebounced}`);
+  // Firma de lo último SERVIDO por el servidor: evita refetch redundante cuando
+  // la carga primaria ya cubrió (dataset, página 0, orden actual).
+  const servedRef = useRef<string>("");
+  // Dataset resuelto por la última carga primaria (para saber si un cambio es de
+  // dataset o solo de página/orden).
+  const resolvedDatasetRef = useRef<string>("");
 
-  const fetcher = useCallback(
-    async (params: { page: number; size: number; search: string; isProbe: boolean }) => {
+  const sortSig = (sp: SortSpec) => (sp ? `${sp.id}:${sp.desc ? "d" : "a"}` : "");
+
+  const runFetch = useCallback(
+    async (opts: { page: number; size: number; primary: boolean; datasetKey: string; sort: SortSpec }) => {
       if (!endpoint) return;
-      const myReq = ++reqCounter.current;
-      const myProbe = params.isProbe ? ++probeSeq.current : 0;
-      const isLatestProbe = () => params.isProbe && myProbe === probeSeq.current;
-      setLoading(true);
-      // Timeout duro: sin esto, un `fetch` que se quedaba encallado en el
-      // navegador dejaba `loading` en true PARA SIEMPRE (el `finally` solo lo
-      // limpia cuando la promesa resuelve). Abortamos a los 20 s → la promesa
-      // rechaza → se pinta el estado de error (con "Reintentar") en vez de un
-      // spinner eterno.
+      const seq = ++seqRef.current;
+      abortRef.current?.abort(); // cancela cualquier request anterior en vuelo
       const controller = new AbortController();
+      abortRef.current = controller;
       const timeout = setTimeout(() => controller.abort(), 20000);
+      const isLatest = () => seq === seqRef.current;
+      setLoading(true);
       try {
         const qs = new URLSearchParams();
-        qs.set("page", String(params.page));
-        qs.set("pageSize", String(params.size));
-        if (params.search) qs.set(searchParam, params.search);
-        if (serverSortRef.current) {
-          const sep = serverSortRef.current.lastIndexOf(":");
-          const sid = serverSortRef.current.slice(0, sep);
-          const sdir = serverSortRef.current.slice(sep + 1);
-          if (sid) {
-            qs.set(sortParam, sid);
-            qs.set(orderParam, sdir === "desc" ? "desc" : "asc");
-          }
+        qs.set("page", String(opts.page));
+        qs.set("pageSize", String(opts.size));
+        if (searchDebounced) qs.set(searchParam, searchDebounced);
+        if (opts.sort) {
+          qs.set(sortParam, opts.sort.id);
+          qs.set(orderParam, opts.sort.desc ? "desc" : "asc");
         }
         if (extraParams) {
           for (const [k, v] of Object.entries(extraParams)) {
@@ -266,69 +318,129 @@ function useRemoteSource<T>(
           }
         }
         const res = await fetch(`${endpoint}?${qs.toString()}`, { signal: controller.signal });
+        if (!isLatest()) return; // una request más nueva ganó
         if (!res.ok) {
-          // The latest probe still decides the mode even if its data is stale,
-          // so a large-population table can't get stuck out of server mode.
-          if (isLatestProbe()) setMode("client");
-          if (myReq !== reqCounter.current) return; // stale data
-          // Surface the failure instead of rendering an empty table: a 403
-          // (no permission) otherwise looked identical to "no data".
           setError(res.status === 403 ? "forbidden" : "error");
-          setData([]);
-          setTotal(0);
+          setStrategy("server");
+          setServerRows([]);
+          setServerTotal(0);
+          setCache(null);
           return;
         }
         const json = await res.json();
-        const rows: T[] = json.data ?? [];
-        const totalRows: number = json.meta?.total ?? rows.length;
-        if (isLatestProbe()) {
-          setMode(totalRows <= threshold ? "client" : "server");
-        }
-        if (myReq !== reqCounter.current) return; // stale data
+        const mapped = source?.mapResponse ? source.mapResponse(json) : null;
+        const rows: T[] = (mapped ? mapped.rows : json.data) ?? [];
+        const total: number = mapped ? mapped.total : json.meta?.total ?? rows.length;
+        if (!isLatest()) return;
         setError(null);
-        setData(rows);
-        setTotal(totalRows);
+        if (opts.primary) {
+          resolvedDatasetRef.current = opts.datasetKey;
+          if (total <= clientCacheMax) {
+            // Dataset pequeño: lo cacheamos entero y ordenamos/paginamos en
+            // memoria. Nunca supera `clientCacheMax` filas.
+            setStrategy("client");
+            setCache(rows);
+            setServerRows([]);
+            setServerTotal(total);
+          } else {
+            // Dataset grande: servidor puro. La carga primaria ya trajo la
+            // primera página (rows[0..pageSize]) → sin doble fetch.
+            setStrategy("server");
+            setCache(null);
+            setServerRows(rows.slice(0, opts.size >= pageSize ? pageSize : opts.size));
+            setServerTotal(total);
+            servedRef.current = `${opts.datasetKey}|0|${pageSize}|${sortSig(opts.sort)}`;
+          }
+        } else {
+          // Fetch de página (servidor).
+          setServerRows(rows);
+          setServerTotal(total);
+          servedRef.current = `${opts.datasetKey}|${opts.page - 1}|${opts.size}|${sortSig(opts.sort)}`;
+        }
       } catch {
-        if (isLatestProbe()) setMode("client");
-        if (myReq !== reqCounter.current) return; // stale data
+        if (!isLatest()) return; // abortada por una request más nueva: la ignoramos
         setError("error");
-        setData([]);
-        setTotal(0);
+        setStrategy("server");
+        setServerRows([]);
+        setServerTotal(0);
+        setCache(null);
       } finally {
         clearTimeout(timeout);
-        if (myReq === reqCounter.current) setLoading(false);
+        if (isLatest()) setLoading(false);
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [endpoint, extraParamsKey, searchParam, sortParam, orderParam, threshold],
+    [endpoint, extraParamsKey, searchDebounced, searchParam, sortParam, orderParam, clientCacheMax, pageSize],
   );
 
-  // Probe fetch on mount / when filters/search/refreshKey change.
+  // Debounce de la búsqueda → searchDebounced (resetea a página 1 atómicamente).
   useEffect(() => {
     if (!source) return;
-    setMode("init");
-    fetcher({ page: 1, size: threshold, search: searchDebounced, isProbe: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [extraParamsKey, searchDebounced, refreshKey, threshold, endpoint, retryTick]);
+    const h = setTimeout(() => dispatch({ type: "commitSearch", value: searchInput.trim() }), 300);
+    return () => clearTimeout(h);
+  }, [searchInput, source]);
 
-  // In server mode, refetch when pageIndex, pageSize or sort change.
+  // Carga PRIMARIA: al cambiar la identidad del dataset (filtros/búsqueda/refresh).
+  // Trae hasta `clientCacheMax` filas + total, y decide estrategia. `pageIndex` ya
+  // es 0 (reset atómico en el reducer al cambiar filtro/búsqueda).
   useEffect(() => {
     if (!source) return;
-    if (mode !== "server") return;
-    fetcher({ page: pageIndex + 1, size: pageSize, search: searchDebounced, isProbe: false });
+    // Reset a página 1 SOLO si cambió el filtro/búsqueda (no en refresh/retry),
+    // porque `extraParams` es prop externa y el reducer no la ve. El clamp cubre
+    // el resto, pero esto da la página correcta (la 1) tras cambiar de filtro.
+    const filterKey = `${extraParamsKey}|${searchDebounced}`;
+    if (prevFilterKeyRef.current !== filterKey) {
+      prevFilterKeyRef.current = filterKey;
+      dispatch({ type: "setPage", pageIndex: 0 });
+    }
+    setStrategy("unknown");
+    runFetch({ page: 1, size: clientCacheMax, primary: true, datasetKey, sort });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageIndex, pageSize, mode, serverSort]);
+  }, [datasetKey]);
+
+  // Carga de PÁGINA (solo servidor): al cambiar página/tamaño/orden dentro del
+  // mismo dataset. En cliente no hace nada (se re-rebana en memoria). Evita el
+  // refetch redundante que ya cubrió la carga primaria vía `servedRef`.
+  useEffect(() => {
+    if (!source) return;
+    if (strategy !== "server") return;
+    if (resolvedDatasetRef.current !== datasetKey) return; // aún resolviendo el dataset
+    const sig = `${datasetKey}|${pageIndex}|${pageSize}|${sortSig(sort)}`;
+    if (sig === servedRef.current) return;
+    runFetch({ page: pageIndex + 1, size: pageSize, primary: false, datasetKey, sort });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageIndex, pageSize, sort, strategy]);
+
+  // Aborta cualquier request en vuelo al desmontar.
+  useEffect(() => () => abortRef.current?.abort(), []);
+
+  // Rebanada visible + total, derivados. En cliente: ordena/rebana la caché en
+  // memoria (instantáneo, sin fetch). En servidor: la página que trajo el fetch.
+  const data = useMemo<T[]>(() => {
+    if (strategy === "client" && cache) {
+      const sorted = sort ? [...cache].sort((a, b) => compareRows(a, b, sort)) : cache;
+      return sorted.slice(pageIndex * pageSize, pageIndex * pageSize + pageSize);
+    }
+    return serverRows;
+  }, [strategy, cache, sort, pageIndex, pageSize, serverRows]);
+  const total = strategy === "client" && cache ? cache.length : serverTotal;
+
+  // Clamp: si `total` encoge por debajo de la página actual (datos borrados,
+  // filtro que reduce), reconducimos a la última página válida. Mata el "página
+  // fuera de rango pintando vacío" en ambas estrategias.
+  useEffect(() => {
+    if (!source || strategy === "unknown") return;
+    const lastPage = Math.max(0, Math.ceil(total / Math.max(1, pageSize)) - 1);
+    if (pageIndex > lastPage) dispatch({ type: "clampPage", lastPage });
+  }, [total, pageIndex, pageSize, strategy, source]);
 
   return {
     enabled: Boolean(source),
-    state: { data, total, mode, loading, error, pageIndex, pageSize, searchInput, searchDebounced, serverSort },
-    setSearchInput: setSearchInputState,
-    setPageIndex: setPageIndexState,
-    setPageSize: (size: number) => {
-      setPageSizeState(size);
-      setPageIndexState(0);
-    },
-    setServerSort,
+    state: { data, total, loading, error, pageIndex, pageSize, sort, searchInput, strategy },
+    setSearchInput: (v: string) => dispatch({ type: "setSearchInput", value: v }),
+    setPageIndex: (idx: number) => dispatch({ type: "setPage", pageIndex: idx }),
+    setPageSize: (size: number) => dispatch({ type: "setPageSize", pageSize: Math.min(size, clientCacheMax) }),
+    setSort: (v: SortSpec) => dispatch({ type: "setSort", sort: v }),
     retry: () => setRetryTick((n) => n + 1),
   };
 }
@@ -367,9 +479,10 @@ export function DataTable<TData, TValue>({
   // Resolve which data/pagination source the table actually uses.
   const usingSource = remote.enabled;
   const data = usingSource ? remote.state.data : inlineData ?? [];
-  const manualPagination = usingSource
-    ? remote.state.mode === "server"
-    : manualPaginationProp;
+  // Con `source` la tabla es SIEMPRE de paginación manual: nosotros calculamos
+  // la rebanada visible (cliente en memoria o página del servidor) y TanStack
+  // solo la pinta. Sin `source` respetamos el modo controlado del caller.
+  const manualPagination = usingSource ? true : manualPaginationProp;
   const effectiveControlledPageIndex = usingSource
     ? remote.state.pageIndex
     : controlledPageIndex;
@@ -379,26 +492,43 @@ export function DataTable<TData, TValue>({
   const effectiveControlledTotalRows = usingSource ? remote.state.total : controlledTotalRows;
   const effectiveInitialPageSize = usingSource ? remote.state.pageSize : initialPageSize;
 
-  // Server-side sorting only kicks in when a remote source runs in server mode.
-  const serverSortMode = usingSource && remote.state.mode === "server";
+  // Solo en estrategia SERVIDOR restringimos las cabeceras ordenables a las que
+  // el endpoint sabe ordenar (`sortableColumns`). En estrategia cliente (dataset
+  // pequeño cacheado) y en modo inline se ordena en memoria cualquier columna.
+  const restrictSort = usingSource && remote.state.strategy === "server";
   const sortableColumnsKey = JSON.stringify(source?.sortableColumns ?? null);
-  // In server mode, restrict clickable sort headers to the columns the endpoint
-  // can actually sort (declared via `source.sortableColumns`). Without that
-  // allow-list, server-mode headers stay non-sortable so we never show the
-  // misleading "sorts just this page" behaviour. Client mode is untouched.
   const resolvedColumns = useMemo(() => {
-    if (!serverSortMode) return columns;
+    if (!restrictSort) return columns;
     const allow = new Set(source?.sortableColumns ?? []);
     return columns.map((c) => {
       const id = (c.id ?? (c as { accessorKey?: string }).accessorKey) as string | undefined;
       return { ...c, enableSorting: id ? allow.has(id) : false };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [columns, serverSortMode, sortableColumnsKey]);
+  }, [columns, restrictSort, sortableColumnsKey]);
 
-  const [sorting, setSorting] = useState<SortingState>(
+  // Orden: con `source` es estado del hook (FUENTE ÚNICA) → derivamos el
+  // `SortingState` de TanStack de `remote.state.sort` y reenviamos los cambios
+  // con `setSort` (que resetea a página 1 atómicamente). Sin `source` (inline)
+  // mantenemos estado local de TanStack. Se elimina el efecto puente
+  // `sorting→serverSort` y su triple representación del orden (origen del #339).
+  const [inlineSorting, setInlineSorting] = useState<SortingState>(
     initialSort ? [{ id: initialSort.id, desc: initialSort.desc ?? false }] : [],
   );
+  const sorting: SortingState = usingSource
+    ? remote.state.sort
+      ? [{ id: remote.state.sort.id, desc: remote.state.sort.desc }]
+      : []
+    : inlineSorting;
+  const handleSortingChange: OnChangeFn<SortingState> = (updater) => {
+    const next = typeof updater === "function" ? updater(sorting) : updater;
+    if (usingSource) {
+      const s = next[0];
+      remote.setSort(s ? { id: s.id, desc: s.desc } : null);
+    } else {
+      setInlineSorting(next);
+    }
+  };
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
     initialColumnVisibility ?? {},
@@ -406,25 +536,11 @@ export function DataTable<TData, TValue>({
   const [currentPageSize, setCurrentPageSize] = useState(effectiveInitialPageSize);
   const [colMenuOpen, setColMenuOpen] = useState(false);
 
-  // Keep the internal page size in sync when the parent changes it
-  // (e.g. a controlled paginator bumping from 20 → 50).
+  // Mantener el pageSize interno sincronizado cuando el padre/hook lo cambia
+  // (ej. paginador controlado que sube de 20 → 50, o el hook al capar).
   useEffect(() => {
     setCurrentPageSize(effectiveInitialPageSize);
   }, [effectiveInitialPageSize]);
-
-  // Record the active sort on the remote source whenever it changes, so the
-  // next server fetch re-queries the full population (not just the current page
-  // slice). We gate on `usingSource` — not `serverSortMode` — on purpose: if a
-  // re-probe momentarily drops us out of server mode, we must still capture the
-  // user's sort intent so it's already in place when server mode resumes. In
-  // client mode the recorded value is simply unused (TanStack sorts in memory),
-  // so this is harmless there. Gating on `serverSortMode` here previously lost
-  // clicks that landed during a mount-time re-probe (#339).
-  useEffect(() => {
-    if (!usingSource) return;
-    const s = sorting[0];
-    remote.setServerSort(s ? `${s.id}:${s.desc ? "desc" : "asc"}` : null);
-  }, [sorting, usingSource, remote.setServerSort]);
 
   const effectivePageIndex = manualPagination ? (effectiveControlledPageIndex ?? 0) : undefined;
 
@@ -446,13 +562,15 @@ export function DataTable<TData, TValue>({
     getPaginationRowModel: manualPagination ? undefined : getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    onSortingChange: setSorting,
+    onSortingChange: handleSortingChange,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     onGlobalFilterChange: () => {},
     manualPagination,
-    manualSorting: serverSortMode,
-    manualFiltering: usingSource && remote.state.mode === "server",
+    // Con `source` ordenamos y filtramos nosotros (cliente en memoria o
+    // servidor): TanStack no debe re-ordenar/re-filtrar la rebanada recibida.
+    manualSorting: usingSource,
+    manualFiltering: usingSource,
     pageCount: manualPagination ? (effectiveControlledPageCount ?? -1) : undefined,
     state: {
       sorting,
@@ -460,7 +578,12 @@ export function DataTable<TData, TValue>({
       columnVisibility,
       globalFilter,
       ...(manualPagination
-        ? { pagination: { pageIndex: effectivePageIndex ?? 0, pageSize: currentPageSize } }
+        ? {
+            pagination: {
+              pageIndex: effectivePageIndex ?? 0,
+              pageSize: usingSource ? remote.state.pageSize : currentPageSize,
+            },
+          }
         : {}),
     },
     initialState: manualPagination
@@ -469,57 +592,53 @@ export function DataTable<TData, TValue>({
   });
 
   function handlePageSizeChange(newSize: number) {
-    setCurrentPageSize(newSize);
-    // Dispatch by who actually owns the pagination state, not by whether a
-    // remote source is configured. With a remote source under the threshold
-    // we run in client mode (TanStack owns the slice), so updating
-    // `remote.state.pageSize` is invisible — drive `table.setPageSize` instead.
-    if (manualPagination) {
-      if (usingSource) {
-        remote.setPageSize(newSize);
-      } else {
-        onPaginationChange?.(0, newSize);
-      }
+    if (usingSource) {
+      remote.setPageSize(newSize); // el hook lo capa a clientCacheMax
+    } else if (manualPagination) {
+      setCurrentPageSize(newSize);
+      onPaginationChange?.(0, newSize);
     } else {
+      setCurrentPageSize(newSize);
       table.setPageSize(newSize);
     }
   }
 
   function handlePageChange(nextIndex: number) {
-    if (manualPagination) {
-      if (usingSource) {
-        remote.setPageIndex(nextIndex);
-      } else {
-        onPaginationChange?.(nextIndex, currentPageSize);
-      }
+    if (usingSource) {
+      remote.setPageIndex(nextIndex);
+    } else if (manualPagination) {
+      onPaginationChange?.(nextIndex, currentPageSize);
     } else {
       table.setPageIndex(nextIndex);
     }
   }
 
-  const pageIndex = manualPagination
-    ? (effectiveControlledPageIndex ?? 0)
-    : table.getState().pagination.pageIndex;
-  const activePSize = manualPagination ? currentPageSize : table.getState().pagination.pageSize;
-  // In manual mode we trust the server-reported total; in client mode we
-  // use the filtered row count so the "Mostrando X de Y" stays honest when
-  // the user searches.
-  const totalRows = manualPagination
-    ? (effectiveControlledTotalRows ?? 0)
-    : table.getFilteredRowModel().rows.length;
-  const totalPages = manualPagination
-    ? Math.max(1, effectiveControlledPageCount ?? 1)
-    : table.getPageCount();
+  const pageIndex = usingSource
+    ? remote.state.pageIndex
+    : manualPagination
+      ? (effectiveControlledPageIndex ?? 0)
+      : table.getState().pagination.pageIndex;
+  const activePSize = usingSource
+    ? remote.state.pageSize
+    : manualPagination
+      ? currentPageSize
+      : table.getState().pagination.pageSize;
+  // Con `source` el total lo manda el servidor (base del cálculo local de
+  // páginas). En inline no-manual, el recuento filtrado de TanStack.
+  const totalRows =
+    usingSource || manualPagination
+      ? (effectiveControlledTotalRows ?? 0)
+      : table.getFilteredRowModel().rows.length;
+  const totalPages =
+    usingSource || manualPagination
+      ? Math.max(1, effectiveControlledPageCount ?? 1)
+      : table.getPageCount();
   const canPrev = pageIndex > 0;
   const canNext = pageIndex < totalPages - 1;
   const start = totalRows === 0 ? 0 : pageIndex * activePSize + 1;
-  const end = manualPagination
-    ? Math.min((pageIndex + 1) * activePSize, totalRows)
-    : Math.min((pageIndex + 1) * activePSize, totalRows);
-  // Make sure the current page size is always in the options, otherwise the
-  // select renders the first option as its visual label (mismatched with the
-  // actual state — e.g. `pageSize={10}` on a list that defaults to [20,50,100]
-  // would show "20 / pág" while 10 rows were being rendered).
+  const end = Math.min((pageIndex + 1) * activePSize, totalRows);
+  // El tamaño activo siempre debe estar entre las opciones (si no, el select
+  // mostraría la primera opción como etiqueta, descuadrada con el estado real).
   const baseSizeOptions = pageSizeOptions || [20, 50, 100];
   const sizeOptions = baseSizeOptions.includes(activePSize)
     ? baseSizeOptions
@@ -737,7 +856,12 @@ export function DataTable<TData, TValue>({
                 {t("ui.dataTable.perPage", { size: String(size) })}
               </option>
             ))}
-            <option value={totalRows}>{t("ui.dataTable.all")}</option>
+            {/* "Todos" solo cuando NO es paginación de servidor: en servidor
+                sería engañoso (una página acotada ≠ toda la población) y podría
+                sugerir traer miles. En cliente/inline es seguro (dataset ≤200). */}
+            {!(usingSource && remote.state.strategy === "server") && (
+              <option value={totalRows}>{t("ui.dataTable.all")}</option>
+            )}
           </select>
           {paginatorExtras && (
             <div className="flex items-center gap-2 border-l border-gray-200 pl-3 text-sm text-foreground-muted">
