@@ -94,11 +94,17 @@ function renderMarkdown(text: string): string {
  */
 function linkifyCitas(html: string, n: number): string {
   if (n <= 0) return html;
-  return html.replace(/\[(\d{1,3})\]/g, (full, d) => {
-    const k = Number(d);
-    return k >= 1 && k <= n
-      ? `<a class="cita-ref" data-cita="${k - 1}" role="button" tabindex="0">[${k}]</a>`
-      : full;
+  // Marca de cita: un número `[n]` O un grupo `[n, m, …]`. El modelo a veces
+  // agrupa varias fuentes en un mismo corchete ("[2, 3]"); las separamos en
+  // anclas individuales contiguas ("[2][3]") para que CADA fuente sea clicable.
+  // Si algún número del grupo cae fuera de rango, no lo tratamos como cita (p. ej.
+  // "[2, 2020]") y lo dejamos intacto.
+  return html.replace(/\[\s*(\d{1,3}(?:\s*,\s*\d{1,3})*)\s*\]/g, (full, group: string) => {
+    const nums = group.split(",").map((s) => Number(s.trim()));
+    if (nums.some((k) => !(k >= 1 && k <= n))) return full;
+    return nums
+      .map((k) => `<a class="cita-ref" data-cita="${k - 1}" role="button" tabindex="0">[${k}]</a>`)
+      .join("");
   });
 }
 
@@ -280,6 +286,17 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
   const [stepLive, setStepLive] = useState<{ label: string; query?: string; hint?: string; error?: boolean } | null>(null);
   // Mensajes cuyo «Ver proceso» está desplegado (por índice de mensaje).
   const [openProcess, setOpenProcess] = useState<Set<number>>(new Set());
+  // Índice del mensaje cuya respuesta se acaba de copiar al portapapeles (feedback ✓).
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const copyAnswer = useCallback(async (idx: number, text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedIdx(idx);
+      setTimeout(() => setCopiedIdx((c) => (c === idx ? null : c)), 1800);
+    } catch {
+      // Portapapeles no disponible (permiso/contexto no seguro): no rompemos nada.
+    }
+  }, []);
   const [conversaciones, setConversaciones] = useState<ConversacionResumen[] | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [viewer, setViewer] = useState<ViewerState | null>(null);
@@ -1291,6 +1308,34 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
                         />
                       ) : (
                         <p className="whitespace-pre-wrap leading-relaxed">{m.text}</p>
+                      )}
+                      {m.role === "bot" && !m.error && m.skill !== "fuera" && m.text && (
+                        <div className="mt-1.5 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => copyAnswer(i, m.text)}
+                            className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-gray-600"
+                            title={t("ui.mycobot.copy")}
+                            aria-label={t("ui.mycobot.copy")}
+                          >
+                            {copiedIdx === i ? (
+                              <>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                  <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                                {t("ui.mycobot.copied")}
+                              </>
+                            ) : (
+                              <>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                                </svg>
+                                {t("ui.mycobot.copy")}
+                              </>
+                            )}
+                          </button>
+                        </div>
                       )}
                       {m.role === "bot" && !m.error && m.steps && m.steps.length > 0 && (
                         <div className="mt-2">

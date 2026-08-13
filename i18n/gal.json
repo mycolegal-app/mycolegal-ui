@@ -941,6 +941,8 @@
       "skill_doctrina": "Doutrina",
       "skill_ayuda": "Axuda",
       "skill_agente": "Datos",
+      "copy": "Copiar",
+      "copied": "Copiado",
       "outOfScope": "Só podo axudarte con doutrina notarial, rexistral ou fiscal e co uso das aplicacións de MyCoLegal.",
       "corpusBadge": "{count} resolucións na base de doutrina",
       "welcomeTitle": "Ola, son MycoBot 👋",

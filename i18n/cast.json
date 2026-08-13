@@ -942,6 +942,8 @@
       "skill_doctrina": "Doctrina",
       "skill_ayuda": "Ayuda",
       "skill_agente": "Datos",
+      "copy": "Copiar",
+      "copied": "Copiado",
       "outOfScope": "Solo puedo ayudarte con doctrina notarial, registral o fiscal y con el uso de las aplicaciones de MyCoLegal.",
       "corpusBadge": "{count} resoluciones en la base de doctrina",
       "welcomeTitle": "Hola, soy MycoBot 👋",
