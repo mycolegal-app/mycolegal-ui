@@ -1,6 +1,6 @@
 {
   "name": "@mycolegal-app/ui",
-  "version": "1.99.7",
+  "version": "1.99.8",
   "type": "module",
   "main": "./index.ts",
   "publishConfig": {
