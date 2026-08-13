@@ -785,7 +785,11 @@ export function IncidentThread({
         </div>
       )}
 
-      {!readOnly && isClosed && (
+      {/* Botón "Reabrir" bodyless SOLO para soporte: debe reabrir explícitamente
+          antes de escribir. Para el USUARIO NO se muestra — reabre respondiendo (la
+          caja de arriba, con su aviso, guarda el texto). Antes se mostraba a todos y
+          el usuario clicaba aquí perdiendo su explicación de reapertura (#570). */}
+      {!readOnly && isClosed && viewerRole !== "user" && (
         <div className="flex justify-end">
           <Button variant="outline" onClick={reopenIncident} disabled={reopening}>
             {reopening ? (
