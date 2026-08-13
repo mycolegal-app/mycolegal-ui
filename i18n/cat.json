@@ -655,6 +655,7 @@
       "empty": "No hi ha dades per mostrar",
       "errorForbidden": "No tens permís per veure aquestes dades",
       "errorGeneric": "No s'han pogut carregar les dades. Torna-ho a provar.",
+      "retry": "Torna-ho a provar",
       "columnsSelectAll": "Marcar totes",
       "columnsDeselectAll": "Desmarcar totes"
     },

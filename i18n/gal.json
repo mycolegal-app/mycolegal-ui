@@ -654,6 +654,7 @@
       "empty": "Non hai datos para amosar",
       "errorForbidden": "Non tes permiso para ver estes datos",
       "errorGeneric": "Non se puideron cargar os datos. Téntao de novo.",
+      "retry": "Téntao de novo",
       "columnsSelectAll": "Marcar todas",
       "columnsDeselectAll": "Desmarcar todas"
     },

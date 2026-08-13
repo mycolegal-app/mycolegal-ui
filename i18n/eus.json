@@ -654,6 +654,7 @@
       "empty": "Ez dago daturik erakusteko",
       "errorForbidden": "Ez duzu baimenik datu hauek ikusteko",
       "errorGeneric": "Ezin izan dira datuak kargatu. Saiatu berriro.",
+      "retry": "Saiatu berriro",
       "columnsSelectAll": "Guztiak markatu",
       "columnsDeselectAll": "Guztiak desmarkatu"
     },

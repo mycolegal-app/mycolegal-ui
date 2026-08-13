@@ -655,6 +655,7 @@
       "empty": "No hay datos para mostrar",
       "errorForbidden": "No tienes permiso para ver estos datos",
       "errorGeneric": "No se pudieron cargar los datos. Inténtalo de nuevo.",
+      "retry": "Reintentar",
       "columnsSelectAll": "Marcar todas",
       "columnsDeselectAll": "Desmarcar todas"
     },

@@ -166,6 +166,7 @@ function useRemoteSource<T>(
   setPageIndex: (idx: number) => void;
   setPageSize: (size: number) => void;
   setServerSort: (v: string | null) => void;
+  retry: () => void;
 } {
   const threshold = source?.threshold ?? 200;
   const searchParam = source?.searchParam ?? "search";
@@ -185,6 +186,9 @@ function useRemoteSource<T>(
   const [pageSize, setPageSizeState] = useState(initialPageSize);
   const [searchInput, setSearchInputState] = useState("");
   const [searchDebounced, setSearchDebounced] = useState("");
+  // Disparador de reintento manual (botón "Reintentar" del estado de error).
+  // Bumpearlo re-lanza el probe con los mismos filtros.
+  const [retryTick, setRetryTick] = useState(0);
   // Seed the server sort from `initialSort` so the very first probe already
   // carries it and no re-probe (e.g. an `extraParams` change right after mount)
   // can lose it. Previously serverSort started null and only got the initial
@@ -234,6 +238,13 @@ function useRemoteSource<T>(
       const myProbe = params.isProbe ? ++probeSeq.current : 0;
       const isLatestProbe = () => params.isProbe && myProbe === probeSeq.current;
       setLoading(true);
+      // Timeout duro: sin esto, un `fetch` que se quedaba encallado en el
+      // navegador dejaba `loading` en true PARA SIEMPRE (el `finally` solo lo
+      // limpia cuando la promesa resuelve). Abortamos a los 20 s → la promesa
+      // rechaza → se pinta el estado de error (con "Reintentar") en vez de un
+      // spinner eterno.
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 20000);
       try {
         const qs = new URLSearchParams();
         qs.set("page", String(params.page));
@@ -254,7 +265,7 @@ function useRemoteSource<T>(
             qs.set(k, String(v));
           }
         }
-        const res = await fetch(`${endpoint}?${qs.toString()}`);
+        const res = await fetch(`${endpoint}?${qs.toString()}`, { signal: controller.signal });
         if (!res.ok) {
           // The latest probe still decides the mode even if its data is stale,
           // so a large-population table can't get stuck out of server mode.
@@ -284,6 +295,7 @@ function useRemoteSource<T>(
         setData([]);
         setTotal(0);
       } finally {
+        clearTimeout(timeout);
         if (myReq === reqCounter.current) setLoading(false);
       }
     },
@@ -297,7 +309,7 @@ function useRemoteSource<T>(
     setMode("init");
     fetcher({ page: 1, size: threshold, search: searchDebounced, isProbe: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [extraParamsKey, searchDebounced, refreshKey, threshold, endpoint]);
+  }, [extraParamsKey, searchDebounced, refreshKey, threshold, endpoint, retryTick]);
 
   // In server mode, refetch when pageIndex, pageSize or sort change.
   useEffect(() => {
@@ -317,6 +329,7 @@ function useRemoteSource<T>(
       setPageIndexState(0);
     },
     setServerSort,
+    retry: () => setRetryTick((n) => n + 1),
   };
 }
 
@@ -679,13 +692,28 @@ export function DataTable<TData, TValue>({
                   colSpan={columns.length}
                   className={`h-24 text-center ${usingSource && remote.state.error ? "text-red-600" : "text-foreground-muted"}`}
                 >
-                  {usingSource && remote.state.loading
-                    ? t("ui.dataTable.loading")
-                    : usingSource && remote.state.error === "forbidden"
-                      ? t("ui.dataTable.errorForbidden")
-                      : usingSource && remote.state.error
-                        ? t("ui.dataTable.errorGeneric")
-                        : t("ui.dataTable.empty")}
+                  {usingSource && remote.state.loading ? (
+                    t("ui.dataTable.loading")
+                  ) : usingSource && remote.state.error === "forbidden" ? (
+                    t("ui.dataTable.errorForbidden")
+                  ) : usingSource && remote.state.error ? (
+                    // Error genérico (timeout/red/5xx): recuperable. Ofrecemos
+                    // "Reintentar" en vez de dejar la tabla en un callejón sin
+                    // salida — el timeout del fetch garantiza que se llegue aquí.
+                    <span className="inline-flex items-center gap-2">
+                      {t("ui.dataTable.errorGeneric")}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => remote.retry()}
+                        className="h-7 px-2 text-xs"
+                      >
+                        {t("ui.dataTable.retry")}
+                      </Button>
+                    </span>
+                  ) : (
+                    t("ui.dataTable.empty")
+                  )}
                 </td>
               </tr>
             )}

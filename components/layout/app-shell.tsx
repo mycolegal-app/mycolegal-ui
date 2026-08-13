@@ -272,36 +272,57 @@ export default function AppShell({
   useAuthFetchGuard();
 
   useEffect(() => {
-    fetch("/api/auth/me")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((json) => {
-        if (json?.data) {
-          setUser({
-            displayName: json.data.displayName || json.data.email,
-            email: json.data.email,
-            role: json.data.appRole || "",
-          });
-          if (json.data.org) {
-            setOrg({ name: json.data.org.name, logo: json.data.org.logo || null });
-          }
-          if (json.data.apps) {
-            setApps(json.data.apps);
-          }
-          if (Array.isArray(json.data.sellableExtras)) {
-            setSellableExtras(json.data.sellableExtras);
-          }
-          setSubscribeUrl(json.data.subscribeUrl ?? null);
-          if (json.data.inactivityTimeout) {
-            setInactivityTimeout(json.data.inactivityTimeout);
-          }
-          setImpersonatedAs(
-            json.data.impersonatedBy
-              ? json.data.displayName || json.data.email || ""
-              : null,
-          );
-        }
-      })
-      .catch(() => {});
+    // Carga del perfil con timeout + reintento. Antes era un `fetch().then()`
+    // sin red de seguridad: si la petición se quedaba encallada en el navegador
+    // (o devolvía algo sin `data`), el perfil se quedaba en "Cargando…" PARA
+    // SIEMPRE, sin forma de recuperarse. Ahora abortamos a los 8 s y reintentamos
+    // con backoff, de modo que un corte de red transitorio se auto-cura. Un 401
+    // real lo intercepta `useAuthFetchGuard` (redirige a /login), así que aquí no
+    // hace falta tratarlo aparte.
+    let cancelled = false;
+    let attempt = 0;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const load = async () => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      try {
+        const r = await fetch("/api/auth/me", { signal: controller.signal });
+        if (!r.ok) throw new Error(`me ${r.status}`);
+        const json = await r.json();
+        if (cancelled) return;
+        if (!json?.data) throw new Error("me: respuesta sin data");
+        const d = json.data;
+        setUser({
+          displayName: d.displayName || d.email,
+          email: d.email,
+          role: d.appRole || "",
+        });
+        if (d.org) setOrg({ name: d.org.name, logo: d.org.logo || null });
+        if (d.apps) setApps(d.apps);
+        if (Array.isArray(d.sellableExtras)) setSellableExtras(d.sellableExtras);
+        setSubscribeUrl(d.subscribeUrl ?? null);
+        if (d.inactivityTimeout) setInactivityTimeout(d.inactivityTimeout);
+        setImpersonatedAs(
+          d.impersonatedBy ? d.displayName || d.email || "" : null,
+        );
+      } catch {
+        if (cancelled) return;
+        // Backoff 2s → 4s → 8s → 15s (tope). Sigue reintentando para
+        // auto-curarse cuando vuelva la conectividad, sin martillear el servidor.
+        attempt += 1;
+        const delay = Math.min(2000 * 2 ** (attempt - 1), 15000);
+        retryTimer = setTimeout(load, delay);
+      } finally {
+        clearTimeout(timeout);
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
+    };
   }, []);
 
   const content = (
