@@ -27,6 +27,11 @@ interface LoginFormProps {
   features?: string[];
   /** API endpoint to POST credentials to (defaults to /api/auth/login) */
   loginEndpoint?: string;
+  /**
+   * API endpoint for the expired-password change (defaults to
+   * /api/auth/password/expired). Used when login returns PASSWORD_EXPIRED.
+   */
+  expiredPasswordEndpoint?: string;
   /** URL to redirect to after successful login */
   redirectTo?: string;
   /** Callback after successful login (alternative to redirectTo) */
@@ -55,6 +60,52 @@ function safeReturnTo(): string | null {
   return rt;
 }
 
+type TFn = (key: string, params?: Record<string, string | number>) => string;
+
+/** Longitud mínima de contraseña (alineada con el resto de formularios de cambio). */
+const PASSWORD_MIN_LENGTH = 12;
+
+/**
+ * `error.code` del backend de auth → clave i18n localizada. Sustituye a mostrar
+ * el `message` crudo (a menudo en inglés, p.ej. "Invalid credentials"). Los
+ * códigos los añade auth.service en cada throw del login.
+ */
+const LOGIN_ERROR_KEYS: Record<string, string> = {
+  INVALID_CREDENTIALS: "errInvalidCredentials",
+  ORG_SUSPENDED: "errOrgSuspended",
+  USER_SUSPENDED: "errUserSuspended",
+  USER_INACTIVE: "errUserInactive",
+  ACCOUNT_LOCKED: "errAccountLocked",
+  APP_ACCESS_DENIED: "errAppAccess",
+  APP_MAINTENANCE: "errAppMaintenance",
+  PASSWORD_SAME: "errPasswordSame",
+  RATE_LIMITED: "errRateLimited",
+};
+
+/**
+ * Códigos cuyo `message` puede venir personalizado por el administrador
+ * (mensaje de suspensión, de mantenimiento): si llega, gana al literal genérico.
+ */
+const PREFER_BACKEND_MESSAGE = new Set(["USER_SUSPENDED", "APP_MAINTENANCE"]);
+
+/** Resuelve el texto a mostrar ante un error del login/cambio, priorizando i18n. */
+function resolveLoginError(t: TFn, status: number, code?: string, message?: string): string {
+  // Fastify rate-limit devuelve 429 con "Too Many Requests" (inglés) y sin code.
+  if (status === 429) return t("ui.login.errRateLimited");
+
+  const key = code ? LOGIN_ERROR_KEYS[code] : undefined;
+  if (key) {
+    if (code && PREFER_BACKEND_MESSAGE.has(code) && message && message.trim()) return message;
+    return t(`ui.login.${key}`);
+  }
+
+  // Código desconocido: usa el mensaje del backend salvo que sea el placeholder
+  // crudo en inglés; en 5xx nunca (puede filtrar detalles internos).
+  const msg = message?.trim();
+  if (msg && status < 500 && msg.toLowerCase() !== "invalid credentials") return msg;
+  return t("ui.login.errAuth");
+}
+
 export function LoginForm({
   appName,
   appLogoSvg,
@@ -64,6 +115,7 @@ export function LoginForm({
   heroImageUrl,
   features,
   loginEndpoint = "/api/auth/login",
+  expiredPasswordEndpoint = "/api/auth/password/expired",
   redirectTo = "/",
   onSuccess,
   versionInfo,
@@ -83,54 +135,126 @@ export function LoginForm({
   // Pending-activation state (invited user logging in — we resend the activation email)
   const [pendingActivation, setPendingActivation] = useState<{ email: string; message: string } | null>(null);
 
+  // Expired-password state: login returned PASSWORD_EXPIRED, so we show an inline
+  // "current + new + repeat" dialog. `expiredCurrent` is prefilled with the
+  // password the user just typed (login already validated it — it's correct,
+  // only expired), so they only need to choose a new one.
+  const [expired, setExpired] = useState(false);
+  const [expiredCurrent, setExpiredCurrent] = useState("");
+  const [expiredNew, setExpiredNew] = useState("");
+  const [expiredConfirm, setExpiredConfirm] = useState("");
+
+  // Core login call, shared by the normal submit and the auto-login that runs
+  // right after an expired-password change. Does NOT manage `loading` — callers
+  // wrap it so they can also cover their own pre-steps.
+  async function performLogin(pwd: string) {
+    const res = await fetch(loginEndpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password: pwd }),
+    });
+
+    const data = await res.json();
+
+    // Invited user — backend resent the activation email. Show the dedicated screen.
+    if (res.status === 202 || data.code === "account_pending_activation") {
+      setPendingActivation({
+        email,
+        message: data.message || t("ui.login.pendingActivationDefault"),
+      });
+      return;
+    }
+
+    if (!res.ok) {
+      // Password expirada: en vez de un error muerto, abrimos el diálogo de
+      // cambio (actual + nueva + repetir). La contraseña actual ya la validó el
+      // login, así que la pre-rellenamos con la que acaba de teclear.
+      if (data.error?.code === "PASSWORD_EXPIRED") {
+        setExpiredCurrent(pwd);
+        setExpiredNew("");
+        setExpiredConfirm("");
+        setError("");
+        setExpired(true);
+        return;
+      }
+      setError(resolveLoginError(t, res.status, data.error?.code, data.error?.message));
+      return;
+    }
+
+    // Superadmin with multiple orgs — show selector
+    if (data.requiresOrgSelection) {
+      setOrgs(data.organizations);
+      setSelectToken(data.selectToken);
+      setUserName(data.user?.displayName || "");
+      return;
+    }
+
+    // Admin-created-with-initial-password users must rotate before
+    // landing on the dashboard. The cookie is already set so /change-password
+    // is an authenticated page; server clears the flag on success.
+    const forcedChange = data?.data?.mustChangePassword === true || data?.mustChangePassword === true;
+
+    if (onSuccess) {
+      onSuccess(data);
+    } else if (forcedChange) {
+      window.location.href = "/change-password";
+    } else {
+      window.location.href = safeReturnTo() ?? redirectTo;
+    }
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     try {
-      const res = await fetch(loginEndpoint, {
+      await performLogin(password);
+    } catch {
+      setError(t("ui.login.errConnection"));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Expired-password change: validate client-side (mirrors the backend policy),
+  // POST to the expired endpoint, then auto-login with the new password so the
+  // normal login proxy issues the session AND runs its per-app provisioning.
+  async function handleExpiredSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError("");
+
+    if (expiredNew.length < PASSWORD_MIN_LENGTH) {
+      setError(t("ui.setPassword.errMinLength", { min: String(PASSWORD_MIN_LENGTH) }));
+      return;
+    }
+    if (!/[A-Z]/.test(expiredNew) || !/[a-z]/.test(expiredNew) || !/[0-9]/.test(expiredNew)) {
+      setError(t("ui.setPassword.errComplexity"));
+      return;
+    }
+    if (expiredNew !== expiredConfirm) {
+      setError(t("ui.setPassword.errMismatch"));
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch(expiredPasswordEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, currentPassword: expiredCurrent, newPassword: expiredNew }),
       });
 
-      const data = await res.json();
-
-      // Invited user — backend resent the activation email. Show the dedicated screen.
-      if (res.status === 202 || data.code === "account_pending_activation") {
-        setPendingActivation({
-          email,
-          message: data.message || t("ui.login.pendingActivationDefault"),
-        });
-        return;
-      }
-
       if (!res.ok) {
-        setError(data.error?.message || t("ui.login.errAuth"));
+        const data = await res.json().catch(() => ({}));
+        setError(resolveLoginError(t, res.status, data.error?.code, data.error?.message));
         return;
       }
 
-      // Superadmin with multiple orgs — show selector
-      if (data.requiresOrgSelection) {
-        setOrgs(data.organizations);
-        setSelectToken(data.selectToken);
-        setUserName(data.user?.displayName || "");
-        return;
-      }
-
-      // Admin-created-with-initial-password users must rotate before
-      // landing on the dashboard. The cookie is already set so /change-password
-      // is an authenticated page; server clears the flag on success.
-      const forcedChange = data?.data?.mustChangePassword === true || data?.mustChangePassword === true;
-
-      if (onSuccess) {
-        onSuccess(data);
-      } else if (forcedChange) {
-        window.location.href = "/change-password";
-      } else {
-        window.location.href = safeReturnTo() ?? redirectTo;
-      }
+      // Éxito: entrar directamente con la nueva contraseña.
+      setPassword(expiredNew);
+      setExpired(false);
+      await performLogin(expiredNew);
     } catch {
       setError(t("ui.login.errConnection"));
     } finally {
@@ -319,6 +443,88 @@ export function LoginForm({
               <button
                 type="button"
                 onClick={handleBackToLogin}
+                className="mt-4 text-sm text-mc-slate-500 hover:text-mc-slate-700 transition-colors"
+              >
+                {t("ui.login.backToLogin")}
+              </button>
+            </>
+          ) : expired ? (
+            /* ── Expired-password change step ── */
+            <>
+              <h2 className="text-2xl font-bold text-mc-slate-900">{t("ui.login.expiredTitle")}</h2>
+              <p className="mt-2 text-sm text-mc-slate-500">
+                {t("ui.login.expiredSubtitle")}
+              </p>
+
+              <form onSubmit={handleExpiredSubmit} className="mt-8 space-y-5">
+                {error && (
+                  <div className="rounded-lg bg-mc-error-50 border border-mc-error-500/30 px-4 py-3 text-sm text-mc-error-700">
+                    {error}
+                  </div>
+                )}
+
+                <div>
+                  <label htmlFor="expired-current" className="block text-sm font-medium text-mc-slate-700">
+                    {t("ui.login.expiredCurrent")}
+                  </label>
+                  <input
+                    id="expired-current"
+                    type="password"
+                    value={expiredCurrent}
+                    onChange={(e) => setExpiredCurrent(e.target.value)}
+                    required
+                    autoComplete="current-password"
+                    className="mt-1 block w-full rounded-lg border border-mc-neutral-300 bg-white px-3 py-2.5 text-mc-slate-900 shadow-sm focus:border-mc-primary-500 focus:outline-none focus:ring-1 focus:ring-mc-primary-500"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="expired-new" className="block text-sm font-medium text-mc-slate-700">
+                    {t("ui.login.expiredNew")}
+                  </label>
+                  <input
+                    id="expired-new"
+                    type="password"
+                    value={expiredNew}
+                    onChange={(e) => setExpiredNew(e.target.value)}
+                    required
+                    autoFocus
+                    minLength={PASSWORD_MIN_LENGTH}
+                    autoComplete="new-password"
+                    className="mt-1 block w-full rounded-lg border border-mc-neutral-300 bg-white px-3 py-2.5 text-mc-slate-900 shadow-sm focus:border-mc-primary-500 focus:outline-none focus:ring-1 focus:ring-mc-primary-500"
+                  />
+                  <p className="mt-1 text-xs text-mc-slate-400">
+                    {t("ui.login.expiredHint", { min: String(PASSWORD_MIN_LENGTH) })}
+                  </p>
+                </div>
+
+                <div>
+                  <label htmlFor="expired-confirm" className="block text-sm font-medium text-mc-slate-700">
+                    {t("ui.login.expiredConfirm")}
+                  </label>
+                  <input
+                    id="expired-confirm"
+                    type="password"
+                    value={expiredConfirm}
+                    onChange={(e) => setExpiredConfirm(e.target.value)}
+                    required
+                    autoComplete="new-password"
+                    className="mt-1 block w-full rounded-lg border border-mc-neutral-300 bg-white px-3 py-2.5 text-mc-slate-900 shadow-sm focus:border-mc-primary-500 focus:outline-none focus:ring-1 focus:ring-mc-primary-500"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full rounded-lg bg-mc-slate-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-mc-slate-900 focus:outline-none focus:ring-2 focus:ring-mc-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {loading ? t("ui.login.loggingIn") : t("ui.login.expiredSubmit")}
+                </button>
+              </form>
+
+              <button
+                type="button"
+                onClick={() => { setExpired(false); setError(""); setExpiredNew(""); setExpiredConfirm(""); }}
                 className="mt-4 text-sm text-mc-slate-500 hover:text-mc-slate-700 transition-colors"
               >
                 {t("ui.login.backToLogin")}

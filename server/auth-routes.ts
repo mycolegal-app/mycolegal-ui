@@ -7,6 +7,7 @@ import {
 } from './impersonation';
 import { clearLanguageCookie, createProfileProxyHandlers } from './language';
 import { effectiveCookieDomain } from './cookie-domain';
+import { forwardExpiredPasswordChange } from './expired-password';
 
 /**
  * Factory for the set of `/api/auth/*` route handlers that are functionally
@@ -104,6 +105,16 @@ export function createAuthRoutes(config: AuthRoutesConfig) {
     changePassword: {
       POST: (request: NextRequest) =>
         proxyToAuth(proxyConfig, request, '/auth/change-password'),
+    },
+
+    /**
+     * POST /api/auth/password/expired — unauthenticated: rotate an expired
+     * password by proving the current one. No session cookie is involved; the
+     * client re-runs the normal login afterwards (see forwardExpiredPasswordChange).
+     */
+    expiredPassword: {
+      POST: (request: NextRequest) =>
+        forwardExpiredPasswordChange(config.authInternalUrl, request),
     },
 
     /** POST /api/auth/impersonate — org_admin starts impersonating a user of their org. */
