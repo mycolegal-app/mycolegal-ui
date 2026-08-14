@@ -18,6 +18,8 @@
       "unmute": "Reactivar avisos",
       "mutedTooltip": "Fòrum silenciat. Prem per veure'l.",
       "composerPlaceholder": "Escriu un missatge…",
+      "attach": "Adjuntar fitxer",
+      "uploading": "Pujant…",
       "send": "Enviar",
       "report": "Reportar missatge",
       "reportPrompt": "Motiu del report?",

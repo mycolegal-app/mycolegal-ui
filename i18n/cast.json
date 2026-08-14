@@ -18,6 +18,8 @@
       "unmute": "Reactivar avisos",
       "mutedTooltip": "Foro silenciado. Pulsa para ver.",
       "composerPlaceholder": "Escribe un mensaje…",
+      "attach": "Adjuntar archivo",
+      "uploading": "Subiendo…",
       "send": "Enviar",
       "report": "Reportar mensaje",
       "reportPrompt": "¿Motivo del reporte?",

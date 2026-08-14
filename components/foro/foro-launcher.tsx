@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   Bell,
@@ -10,6 +10,7 @@ import {
   MessageSquarePlus,
   MessageSquareX,
   MessagesSquare,
+  Paperclip,
   Send,
   Unlink,
   X,
@@ -374,6 +375,8 @@ function ForoDrawerPanel({
   const [modView, setModView] = useState(false);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const timeFmt = useMemo(
     () =>
@@ -490,6 +493,35 @@ function ForoDrawerPanel({
       setSending(false);
     }
   }, [draft, activeId, sending]);
+
+  // Adjuntar un archivo desde la app: sube por multipart a /api/foro/media, que
+  // lo guarda en GCS y lo puentea a Telegram (foto/documento). El `draft` viaja
+  // como pie opcional. La respuesta trae el mensaje ya creado (con media) → se
+  // añade al hilo, igual que `send`.
+  const onPickFile = useCallback(
+    async (e: ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      e.target.value = ""; // permite re-seleccionar el mismo fichero
+      if (!file || !activeId || uploading) return;
+      setUploading(true);
+      try {
+        const fd = new FormData();
+        fd.append("topicId", activeId);
+        fd.append("file", file);
+        if (draft.trim()) fd.append("text", draft.trim());
+        const r = await fetch("/api/foro/media", { method: "POST", body: fd });
+        if (r.ok) {
+          const j = await r.json();
+          const m = j?.data as Message | undefined;
+          if (m) setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, m]));
+          setDraft("");
+        }
+      } finally {
+        setUploading(false);
+      }
+    },
+    [activeId, draft, uploading],
+  );
 
   const report = useCallback(
     async (id: string) => {
@@ -685,6 +717,17 @@ function ForoDrawerPanel({
             <p className="text-center text-xs text-gray-400">{t("ui.foro.readOnly")}</p>
           ) : (
             <div className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 dark:border-gray-700">
+              <input ref={fileRef} type="file" className="hidden" onChange={onPickFile} />
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading || sending}
+                title={t("ui.foro.attach")}
+                aria-label={t("ui.foro.attach")}
+                className="shrink-0 text-gray-400 transition-colors hover:text-gray-700 disabled:opacity-40 dark:hover:text-gray-200"
+              >
+                <Paperclip className="h-4 w-4" />
+              </button>
               <input
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
@@ -694,12 +737,13 @@ function ForoDrawerPanel({
                     void send();
                   }
                 }}
-                placeholder={t("ui.foro.composerPlaceholder")}
-                className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
+                disabled={uploading}
+                placeholder={uploading ? t("ui.foro.uploading") : t("ui.foro.composerPlaceholder")}
+                className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400 disabled:opacity-60"
               />
               <button
                 onClick={() => void send()}
-                disabled={sending || !draft.trim()}
+                disabled={sending || uploading || !draft.trim()}
                 aria-label={t("ui.foro.send")}
                 className="text-gray-400 transition-colors hover:text-gray-700 disabled:opacity-40 dark:hover:text-gray-200"
               >
