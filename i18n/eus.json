@@ -640,7 +640,11 @@
       "btnCancel": "Utzi",
       "btnCreate": "Sortu",
       "btnSave": "Gorde",
-      "btnSaving": "Gordetzen…"
+      "btnSaving": "Gordetzen…",
+      "dupTitle": "Bezero bikoiztu posiblea",
+      "dupHint": "Berdina diruditen bezeroak badaude jada. Erabili horietako bat edo sortu berri bat hala ere.",
+      "dupUse": "Hau erabili",
+      "dupCreateAnyway": "Sortu hala ere"
     },
     "actPicker": {
       "placeholder": "Bilatu egintza juridikoa kodez, izenez edo kategoriaz...",

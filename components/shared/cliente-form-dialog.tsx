@@ -30,6 +30,19 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { useI18n } from "../i18n/i18n-context";
 
+/**
+ * Candidato duplicado devuelto por el backend (POSSIBLE_DUPLICATE). Forma
+ * mínima para mostrarlo y para poder seleccionarlo como si se hubiese creado.
+ */
+export interface DuplicateCandidate {
+  id: string;
+  tipo: string;
+  nombre: string;
+  apellidos: string | null;
+  razonSocial: string | null;
+  nif: string | null;
+}
+
 export interface ClienteFormData {
   id: string;
   tipo: "PERSONA_FISICA" | "PERSONA_JURIDICA";
@@ -129,12 +142,16 @@ export function ClienteFormDialog({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Candidatos duplicados devueltos por el backend (POSSIBLE_DUPLICATE).
+  // Mientras haya candidatos mostramos el panel de aviso en vez de crear.
+  const [duplicates, setDuplicates] = useState<DuplicateCandidate[] | null>(null);
 
   // Reset and hydrate on open.
   useEffect(() => {
     if (!open) return;
     setError("");
     setConfirmDelete(false);
+    setDuplicates(null);
     if (isEdit && clienteId) {
       setLoading(true);
       fetch(`${apiBase}/${clienteId}`)
@@ -200,7 +217,7 @@ export function ClienteFormDialog({
     return base;
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent, force = false) {
     e.preventDefault();
     if (saving) return;
     setSaving(true);
@@ -208,12 +225,21 @@ export function ClienteFormDialog({
     try {
       const url = isEdit ? `${apiBase}/${clienteId}` : apiBase;
       const method = isEdit ? "PATCH" : "POST";
+      const payload = buildPayload();
+      // En creación, `force` salta la comprobación anti-duplicados del backend.
+      if (!isEdit && force) payload.force = true;
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildPayload()),
+        body: JSON.stringify(payload),
       });
       const json = await res.json().catch(() => ({}));
+      // Backend detectó posibles duplicados: mostramos el panel de aviso y
+      // dejamos al usuario elegir (usar existente / crear igualmente).
+      if (res.status === 409 && json?.error?.code === "POSSIBLE_DUPLICATE") {
+        setDuplicates((json.error.candidates as DuplicateCandidate[]) ?? []);
+        return;
+      }
       if (!res.ok) {
         throw new Error(
           json?.error?.message || json?.message || `HTTP ${res.status}`,
@@ -228,6 +254,19 @@ export function ClienteFormDialog({
     } finally {
       setSaving(false);
     }
+  }
+
+  // El usuario elige un candidato existente en vez de crear uno nuevo: se
+  // trata como "creado" para que el picker lo seleccione.
+  function handleUseExisting(c: DuplicateCandidate) {
+    onCreated?.(c as unknown as ClienteFormData);
+    onOpenChange(false);
+  }
+
+  function candidateName(c: DuplicateCandidate): string {
+    return c.tipo === "PERSONA_JURIDICA"
+      ? c.razonSocial || c.nombre
+      : `${c.nombre} ${c.apellidos || ""}`.trim();
   }
 
   async function handleDelete() {
@@ -273,7 +312,56 @@ export function ClienteFormDialog({
           <div className="rounded-md bg-red-50 p-2 text-xs text-red-700">{error}</div>
         )}
 
-        {loading ? (
+        {duplicates && duplicates.length > 0 ? (
+          <div className="space-y-3">
+            <div className="rounded-md bg-amber-50 p-3 text-sm text-amber-800">
+              <p className="font-medium">{t("ui.clienteForm.dupTitle")}</p>
+              <p className="mt-0.5 text-xs">{t("ui.clienteForm.dupHint")}</p>
+            </div>
+            <div className="max-h-56 space-y-1.5 overflow-auto">
+              {duplicates.map((c) => (
+                <div
+                  key={c.id}
+                  className="flex items-center justify-between gap-3 rounded-md border px-3 py-2"
+                >
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-medium">{candidateName(c)}</div>
+                    {c.nif && (
+                      <div className="text-xs text-gray-500">
+                        {formatNif ? formatNif(c.nif) : c.nif}
+                      </div>
+                    )}
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleUseExisting(c)}
+                  >
+                    {t("ui.clienteForm.dupUse")}
+                  </Button>
+                </div>
+              ))}
+            </div>
+            <DialogFooter className="flex-row items-center justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setDuplicates(null)}
+                disabled={saving}
+              >
+                {t("ui.clienteForm.btnCancel")}
+              </Button>
+              <Button
+                type="button"
+                disabled={saving}
+                onClick={(e) => handleSubmit(e as unknown as React.FormEvent, true)}
+              >
+                {saving ? t("ui.clienteForm.btnSaving") : t("ui.clienteForm.dupCreateAnyway")}
+              </Button>
+            </DialogFooter>
+          </div>
+        ) : loading ? (
           <div className="py-6 text-center text-sm text-gray-500">
             {t("ui.clienteForm.loading")}
           </div>

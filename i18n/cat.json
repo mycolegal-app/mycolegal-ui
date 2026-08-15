@@ -641,7 +641,11 @@
       "btnCancel": "Cancel·lar",
       "btnCreate": "Crear",
       "btnSave": "Desar",
-      "btnSaving": "Desant…"
+      "btnSaving": "Desant…",
+      "dupTitle": "Possible client duplicat",
+      "dupHint": "Ja existeixen clients que semblen el mateix. Fes servir un d'aquests o crea'n un de nou igualment.",
+      "dupUse": "Fer servir aquest",
+      "dupCreateAnyway": "Crear igualment"
     },
     "actPicker": {
       "placeholder": "Cercar acte jurídic per codi, nom o categoria...",

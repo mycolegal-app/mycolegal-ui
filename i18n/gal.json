@@ -640,7 +640,11 @@
       "btnCancel": "Cancelar",
       "btnCreate": "Crear",
       "btnSave": "Gardar",
-      "btnSaving": "Gardando…"
+      "btnSaving": "Gardando…",
+      "dupTitle": "Posible cliente duplicado",
+      "dupHint": "Xa existen clientes que parecen o mesmo. Usa un destes ou crea un novo igualmente.",
+      "dupUse": "Usar este",
+      "dupCreateAnyway": "Crear igualmente"
     },
     "actPicker": {
       "placeholder": "Buscar acto xurídico por código, nome ou categoría...",

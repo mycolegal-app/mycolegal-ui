@@ -641,7 +641,11 @@
       "btnCancel": "Cancelar",
       "btnCreate": "Crear",
       "btnSave": "Guardar",
-      "btnSaving": "Guardando…"
+      "btnSaving": "Guardando…",
+      "dupTitle": "Posible cliente duplicado",
+      "dupHint": "Ya existen clientes que parecen el mismo. Usa uno de estos o crea uno nuevo igualmente.",
+      "dupUse": "Usar este",
+      "dupCreateAnyway": "Crear igualmente"
     },
     "actPicker": {
       "placeholder": "Buscar acto jurídico por código, nombre o categoría...",
