@@ -12,6 +12,8 @@ interface IncidentListEntry {
   id: string;
   number: number;
   appSlug: string;
+  /** Naturaleza del reporte: "incident" (por defecto) o "improvement". */
+  kind?: string;
   description: string;
   status: string;
   closedByRole: string | null;
@@ -22,6 +24,18 @@ interface IncidentListEntry {
 }
 
 type Scope = "mine" | "org";
+/** Filtro por naturaleza: todas / solo incidencias / solo mejoras. */
+type KindFilter = "all" | "incident" | "improvement";
+
+const KIND_TONES: Record<string, string> = {
+  incident: "bg-amber-100 text-amber-800",
+  improvement: "bg-cyan-100 text-cyan-800",
+};
+
+const KIND_LABEL_KEYS: Record<string, string> = {
+  incident: "ui.myIncidents.kindIncident",
+  improvement: "ui.myIncidents.kindImprovement",
+};
 
 const STATUS_TONES: Record<string, string> = {
   open: "bg-amber-100 text-amber-800",
@@ -100,6 +114,7 @@ export function MyIncidentsPage({ onReport }: MyIncidentsPageProps = {}) {
   const { t } = useI18n();
   const [items, setItems] = useState<IncidentListEntry[]>([]);
   const [scope, setScope] = useState<Scope>("mine");
+  const [kindFilter, setKindFilter] = useState<KindFilter>("all");
   const [canManage, setCanManage] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -108,12 +123,13 @@ export function MyIncidentsPage({ onReport }: MyIncidentsPageProps = {}) {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   const loadScope = useCallback(
-    async (s: Scope, sBy: SortField, sOrder: "asc" | "desc") => {
+    async (s: Scope, sBy: SortField, sOrder: "asc" | "desc", kFilter: KindFilter) => {
       setLoading(true);
       setError(null);
       try {
         const ep = s === "org" ? "/api/incidents/org" : "/api/incidents/mine";
-        const res = await fetch(`${ep}?limit=100&sortBy=${sBy}&sortOrder=${sOrder}`, { credentials: "include" });
+        const kindParam = kFilter !== "all" ? `&kind=${kFilter}` : "";
+        const res = await fetch(`${ep}?limit=100&sortBy=${sBy}&sortOrder=${sOrder}${kindParam}`, { credentials: "include" });
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
           throw new Error(
@@ -180,9 +196,17 @@ export function MyIncidentsPage({ onReport }: MyIncidentsPageProps = {}) {
   const onScope = useCallback(
     (s: Scope) => {
       setScope(s);
-      void loadScope(s, sortBy, sortOrder);
+      void loadScope(s, sortBy, sortOrder, kindFilter);
     },
-    [loadScope, sortBy, sortOrder],
+    [loadScope, sortBy, sortOrder, kindFilter],
+  );
+
+  const onKind = useCallback(
+    (k: KindFilter) => {
+      setKindFilter(k);
+      void loadScope(scope, sortBy, sortOrder, k);
+    },
+    [loadScope, scope, sortBy, sortOrder],
   );
 
   // Al pulsar una cabecera: si ya es la columna activa alterna asc/desc; si es
@@ -193,9 +217,9 @@ export function MyIncidentsPage({ onReport }: MyIncidentsPageProps = {}) {
         field === sortBy ? (sortOrder === "asc" ? "desc" : "asc") : "asc";
       setSortBy(field);
       setSortOrder(nextOrder);
-      void loadScope(scope, field, nextOrder);
+      void loadScope(scope, field, nextOrder, kindFilter);
     },
-    [scope, sortBy, sortOrder, loadScope],
+    [scope, sortBy, sortOrder, kindFilter, loadScope],
   );
 
   const isOrg = scope === "org";
@@ -207,25 +231,52 @@ export function MyIncidentsPage({ onReport }: MyIncidentsPageProps = {}) {
         subtitle={isOrg ? t("ui.myIncidents.subtitleOrg") : t("ui.myIncidents.subtitle")}
       />
 
-      {canManage && (
+      <div className="flex flex-wrap items-center gap-2">
+        {canManage && (
+          <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5 text-xs">
+            {(["org", "mine"] as Scope[]).map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => onScope(s)}
+                className={cn(
+                  "rounded-md px-3 py-1 font-medium transition-colors",
+                  scope === s
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-500 hover:text-gray-800",
+                )}
+              >
+                {s === "org" ? t("ui.myIncidents.scopeOrg") : t("ui.myIncidents.scopeMine")}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Filtro por naturaleza: todas / incidencias / mejoras. */}
         <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5 text-xs">
-          {(["org", "mine"] as Scope[]).map((s) => (
+          {(
+            [
+              ["all", "ui.myIncidents.kindFilterAll"],
+              ["incident", "ui.myIncidents.kindFilterIncidents"],
+              ["improvement", "ui.myIncidents.kindFilterImprovements"],
+            ] as [KindFilter, string][]
+          ).map(([k, labelKey]) => (
             <button
-              key={s}
+              key={k}
               type="button"
-              onClick={() => onScope(s)}
+              onClick={() => onKind(k)}
               className={cn(
                 "rounded-md px-3 py-1 font-medium transition-colors",
-                scope === s
+                kindFilter === k
                   ? "bg-white text-gray-900 shadow-sm"
                   : "text-gray-500 hover:text-gray-800",
               )}
             >
-              {s === "org" ? t("ui.myIncidents.scopeOrg") : t("ui.myIncidents.scopeMine")}
+              {t(labelKey)}
             </button>
           ))}
         </div>
-      )}
+      </div>
 
       {loading && (
         <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -263,6 +314,7 @@ export function MyIncidentsPage({ onReport }: MyIncidentsPageProps = {}) {
             <thead>
               <tr className="border-b border-gray-100 text-left text-xs uppercase tracking-wide text-gray-500">
                 <SortableTh field="number" label="#" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
+                <th className="px-4 py-2">{t("ui.myIncidents.colKind")}</th>
                 <th className="px-4 py-2">{t("ui.myIncidents.colDescription")}</th>
                 {isOrg && <th className="px-4 py-2">{t("ui.myIncidents.colReporter")}</th>}
                 <SortableTh field="appSlug" label={t("ui.myIncidents.colApp")} sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} />
@@ -281,6 +333,19 @@ export function MyIncidentsPage({ onReport }: MyIncidentsPageProps = {}) {
                       <Link href={`/incidencias/${i.number}`} className="hover:underline">
                         #{i.number}
                       </Link>
+                    </td>
+                    <td className="px-4 py-2">
+                      {(() => {
+                        const k = i.kind || "incident";
+                        const kTone = KIND_TONES[k] || "bg-gray-100 text-gray-700";
+                        const kLabelKey = KIND_LABEL_KEYS[k];
+                        const kLabel = kLabelKey ? t(kLabelKey) : k;
+                        return (
+                          <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${kTone}`}>
+                            {kLabel}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="max-w-md px-4 py-2 text-gray-700">
                       <Link href={`/incidencias/${i.number}`} className="hover:underline">

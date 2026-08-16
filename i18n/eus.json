@@ -20,6 +20,8 @@
       "composerPlaceholder": "Idatzi mezu bat…",
       "attach": "Erantsi fitxategia",
       "uploading": "Igotzen…",
+      "loadOlder": "Kargatu aurreko mezuak",
+      "loadingOlder": "Kargatzen…",
       "send": "Bidali",
       "report": "Mezua salatu",
       "reportPrompt": "Salaketaren arrazoia?",
@@ -418,7 +420,13 @@
       "scopeOrg": "Erakunde osoa",
       "titleOrg": "Erakundeko gertakariak",
       "subtitleOrg": "Zure erakundeko erabiltzaileek jakinarazitako gertakari guztiak.",
-      "emptyOrg": "Ez dago gertakaririk zure erakundean."
+      "emptyOrg": "Ez dago gertakaririk zure erakundean.",
+      "colKind": "Mota",
+      "kindIncident": "Intzidentzia",
+      "kindImprovement": "Hobekuntza",
+      "kindFilterAll": "Guztiak",
+      "kindFilterIncidents": "Intzidentziak",
+      "kindFilterImprovements": "Hobekuntzak"
     },
     "incidentDetail": {
       "errNotFound": "Ez dugu gertakari hau aurkitu.",
@@ -475,8 +483,8 @@
     "incidentReporter": {
       "errSend": "Ezin izan da gertakaria bidali.",
       "errSendShort": "Errorea gertakaria bidaltzean.",
-      "btnTooltip": "Gertakaria jakinarazi — {shortcut} botoia ezkutatzeko",
-      "btnAria": "Gertakaria jakinarazi. Sakatu {shortcut} botoia ezkutatzeko.",
+      "btnTooltip": "Intzidentzia edo hobekuntza jakinarazi — {shortcut} botoi hau ezkutatzeko",
+      "btnAria": "Intzidentzia edo hobekuntza-proposamena jakinarazi. Sakatu {shortcut} botoi hau ezkutatzeko.",
       "title": "Gertakari bat jakinarazi",
       "description": "Deskribatu zer egiten ari zinen eta zer gertatu den. Orain ikusten ari zarenaren pantaila-argazkia eransten dugu erreproduzitzen laguntzeko.",
       "capturing": "Pantaila kapturatzen…",
@@ -496,7 +504,21 @@
       "attachReadError": "Ezin izan da «{name}» irakurri.",
       "minimizedLabel": "Intzidentzia jakinarazi",
       "minimize": "Minimizatu",
-      "expand": "Zabaldu"
+      "expand": "Zabaldu",
+      "chooseTitle": "Zer jakinarazi nahi duzu?",
+      "chooseDescription": "Aukeratu jakinarazpen mota.",
+      "chooseIncident": "Intzidentzia bat jakinarazi",
+      "chooseIncidentHint": "Zerbaitek ez du funtzionatzen edo errorea ematen du.",
+      "chooseImprovement": "Hobekuntza bat proposatu",
+      "chooseImprovementHint": "Aplikazioa hobetzeko ideia edo iradokizun bat.",
+      "titleImprovement": "Hobekuntza bat proposatu",
+      "descriptionImprovement": "Azaldu zure ideia eta zer hobetuko lukeen. Orain ikusten duzunaren argazkia eransten dugu, kokatzen laguntzeko.",
+      "descriptionLabelImprovement": "Zure proposamena",
+      "descriptionPlaceholderImprovement": "Deskribatu proposatzen duzun hobekuntza eta zer arazo edo behar konponduko lukeen.",
+      "btnSendImprovement": "Proposamena bidali",
+      "sentOkImprovement": "Proposamena bidalita. Eskerrik asko.",
+      "minimizedLabelImprovement": "Hobekuntza bat proposatu",
+      "btnBack": "Atzera"
     },
     "appInfo": {
       "btnAria": "Aplikazioari buruz",

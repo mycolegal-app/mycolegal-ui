@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bug, Camera, Send, Loader2, X, Paperclip, Upload, Minus, Maximize2 } from "lucide-react";
+import { Bug, Camera, Send, Loader2, X, Paperclip, Upload, Minus, Maximize2, Lightbulb, ChevronLeft } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -41,6 +41,15 @@ const DRAFT_STORAGE_PREFIX = "mycolegal:incident-reporter:draft:";
 // subir para dar feedback inmediato. Tope de nº alineado con el schema de auth.
 const MAX_ATTACHMENTS = 5;
 const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
+
+/**
+ * Naturaleza del reporte, elegida en el primer paso del reporter:
+ * - "incident": algo falla / no funciona como debería.
+ * - "improvement": propuesta de mejora / sugerencia.
+ * El backend lo persiste en `IncidentReport.kind`; la pantalla es la misma,
+ * solo cambia el lenguaje (y, en mejora, no adjuntamos los errores de consola).
+ */
+type ReportKind = "incident" | "improvement";
 
 interface PendingAttachment {
   filename: string;
@@ -124,6 +133,10 @@ export function IncidentReporter({
 }: IncidentReporterProps) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
+  // Naturaleza elegida en el primer paso. `null` = aún mostrando la elección
+  // (incidencia vs propuesta de mejora); una vez elegida, se muestra el
+  // formulario de siempre con el lenguaje adaptado.
+  const [kind, setKind] = useState<ReportKind | null>(null);
   // #306 — el modal puede minimizarse a una barra para echar un vistazo a la
   // pantalla sin perder lo escrito. `minimizeRef` evita que el cierre del Dialog
   // (al ocultarse por minimizar) se interprete como cerrar del todo.
@@ -248,6 +261,8 @@ export function IncidentReporter({
     setScreenshot(null);
     setAttachments([]);
     setAttachError(null);
+    // Cada apertura arranca en el paso de elección incidencia vs mejora.
+    setKind(null);
     // Capture BEFORE opening the dialog so the overlay + modal don't end up
     // in the screenshot. captureScreenshot manages its own capturing state.
     await captureScreenshot();
@@ -317,6 +332,9 @@ export function IncidentReporter({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           appSlug,
+          // Naturaleza elegida en el primer paso. Fallback defensivo a
+          // "incident" (el backend también aplica ese default).
+          kind: kind ?? "incident",
           description: description.trim(),
           pageUrl: window.location.href,
           screenshot,
@@ -326,7 +344,9 @@ export function IncidentReporter({
             dpr: window.devicePixelRatio || 1,
             language: navigator.language,
             platform: (navigator as any).platform,
-            consoleErrors,
+            // Los errores de consola solo aportan al diagnóstico de una
+            // incidencia; en una propuesta de mejora no son relevantes.
+            consoleErrors: kind === "improvement" ? [] : consoleErrors,
             screenshotCaptureError: captureError,
             capturedAt: new Date().toISOString(),
           },
@@ -366,9 +386,34 @@ export function IncidentReporter({
     } finally {
       setSubmitting(false);
     }
-  }, [appSlug, attachments, captureError, consoleErrors, description, draftKey, screenshot, submitUrl, t]);
+  }, [appSlug, attachments, captureError, consoleErrors, description, draftKey, kind, screenshot, submitUrl, t]);
 
   const shortcutLabel = formatShortcut(shortcut);
+
+  // Textos adaptados a la naturaleza elegida. Misma pantalla, distinto
+  // lenguaje: en propuesta de mejora usamos las claves `*Improvement`.
+  const isImprovement = kind === "improvement";
+  const headerTitle = isImprovement
+    ? t("ui.incidentReporter.titleImprovement")
+    : t("ui.incidentReporter.title");
+  const headerDescription = isImprovement
+    ? t("ui.incidentReporter.descriptionImprovement")
+    : t("ui.incidentReporter.description");
+  const descLabel = isImprovement
+    ? t("ui.incidentReporter.descriptionLabelImprovement")
+    : t("ui.incidentReporter.descriptionLabel");
+  const descPlaceholder = isImprovement
+    ? t("ui.incidentReporter.descriptionPlaceholderImprovement")
+    : t("ui.incidentReporter.descriptionPlaceholder");
+  const sendLabel = isImprovement
+    ? t("ui.incidentReporter.btnSendImprovement")
+    : t("ui.incidentReporter.btnSend");
+  const sentOkLabel = isImprovement
+    ? t("ui.incidentReporter.sentOkImprovement")
+    : t("ui.incidentReporter.sentOk");
+  const minimizedLabel = isImprovement
+    ? t("ui.incidentReporter.minimizedLabelImprovement")
+    : t("ui.incidentReporter.minimizedLabel");
 
   return (
     <>
@@ -387,9 +432,13 @@ export function IncidentReporter({
       {/* #306 — barra minimizada: deja ver la pantalla sin perder el borrador. */}
       {open && minimized && (
         <div className="fixed bottom-6 right-6 z-[60] flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-lg print:hidden">
-          <Bug className="h-4 w-4 shrink-0 text-navy" />
+          {isImprovement ? (
+            <Lightbulb className="h-4 w-4 shrink-0 text-navy" />
+          ) : (
+            <Bug className="h-4 w-4 shrink-0 text-navy" />
+          )}
           <span className="text-sm font-medium text-gray-800">
-            {t("ui.incidentReporter.minimizedLabel")}
+            {minimizedLabel}
           </span>
           <button
             type="button"
@@ -425,12 +474,52 @@ export function IncidentReporter({
             <Minus className="h-4 w-4" />
           </button>
           <DialogHeader>
-            <DialogTitle>{t("ui.incidentReporter.title")}</DialogTitle>
+            <DialogTitle>
+              {kind === null ? t("ui.incidentReporter.chooseTitle") : headerTitle}
+            </DialogTitle>
             <DialogDescription>
-              {t("ui.incidentReporter.description")}
+              {kind === null ? t("ui.incidentReporter.chooseDescription") : headerDescription}
             </DialogDescription>
           </DialogHeader>
 
+          {/* Paso 1 — elección incidencia vs propuesta de mejora. Misma
+              pantalla a continuación, solo cambia el lenguaje. */}
+          {kind === null && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => setKind("incident")}
+                className="flex flex-col items-start gap-2 rounded-lg border border-gray-200 bg-white p-4 text-left transition-colors hover:border-navy hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-cyan"
+              >
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+                  <Bug className="h-5 w-5" />
+                </span>
+                <span className="text-sm font-semibold text-gray-900">
+                  {t("ui.incidentReporter.chooseIncident")}
+                </span>
+                <span className="text-xs text-gray-500">
+                  {t("ui.incidentReporter.chooseIncidentHint")}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setKind("improvement")}
+                className="flex flex-col items-start gap-2 rounded-lg border border-gray-200 bg-white p-4 text-left transition-colors hover:border-navy hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-cyan"
+              >
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-cyan-100 text-cyan-700">
+                  <Lightbulb className="h-5 w-5" />
+                </span>
+                <span className="text-sm font-semibold text-gray-900">
+                  {t("ui.incidentReporter.chooseImprovement")}
+                </span>
+                <span className="text-xs text-gray-500">
+                  {t("ui.incidentReporter.chooseImprovementHint")}
+                </span>
+              </button>
+            </div>
+          )}
+
+          {kind !== null && (
           <div className="space-y-4">
             {/* Screenshot preview */}
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-2">
@@ -470,13 +559,13 @@ export function IncidentReporter({
 
             <div>
               <label htmlFor="incident-description" className="mb-1 block text-sm text-gray-700">
-                {t("ui.incidentReporter.descriptionLabel")}
+                {descLabel}
               </label>
               <Textarea
                 id="incident-description"
                 value={description}
                 onChange={(e) => updateDescription(e.target.value)}
-                placeholder={t("ui.incidentReporter.descriptionPlaceholder")}
+                placeholder={descPlaceholder}
                 rows={5}
                 // #429 — tope alineado con el backend (evita que el envío falle
                 // silenciosamente por longitud; antes eran 4000 y truncaba).
@@ -550,7 +639,7 @@ export function IncidentReporter({
 
             {result === "ok" && (
               <div className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
-                {t("ui.incidentReporter.sentOk")}
+                {sentOkLabel}
               </div>
             )}
             {result === "error" && (
@@ -559,19 +648,34 @@ export function IncidentReporter({
               </div>
             )}
           </div>
+          )}
 
           <DialogFooter>
+            {kind !== null && (
+              // Volver al paso de elección sin perder lo escrito.
+              <Button
+                variant="outline"
+                onClick={() => { setKind(null); setResult(null); setErrorMessage(""); }}
+                disabled={submitting}
+                className="sm:mr-auto"
+              >
+                <ChevronLeft className="mr-1 h-4 w-4" />
+                {t("ui.incidentReporter.btnBack")}
+              </Button>
+            )}
             <Button variant="outline" onClick={() => setOpen(false)} disabled={submitting}>
               <X className="mr-1 h-4 w-4" />
               {t("ui.incidentThread.btnCancel")}
             </Button>
-            <Button onClick={submit} disabled={submitting || capturing || !description.trim()}>
-              {submitting ? (
-                <><Loader2 className="mr-1 h-4 w-4 animate-spin" />{t("ui.forgotPassword.sending")}</>
-              ) : (
-                <><Send className="mr-1 h-4 w-4" />{t("ui.incidentReporter.btnSend")}</>
-              )}
-            </Button>
+            {kind !== null && (
+              <Button onClick={submit} disabled={submitting || capturing || !description.trim()}>
+                {submitting ? (
+                  <><Loader2 className="mr-1 h-4 w-4 animate-spin" />{t("ui.forgotPassword.sending")}</>
+                ) : (
+                  <><Send className="mr-1 h-4 w-4" />{sendLabel}</>
+                )}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

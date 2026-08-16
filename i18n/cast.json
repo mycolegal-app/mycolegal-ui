@@ -20,6 +20,8 @@
       "composerPlaceholder": "Escribe un mensaje…",
       "attach": "Adjuntar archivo",
       "uploading": "Subiendo…",
+      "loadOlder": "Cargar mensajes anteriores",
+      "loadingOlder": "Cargando…",
       "send": "Enviar",
       "report": "Reportar mensaje",
       "reportPrompt": "¿Motivo del reporte?",
@@ -419,7 +421,13 @@
       "scopeOrg": "Toda la organización",
       "titleOrg": "Incidencias de la organización",
       "subtitleOrg": "Todas las incidencias reportadas por los usuarios de tu organización.",
-      "emptyOrg": "No hay incidencias en tu organización."
+      "emptyOrg": "No hay incidencias en tu organización.",
+      "colKind": "Tipo",
+      "kindIncident": "Incidencia",
+      "kindImprovement": "Mejora",
+      "kindFilterAll": "Todas",
+      "kindFilterIncidents": "Incidencias",
+      "kindFilterImprovements": "Mejoras"
     },
     "incidentDetail": {
       "errNotFound": "No encontramos esta incidencia.",
@@ -476,8 +484,8 @@
     "incidentReporter": {
       "errSend": "No se pudo enviar la incidencia.",
       "errSendShort": "Error al enviar la incidencia.",
-      "btnTooltip": "Reportar incidencia — {shortcut} para ocultar este botón",
-      "btnAria": "Reportar incidencia. Pulsa {shortcut} para ocultar este botón.",
+      "btnTooltip": "Comunicar incidencia o mejora — {shortcut} para ocultar este botón",
+      "btnAria": "Comunicar incidencia o propuesta de mejora. Pulsa {shortcut} para ocultar este botón.",
       "title": "Reportar una incidencia",
       "description": "Describe qué estabas intentando hacer y qué ha pasado. Adjuntamos una captura de lo que ves ahora para ayudarnos a reproducirlo.",
       "capturing": "Capturando pantalla…",
@@ -497,7 +505,21 @@
       "attachReadError": "No se pudo leer «{name}».",
       "minimizedLabel": "Reportar incidencia",
       "minimize": "Minimizar",
-      "expand": "Expandir"
+      "expand": "Expandir",
+      "chooseTitle": "¿Qué quieres comunicar?",
+      "chooseDescription": "Elige el tipo de comunicación.",
+      "chooseIncident": "Comunicar una incidencia",
+      "chooseIncidentHint": "Algo no funciona o da error.",
+      "chooseImprovement": "Proponer una mejora",
+      "chooseImprovementHint": "Una idea o sugerencia para mejorar la aplicación.",
+      "titleImprovement": "Proponer una mejora",
+      "descriptionImprovement": "Cuéntanos tu idea y qué mejoraría. Adjuntamos una captura de lo que ves ahora por si ayuda a situarla.",
+      "descriptionLabelImprovement": "Tu propuesta",
+      "descriptionPlaceholderImprovement": "Describe la mejora que propones y qué problema o necesidad resolvería.",
+      "btnSendImprovement": "Enviar propuesta",
+      "sentOkImprovement": "Propuesta enviada. Gracias.",
+      "minimizedLabelImprovement": "Proponer una mejora",
+      "btnBack": "Atrás"
     },
     "appInfo": {
       "btnAria": "Acerca de la aplicación",

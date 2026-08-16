@@ -20,6 +20,8 @@
       "composerPlaceholder": "Escriu un missatge…",
       "attach": "Adjuntar fitxer",
       "uploading": "Pujant…",
+      "loadOlder": "Carregar missatges anteriors",
+      "loadingOlder": "Carregant…",
       "send": "Enviar",
       "report": "Reportar missatge",
       "reportPrompt": "Motiu del report?",
@@ -419,7 +421,13 @@
       "scopeOrg": "Tota l'organització",
       "titleOrg": "Incidències de l'organització",
       "subtitleOrg": "Totes les incidències reportades pels usuaris de la teva organització.",
-      "emptyOrg": "No hi ha incidències a la teva organització."
+      "emptyOrg": "No hi ha incidències a la teva organització.",
+      "colKind": "Tipus",
+      "kindIncident": "Incidència",
+      "kindImprovement": "Millora",
+      "kindFilterAll": "Totes",
+      "kindFilterIncidents": "Incidències",
+      "kindFilterImprovements": "Millores"
     },
     "incidentDetail": {
       "errNotFound": "No trobem aquesta incidència.",
@@ -476,8 +484,8 @@
     "incidentReporter": {
       "errSend": "No s'ha pogut enviar la incidència.",
       "errSendShort": "Error en enviar la incidència.",
-      "btnTooltip": "Reportar incidència — {shortcut} per ocultar aquest botó",
-      "btnAria": "Reportar incidència. Prem {shortcut} per ocultar aquest botó.",
+      "btnTooltip": "Comunicar incidència o millora — {shortcut} per amagar aquest botó",
+      "btnAria": "Comunicar incidència o proposta de millora. Prem {shortcut} per amagar aquest botó.",
       "title": "Reportar una incidència",
       "description": "Descriu què estaves intentant fer i què ha passat. Adjuntem una captura del que veus ara per ajudar-nos a reproduir-ho.",
       "capturing": "Capturant pantalla…",
@@ -497,7 +505,21 @@
       "attachReadError": "No s'ha pogut llegir «{name}».",
       "minimizedLabel": "Reportar incidència",
       "minimize": "Minimitzar",
-      "expand": "Expandir"
+      "expand": "Expandir",
+      "chooseTitle": "Què vols comunicar?",
+      "chooseDescription": "Tria el tipus de comunicació.",
+      "chooseIncident": "Comunicar una incidència",
+      "chooseIncidentHint": "Alguna cosa no funciona o dóna error.",
+      "chooseImprovement": "Proposar una millora",
+      "chooseImprovementHint": "Una idea o suggeriment per millorar l'aplicació.",
+      "titleImprovement": "Proposar una millora",
+      "descriptionImprovement": "Explica'ns la teva idea i què milloraria. Adjuntem una captura del que veus ara per si ajuda a situar-la.",
+      "descriptionLabelImprovement": "La teva proposta",
+      "descriptionPlaceholderImprovement": "Descriu la millora que proposes i quin problema o necessitat resoldria.",
+      "btnSendImprovement": "Enviar proposta",
+      "sentOkImprovement": "Proposta enviada. Gràcies.",
+      "minimizedLabelImprovement": "Proposar una millora",
+      "btnBack": "Enrere"
     },
     "appInfo": {
       "btnAria": "Quant a l'aplicació",

@@ -18,6 +18,45 @@ import {
 import { useI18n } from "../i18n";
 
 const GOLD = "#b09a6e";
+const MESSAGES_PAGE = 50; // debe coincidir con el límite por defecto de listMessages
+
+/** Markdown → HTML mínimo y seguro para los mensajes del BOT (escapa y luego aplica
+ *  enlaces [txt](url), negrita, cursiva, código y viñetas). Así las citas/tutoriales
+ *  que MycoBot persiste en markdown se ven como ENLACES en la app, igual que en
+ *  Telegram (antes salían como texto plano "[3]"). */
+function botMdToHtml(md: string): string {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const inline = (s: string) =>
+    esc(s)
+      .replace(
+        /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,
+        '<a href="$2" target="_blank" rel="noopener noreferrer" style="color:#b09a6e;text-decoration:underline">$1</a>',
+      )
+      .replace(/\*\*([^\n*]+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*([^\n*]+?)\*/g, "<em>$1</em>")
+      .replace(/`([^`\n]+?)`/g, "<code>$1</code>");
+  const out: string[] = [];
+  let inList = false;
+  for (const raw of md.split("\n")) {
+    const line = raw.replace(/\s+$/, "");
+    const bullet = line.match(/^\s*[*\-+]\s+(.*)$/);
+    if (bullet) {
+      if (!inList) {
+        out.push('<ul style="padding-left:18px;margin:4px 0">');
+        inList = true;
+      }
+      out.push(`<li style="margin:2px 0">${inline(bullet[1])}</li>`);
+      continue;
+    }
+    if (inList) {
+      out.push("</ul>");
+      inList = false;
+    }
+    if (line.trim()) out.push(`<p style="margin:4px 0">${inline(line)}</p>`);
+  }
+  if (inList) out.push("</ul>");
+  return out.join("");
+}
 
 interface Topic {
   id: string;
@@ -376,8 +415,11 @@ function ForoDrawerPanel({
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const timeFmt = useMemo(
     () =>
       new Intl.DateTimeFormat(localeOf(language), {
@@ -400,8 +442,17 @@ function ForoDrawerPanel({
   useEffect(() => {
     if (!activeId) return;
     let alive = true;
+    // Carga inicial: SOLO la página reciente (el API pagina, 50). Se pinta y se
+    // salta al fondo AL INSTANTE (sin animación) → evita el molesto scroll continuo
+    // desde el mensaje más antiguo hasta el más nuevo en canales con historia.
     getData<Message[]>(`/api/foro/messages?topicId=${activeId}`).then((m) => {
-      if (alive && m) setMessages(m);
+      if (!alive || !m) return;
+      setMessages(m);
+      setHasMore(m.length >= MESSAGES_PAGE);
+      requestAnimationFrame(() => {
+        const el = listRef.current;
+        if (el) el.scrollTop = el.scrollHeight;
+      });
     });
     fetch("/api/foro/read", {
       method: "POST",
@@ -413,7 +464,12 @@ function ForoDrawerPanel({
     es.addEventListener("message", (e) => {
       try {
         const m = JSON.parse((e as MessageEvent).data) as Message;
+        // Solo auto-scroll (suave) si el usuario está cerca del fondo; si está
+        // leyendo historia arriba, no le arrastramos el scroll.
+        const el = listRef.current;
+        const near = el ? el.scrollHeight - el.scrollTop - el.clientHeight < 120 : true;
         setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, m]));
+        if (near) requestAnimationFrame(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }));
       } catch {
         /* noop */
       }
@@ -424,9 +480,35 @@ function ForoDrawerPanel({
     };
   }, [activeId]);
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  // "Cargar mensajes anteriores": trae la página anterior (before = el más antiguo
+  // cargado) y la PREPENDE, preservando la posición de scroll (sin saltos).
+  const loadOlder = useCallback(async () => {
+    if (loadingOlder || !activeId || !messages.length) return;
+    setLoadingOlder(true);
+    try {
+      const oldest = messages[0].createdAt;
+      const older = await getData<Message[]>(
+        `/api/foro/messages?topicId=${activeId}&before=${encodeURIComponent(oldest)}`,
+      );
+      const el = listRef.current;
+      const prevH = el?.scrollHeight ?? 0;
+      if (older && older.length) {
+        setMessages((prev) => {
+          const ids = new Set(prev.map((x) => x.id));
+          return [...older.filter((x) => !ids.has(x.id)), ...prev];
+        });
+        setHasMore(older.length >= MESSAGES_PAGE);
+        requestAnimationFrame(() => {
+          const el2 = listRef.current;
+          if (el2) el2.scrollTop = el2.scrollHeight - prevH; // mantiene el punto de lectura
+        });
+      } else {
+        setHasMore(false);
+      }
+    } finally {
+      setLoadingOlder(false);
+    }
+  }, [activeId, messages, loadingOlder]);
 
   useEffect(() => {
     let alive = true;
@@ -647,7 +729,19 @@ function ForoDrawerPanel({
         </div>
 
         {/* Hilo */}
-        <div className="flex-1 space-y-4 overflow-y-auto px-4 py-3">
+        <div ref={listRef} className="flex-1 space-y-4 overflow-y-auto px-4 py-3">
+          {hasMore && (
+            <div className="pb-1 text-center">
+              <button
+                type="button"
+                onClick={() => void loadOlder()}
+                disabled={loadingOlder}
+                className="rounded-full border border-gray-200 px-3 py-1 text-xs text-gray-500 hover:bg-gray-100 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800"
+              >
+                {loadingOlder ? t("ui.foro.loadingOlder") : t("ui.foro.loadOlder")}
+              </button>
+            </div>
+          )}
           {active && messages.length === 0 && (
             <p className="pt-6 text-center text-sm text-gray-400">{t("ui.foro.noMessages")}</p>
           )}
@@ -665,11 +759,19 @@ function ForoDrawerPanel({
                   )}
                   {m.editedAt && <span className="text-[9px] text-gray-400">· {t("ui.foro.edited")}</span>}
                 </div>
-                {m.text && (
-                  <p className="whitespace-pre-wrap break-words text-sm text-gray-800 dark:text-gray-200">
-                    {m.text}
-                  </p>
-                )}
+                {m.text &&
+                  (m.source === "BOT" ? (
+                    // MycoBot persiste su respuesta en markdown (con fuentes/tutoriales
+                    // como enlaces) → se renderiza para espejar las citas de Telegram.
+                    <div
+                      className="break-words text-sm text-gray-800 dark:text-gray-200"
+                      dangerouslySetInnerHTML={{ __html: botMdToHtml(m.text) }}
+                    />
+                  ) : (
+                    <p className="whitespace-pre-wrap break-words text-sm text-gray-800 dark:text-gray-200">
+                      {m.text}
+                    </p>
+                  ))}
                 {m.media.map((md) =>
                   md.mime.startsWith("image/") ? (
                     <a
