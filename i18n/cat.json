@@ -22,6 +22,8 @@
       "uploading": "Pujant…",
       "loadOlder": "Carregar missatges anteriors",
       "loadingOlder": "Carregant…",
+      "expand": "Expandir",
+      "collapse": "Contraure",
       "send": "Enviar",
       "report": "Reportar missatge",
       "reportPrompt": "Motiu del report?",

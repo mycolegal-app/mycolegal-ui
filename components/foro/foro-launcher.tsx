@@ -7,15 +7,18 @@ import {
   BellOff,
   Flag,
   Lock,
+  Maximize2,
   MessageSquarePlus,
   MessageSquareX,
   MessagesSquare,
+  Minimize2,
   Paperclip,
   Send,
   Unlink,
   X,
 } from "lucide-react";
 import { useI18n } from "../i18n";
+import { useSidebarCollapse } from "../layout/sidebar-collapse-context";
 
 const GOLD = "#b09a6e";
 const MESSAGES_PAGE = 50; // debe coincidir con el límite por defecto de listMessages
@@ -417,6 +420,11 @@ function ForoDrawerPanel({
   const [uploading, setUploading] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
+  // Maximizar el drawer a todo el espacio de trabajo (como el rail de MycoBot).
+  // El contexto de sidebar viaja por el portal (React lo preserva) → sabemos si el
+  // sidebar está compacto para dejarlo visible al expandir.
+  const { collapsed } = useSidebarCollapse();
+  const [expanded, setExpanded] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -621,10 +629,16 @@ function ForoDrawerPanel({
   const active = topics.find((x) => x.id === activeId) ?? null;
 
   return (
-    <div className="fixed inset-0 z-[110] flex justify-end bg-black/40" onClick={onClose}>
-      <div
-        className="flex h-full w-full max-w-md flex-col bg-white shadow-2xl dark:bg-gray-900"
-        onClick={(e) => e.stopPropagation()}
+    <>
+      {/* Backdrop modal SOLO en modo no-expandido (clic fuera cierra). Expandido =
+          como MycoBot: ocupa el workspace y deja el sidebar usable, sin backdrop. */}
+      {!expanded && <div className="fixed inset-0 z-[109] bg-black/40" onClick={onClose} />}
+      <aside
+        className={`fixed top-0 z-[110] flex h-full flex-col bg-white shadow-2xl transition-[left,max-width] duration-200 dark:bg-gray-900 ${
+          expanded
+            ? `left-0 right-0 w-auto max-w-none ${collapsed ? "lg:left-[64px]" : "lg:left-[220px]"}`
+            : "right-0 w-full max-w-md"
+        }`}
       >
         {/* Cabecera */}
         <header className="flex items-center gap-2 border-b border-gray-200 px-4 py-3 dark:border-gray-800">
@@ -632,6 +646,16 @@ function ForoDrawerPanel({
           <h2 className="flex-1 text-sm font-semibold text-gray-900 dark:text-gray-100">
             {t("ui.foro.title")}
           </h2>
+          {/* Expandir / contraer (solo desktop, como MycoBot). */}
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            title={expanded ? t("ui.foro.collapse") : t("ui.foro.expand")}
+            aria-label={expanded ? t("ui.foro.collapse") : t("ui.foro.expand")}
+            className="hidden text-gray-400 hover:text-gray-700 lg:block dark:hover:text-gray-200"
+          >
+            {expanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          </button>
           {canModerate && modReports.length > 0 && (
             <button
               onClick={() => setModView((v) => !v)}
@@ -856,7 +880,7 @@ function ForoDrawerPanel({
         </footer>
           </>
         )}
-      </div>
-    </div>
+      </aside>
+    </>
   );
 }

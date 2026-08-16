@@ -22,6 +22,8 @@
       "uploading": "Igotzen…",
       "loadOlder": "Kargatu aurreko mezuak",
       "loadingOlder": "Kargatzen…",
+      "expand": "Zabaldu",
+      "collapse": "Tolestu",
       "send": "Bidali",
       "report": "Mezua salatu",
       "reportPrompt": "Salaketaren arrazoia?",

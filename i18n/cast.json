@@ -22,6 +22,8 @@
       "uploading": "Subiendo…",
       "loadOlder": "Cargar mensajes anteriores",
       "loadingOlder": "Cargando…",
+      "expand": "Expandir",
+      "collapse": "Contraer",
       "send": "Enviar",
       "report": "Reportar mensaje",
       "reportPrompt": "¿Motivo del reporte?",
