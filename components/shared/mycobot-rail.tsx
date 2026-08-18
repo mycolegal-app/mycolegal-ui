@@ -271,7 +271,7 @@ interface ViewerState {
  * `available` calculado server-side a partir de las apps de la org.
  */
 export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask", consultorUrl, appSlug }: MycoBotRailProps) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const { collapsed } = useSidebarCollapse();
   const [open, setOpen] = useState(false);
   // #563 — modo expandido: el rail ocupa toda la pantalla salvo el sidebar
@@ -537,6 +537,9 @@ export function MycoBotRail({ available = false, askUrl = "/api/resoluciones/ask
             pregunta: q,
             conversacionId,
             appSlug,
+            // Idioma de la UI → MycoBot acota el Manual a esa lengua (citas en el
+            // idioma que lee el usuario, no mezcladas).
+            lang: language,
             clases: readClasesSel() ?? undefined,
             // Scope por FUENTE (el otro nivel del modal de Fuentes). AND con clases.
             fuentes: readFuentesSel() ?? undefined,
