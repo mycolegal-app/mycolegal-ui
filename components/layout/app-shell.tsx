@@ -14,6 +14,8 @@ import {
   DefaultSearchButton,
 } from "../shared/header-default-buttons";
 import { useAuthFetchGuard } from "../../hooks/use-auth-fetch-guard";
+import { useIsOrgAdmin } from "../../hooks/use-is-org-admin";
+import { CreditsPurchaseModal } from "../shared/credits-purchase-modal";
 import { useI18n } from "../i18n/i18n-context";
 import { cn } from "../../lib/utils";
 import {
@@ -156,7 +158,7 @@ function AppShellInner({
             <AppInfoButton appName={appName} appLogoUrl={appLogoUrl} />
             {/* Org info: nombre + saldo de créditos de IA debajo (monedero único
                 de la org; se auto-oculta si la app no expone /api/credits/balance). */}
-            {org?.name && <OrgBadge org={org} subscribeUrl={subscribeUrl} />}
+            {org?.name && <OrgBadge org={org} />}
           </div>
         </header>
       )}
@@ -166,7 +168,7 @@ function AppShellInner({
   );
 }
 
-function OrgBadge({ org, subscribeUrl }: { org: OrgInfo; subscribeUrl?: string | null }) {
+function OrgBadge({ org }: { org: OrgInfo }) {
   const [errored, setErrored] = useState(false);
   const showImg = org.logo && !errored;
   return (
@@ -188,7 +190,7 @@ function OrgBadge({ org, subscribeUrl }: { org: OrgInfo; subscribeUrl?: string |
           justo debajo. El saldo solo aparece si la app expone el monedero. */}
       <div className="hidden min-w-0 flex-col leading-tight xl:flex">
         <span className="truncate text-xs font-medium text-navy-100">{org.name}</span>
-        <OrgCreditBalance subscribeUrl={subscribeUrl} />
+        <OrgCreditBalance />
       </div>
     </div>
   );
@@ -196,12 +198,14 @@ function OrgBadge({ org, subscribeUrl }: { org: OrgInfo; subscribeUrl?: string |
 
 // Saldo del monedero único de créditos de IA de la org, bajo el nombre en la
 // barra superior. Lee `/api/credits/balance` (proxy a platform en cada app); si
-// la app no lo expone o falla, no renderiza nada. Enlaza a Config para recargar
-// cuando hay `subscribeUrl`.
-function OrgCreditBalance({ subscribeUrl }: { subscribeUrl?: string | null }) {
+// la app no lo expone o falla, no renderiza nada. Para org_admin es un botón que
+// abre el modal de compra de packs; para el resto, texto informativo.
+function OrgCreditBalance() {
   const { t } = useI18n();
+  const isOrgAdmin = useIsOrgAdmin();
   const [total, setTotal] = useState<number | null>(null);
   const [blocked, setBlocked] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -228,19 +232,28 @@ function OrgCreditBalance({ subscribeUrl }: { subscribeUrl?: string | null }) {
         "inline-flex items-center gap-1 text-[11px] leading-tight",
         blocked ? "text-amber-300" : "text-navy-200",
       )}
-      title={t("ui.billing.credits")}
+      title={t(isOrgAdmin ? "ui.billing.buyCredits" : "ui.billing.credits")}
     >
       <Coins className="h-3 w-3 shrink-0" />
       <span className="truncate">{t("ui.billing.creditsBalance", { n: String(total) })}</span>
     </span>
   );
 
-  return subscribeUrl ? (
-    <a href={subscribeUrl} className="transition-colors hover:text-white">
-      {content}
-    </a>
-  ) : (
-    content
+  // Solo org_admin puede comprar (el proxy exige billing:write; aquí gateamos el
+  // trigger). El resto ve el saldo como texto sin acción.
+  if (!isOrgAdmin) return content;
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setModalOpen(true)}
+        className="text-left transition-colors hover:text-white"
+      >
+        {content}
+      </button>
+      <CreditsPurchaseModal open={modalOpen} onOpenChange={setModalOpen} />
+    </>
   );
 }
 

@@ -104,7 +104,14 @@
       "buy": "Comprar",
       "packLabel": "{n} crèdits · {amount}",
       "creditsError": "No s'han pogut carregar els crèdits.",
-      "walletTitle": "Moneder de crèdits d'IA"
+      "walletTitle": "Moneder de crèdits d'IA",
+      "creditsTotal": "Total disponible",
+      "creditsSub": "De subscripció",
+      "creditsBought": "Comprats",
+      "buyInProgress": "Compra en curs. El teu saldo s'actualitzarà en uns segons.",
+      "paymentsUnavailable": "Els pagaments no estan disponibles ara mateix.",
+      "vatNote": "Preus sense IVA; s'hi afegeix el 21 % en el cobrament.",
+      "noPacks": "No hi ha packs disponibles."
     },
     "impersonation": {
       "btn": "Suplantar usuari",

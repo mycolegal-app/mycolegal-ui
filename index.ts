@@ -52,6 +52,7 @@ export { IncidentReporter } from './components/shared/incident-reporter';
 export { BillingPanel } from './components/shared/billing-panel';
 export type { BillingPanelProps } from './components/shared/billing-panel';
 export { CreditBalanceBadge } from './components/shared/credit-balance-badge';
+export { CreditsPurchaseModal } from './components/shared/credits-purchase-modal';
 export { MycoBotRail } from './components/shared/mycobot-rail';
 export { FuentesModal } from './components/shared/fuentes-modal';
 export type { FuentesModalProps, FuenteCatalogoDTO } from './components/shared/fuentes-modal';

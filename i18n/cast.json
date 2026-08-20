@@ -104,7 +104,14 @@
       "buy": "Comprar",
       "packLabel": "{n} créditos · {amount}",
       "creditsError": "No se pudieron cargar los créditos.",
-      "walletTitle": "Monedero de créditos de IA"
+      "walletTitle": "Monedero de créditos de IA",
+      "creditsTotal": "Total disponible",
+      "creditsSub": "De suscripción",
+      "creditsBought": "Comprados",
+      "buyInProgress": "Compra en curso. Tu saldo se actualizará en unos segundos.",
+      "paymentsUnavailable": "Los pagos no están disponibles ahora mismo.",
+      "vatNote": "Precios sin IVA; se añade el 21 % en el cobro.",
+      "noPacks": "No hay packs disponibles."
     },
     "impersonation": {
       "btn": "Impersonar usuario",

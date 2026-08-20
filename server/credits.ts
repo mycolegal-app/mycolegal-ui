@@ -104,30 +104,83 @@ export function createCreditsClient(config: CreditsClientConfig) {
 export interface CreditsRoutesConfig {
   platformUrl: string;
   serviceKey: string;
-  /** withSession/withAuth de la app: rellena context.auth.orgId. */
+  /** withSession/withAuth de la app: rellena context.auth (orgId + rol/permisos). */
   withAuth: (handler: CreditsHandler) => CreditsHandler;
 }
 
-type CreditsContext = { params: Promise<{ path?: string[] }>; auth: { orgId: string } };
+// El proxy recibe el AuthContext completo de la app (orgId + rol cross-app +
+// permisos). Tipamos solo lo que usamos; en runtime la app inyecta el resto.
+type CreditsAuth = { orgId: string; authRole?: string; permissions?: string[] };
+type CreditsContext = { params: Promise<{ path?: string[] }>; auth: CreditsAuth };
 type CreditsHandler = (request: NextRequest, context: CreditsContext) => Promise<Response>;
+
+/**
+ * ¿El usuario puede administrar la org (y por tanto comprar créditos)? Mismo
+ * criterio que el hook `useIsOrgAdmin` del cliente: rol cross-app org_admin/
+ * superadmin, o permiso de administración de usuarios / comodín. Sirve para
+ * gatear las escrituras de forma uniforme SIN depender del catálogo de permisos
+ * de cada app (evita el drift `billing:write` app-a-app).
+ */
+function canManageBilling(auth: CreditsAuth): boolean {
+  const role = auth.authRole;
+  const perms = auth.permissions ?? [];
+  return (
+    role === 'org_admin' ||
+    role === 'superadmin' ||
+    perms.includes('admin:users') ||
+    perms.includes('admin:*') ||
+    perms.includes('*')
+  );
+}
 
 export function createCreditsRoutes(config: CreditsRoutesConfig) {
   const base = config.platformUrl.replace(/\/$/, '');
 
-  return {
-    catchAll: {
-      GET: config.withAuth(async (_request, context) => {
-        const orgId = context.auth.orgId;
-        const op = (await context.params).path?.[0] ?? 'balance';
-        if (op !== 'balance') {
-          return NextResponse.json({ error: { code: 'NOT_FOUND' } }, { status: 404 });
-        }
-        const res = await fetch(`${base}/internal/credits/balance?orgId=${encodeURIComponent(orgId)}`, {
-          headers: { 'X-Service-Key': config.serviceKey },
-        });
-        const data = await res.json().catch(() => ({}));
-        return NextResponse.json(data, { status: res.status });
-      }),
-    },
-  };
+  // Lecturas (cualquier usuario de la org): saldo del monedero y catálogo de packs.
+  // El saldo se pinta en la cabecera de todas las apps; los packs son catálogo
+  // (nombre/precio), no dato sensible.
+  const GET = config.withAuth(async (_request, context) => {
+    const orgId = context.auth.orgId;
+    const op = (await context.params).path?.[0] ?? 'balance';
+    const path =
+      op === 'balance'
+        ? '/internal/credits/balance'
+        : op === 'packs'
+          ? '/internal/billing/packs'
+          : null;
+    if (!path) return NextResponse.json({ error: { code: 'NOT_FOUND' } }, { status: 404 });
+    const res = await fetch(`${base}${path}?orgId=${encodeURIComponent(orgId)}`, {
+      headers: { 'X-Service-Key': config.serviceKey },
+    });
+    const data = await res.json().catch(() => ({}));
+    return NextResponse.json(data, { status: res.status });
+  });
+
+  // Escrituras (SOLO org_admin): iniciar la compra de un pack. Se valida el rol
+  // en el propio proxy (403 si no). `orgId` SIEMPRE de la sesión, nunca del
+  // cuerpo del cliente.
+  const POST = config.withAuth(async (request, context) => {
+    if (!canManageBilling(context.auth)) {
+      return NextResponse.json({ error: { code: 'FORBIDDEN' } }, { status: 403 });
+    }
+    const orgId = context.auth.orgId;
+    const op = (await context.params).path?.[0];
+    const target =
+      op === 'checkout'
+        ? '/internal/billing/credit-checkout'
+        : op === 'purchase'
+          ? '/internal/billing/credit-purchase'
+          : null;
+    if (!target) return NextResponse.json({ error: { code: 'NOT_FOUND' } }, { status: 404 });
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+    const res = await fetch(`${base}${target}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Service-Key': config.serviceKey },
+      body: JSON.stringify({ ...body, orgId }),
+    });
+    const data = await res.json().catch(() => ({}));
+    return NextResponse.json(data, { status: res.status });
+  });
+
+  return { catchAll: { GET, POST } };
 }

@@ -103,7 +103,14 @@
       "buy": "Erosi",
       "packLabel": "{n} kreditu · {amount}",
       "creditsError": "Ezin izan dira kredituak kargatu.",
-      "walletTitle": "IAren kredituen diru-zorroa"
+      "walletTitle": "IAren kredituen diru-zorroa",
+      "creditsTotal": "Erabilgarri guztira",
+      "creditsSub": "Harpidetzakoak",
+      "creditsBought": "Erosiak",
+      "buyInProgress": "Erosketa abian. Zure saldoa segundo batzuetan eguneratuko da.",
+      "paymentsUnavailable": "Ordainketak ez daude erabilgarri une honetan.",
+      "vatNote": "Prezioak BEZ gabe; %21 gehitzen da kobrantzan.",
+      "noPacks": "Ez dago packik erabilgarri."
     },
     "impersonation": {
       "btn": "Erabiltzailea ordezkatu",
