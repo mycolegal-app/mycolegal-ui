@@ -205,6 +205,10 @@ function OrgCreditBalance() {
   const isOrgAdmin = useIsOrgAdmin();
   const [total, setTotal] = useState<number | null>(null);
   const [blocked, setBlocked] = useState(false);
+  // Fracción [0,1) del crédito EN CURSO ya consumida (acumulador por tokens). El chat
+  // mide por tokens y solo debita créditos enteros al cruzar; esto muestra el avance
+  // dentro del crédito actual (antes solo estaba en el rail de MycoBot, no en la toolbar).
+  const [progress, setProgress] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
@@ -216,6 +220,7 @@ function OrgCreditBalance() {
         if (typeof d.total === "number") {
           setTotal(d.total);
           setBlocked(Boolean(d.blocked));
+          setProgress(typeof d.nextCreditProgress === "number" ? d.nextCreditProgress : 0);
         }
       })
       .catch(() => {});
@@ -226,16 +231,30 @@ function OrgCreditBalance() {
 
   if (total === null) return null;
 
+  const pct = Math.min(100, Math.max(0, Math.round(progress * 100)));
+
   const content = (
     <span
       className={cn(
-        "inline-flex items-center gap-1 text-[11px] leading-tight",
+        "inline-flex items-center gap-1.5 text-[11px] leading-tight",
         blocked ? "text-amber-300" : "text-navy-200",
       )}
       title={t(isOrgAdmin ? "ui.billing.buyCredits" : "ui.billing.credits")}
     >
       <Coins className="h-3 w-3 shrink-0" />
       <span className="truncate">{t("ui.billing.creditsBalance", { n: String(total) })}</span>
+      {/* % del crédito en curso: barra fina + número. Solo si hay consumo acumulado. */}
+      {progress > 0 && (
+        <span
+          className="inline-flex items-center gap-1"
+          title={t("ui.billing.nextCreditProgress", { pct: String(pct) })}
+        >
+          <span className="h-1 w-8 overflow-hidden rounded-full bg-navy-200/25">
+            <span className="block h-full rounded-full bg-navy-200" style={{ width: `${pct}%` }} />
+          </span>
+          <span className="tabular-nums text-navy-300">{pct}%</span>
+        </span>
+      )}
     </span>
   );
 
