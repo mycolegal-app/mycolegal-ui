@@ -737,6 +737,15 @@
       "loadingApp": "Carregant aplicació…",
       "unread": "{count} sense llegir"
     },
+    "billingNotice": {
+      "courtesyExpired": "L’accés de cortesia a {app} ha caducat.",
+      "trialExpired": "La prova de {app} ha finalitzat.",
+      "subscriptionExpired": "La subscripció de {app} ha caducat.",
+      "subscribePrompt": "Subscriu-te per continuar fent servir les seves funcions d’IA.",
+      "askAdmin": "Demana a un administrador que renovi la subscripció per continuar fent servir la IA.",
+      "ctaSubscribe": "Reactivar subscripció",
+      "dismiss": "Descartar"
+    },
     "appShell": {
       "openMobileMenu": "Obrir menú lateral"
     },

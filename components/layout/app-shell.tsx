@@ -8,6 +8,7 @@ import { IdleTimeout } from "./idle-timeout";
 import { AppSwitcherBar } from "./app-switcher-bar";
 import { AppInfoButton } from "../shared/app-info-button";
 import { ImpersonationBanner } from "../shared/impersonation-banner";
+import { BillingNoticeBanner, type BillingNotice } from "../shared/billing-notice-banner";
 import { LegalGate } from "../shared/legal-gate";
 import {
   DefaultHelpButton,
@@ -79,6 +80,7 @@ function AppShellInner({
   breadcrumbs,
   appSwitcherBar,
   impersonationBanner,
+  billingNotices,
   onToggleMobile,
 }: {
   children: ReactNode;
@@ -92,6 +94,7 @@ function AppShellInner({
   breadcrumbs?: ReactNode;
   appSwitcherBar?: ReactNode;
   impersonationBanner?: ReactNode;
+  billingNotices?: ReactNode;
   onToggleMobile: () => void;
 }) {
   const { t } = useI18n();
@@ -117,6 +120,7 @@ function AppShellInner({
       )}
     >
       {impersonationBanner}
+      {billingNotices}
       {appSwitcherBar}
       {header && (
         <header className="flex h-14 shrink-0 items-center justify-between border-b border-navy-600/30 bg-navy-700 px-6">
@@ -297,6 +301,8 @@ export default function AppShell({
   // Apps vendibles no concedidas (grayed en la toolbar, solo org_admin) + destino.
   const [sellableExtras, setSellableExtras] = useState<AppInfo[]>([]);
   const [subscribeUrl, setSubscribeUrl] = useState<string | null>(null);
+  // Avisos de cortesía/trial expirado por app concedida (banner descartable).
+  const [billingNotices, setBillingNotices] = useState<BillingNotice[]>([]);
   const [inactivityTimeout, setInactivityTimeout] = useState(15);
   // Label of the impersonated user when this is an impersonation session,
   // null otherwise. Drives the persistent "acting as" banner.
@@ -334,6 +340,7 @@ export default function AppShell({
         if (d.apps) setApps(d.apps);
         if (Array.isArray(d.sellableExtras)) setSellableExtras(d.sellableExtras);
         setSubscribeUrl(d.subscribeUrl ?? null);
+        if (Array.isArray(d.notices)) setBillingNotices(d.notices);
         if (d.inactivityTimeout) setInactivityTimeout(d.inactivityTimeout);
         setImpersonatedAs(
           d.impersonatedBy ? d.displayName || d.email || "" : null,
@@ -392,6 +399,16 @@ export default function AppShell({
           }
           impersonationBanner={
             impersonatedAs ? <ImpersonationBanner targetLabel={impersonatedAs} /> : undefined
+          }
+          billingNotices={
+            // Solo el aviso de la app ACTUAL: los notices son de toda la org, pero
+            // enseñar "Consultor caducó" dentro de Notaría sería ruido fuera de contexto.
+            billingNotices.some((n) => n.appSlug === appSlug) ? (
+              <BillingNoticeBanner
+                notices={billingNotices.filter((n) => n.appSlug === appSlug)}
+                subscribeUrl={subscribeUrl}
+              />
+            ) : undefined
           }
           onToggleMobile={() => setMobileOpen(!mobileOpen)}
         >

@@ -736,6 +736,15 @@
       "loadingApp": "Aplikazioa kargatzen…",
       "unread": "{count} irakurri gabe"
     },
+    "billingNotice": {
+      "courtesyExpired": "{app} aplikaziorako kortesiazko sarbidea iraungi da.",
+      "trialExpired": "{app} aplikazioaren proba amaitu da.",
+      "subscriptionExpired": "{app} aplikazioaren harpidetza iraungi da.",
+      "subscribePrompt": "Harpidetu bere IA funtzioak erabiltzen jarraitzeko.",
+      "askAdmin": "Eskatu administratzaile bati harpidetza berritzeko, IA erabiltzen jarraitzeko.",
+      "ctaSubscribe": "Harpidetza berritu",
+      "dismiss": "Baztertu"
+    },
     "appShell": {
       "openMobileMenu": "Alboko menua ireki"
     },
